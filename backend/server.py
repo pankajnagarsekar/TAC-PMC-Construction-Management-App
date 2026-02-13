@@ -853,6 +853,9 @@ async def create_mapping(
     )
     
     mapping_dict["map_id"] = map_id
+    # Remove MongoDB _id to avoid serialization issues
+    if "_id" in mapping_dict:
+        del mapping_dict["_id"]
     return mapping_dict
 
 
