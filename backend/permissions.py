@@ -105,7 +105,7 @@ class PermissionChecker:
         organisation_id: str
     ):
         """Verify that project belongs to the user's organisation"""
-        project = await self.db.projects.find_one({"_id": project_id})
+        project = await self.db.projects.find_one({"_id": ObjectId(project_id) if isinstance(project_id, str) else project_id})
         
         if not project:
             raise HTTPException(
