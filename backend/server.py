@@ -341,6 +341,9 @@ async def create_project(
     )
     
     project_dict["project_id"] = project_id
+    # Remove MongoDB _id to avoid serialization issues
+    if "_id" in project_dict:
+        del project_dict["_id"]
     return project_dict
 
 
