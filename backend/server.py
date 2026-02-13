@@ -409,7 +409,7 @@ async def update_project(
     await permission_checker.verify_project_organisation(project_id, user["organisation_id"])
     
     # Get existing project
-    project = await db.projects.find_one({"_id": project_id})
+    project = await db.projects.find_one({"_id": ObjectId(project_id)})
     
     if not project:
         raise HTTPException(
