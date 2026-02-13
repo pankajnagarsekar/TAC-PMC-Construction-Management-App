@@ -254,7 +254,7 @@ async def update_user(
     await permission_checker.check_admin_role(user)
     
     # Get existing user
-    target_user = await db.users.find_one({"_id": user_id})
+    target_user = await db.users.find_one({"_id": ObjectId(user_id)})
     
     if not target_user:
         raise HTTPException(
@@ -275,7 +275,7 @@ async def update_user(
     
     # Update user
     await db.users.update_one(
-        {"_id": user_id},
+        {"_id": ObjectId(user_id)},
         {"$set": update_dict}
     )
     
