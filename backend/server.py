@@ -738,7 +738,7 @@ async def update_budget(
     async with await client.start_session() as session:
         async with session.start_transaction():
             await db.project_budgets.update_one(
-                {"_id": budget_id},
+                {"_id": ObjectId(budget_id)},
                 {"$set": update_dict},
                 session=session
             )
