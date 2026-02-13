@@ -649,18 +649,15 @@ async def create_budget(
     budget_dict["created_at"] = datetime.utcnow()
     budget_dict["updated_at"] = datetime.utcnow()
     
-    # Transaction-safe budget creation + financial recalculation
-    async with await client.start_session() as session:
-        async with session.start_transaction():
-            result = await db.project_budgets.insert_one(budget_dict, session=session)
-            budget_id = str(result.inserted_id)
-            
-            # Trigger financial recalculation
-            await financial_service.recalculate_project_code_financials(
-                project_id=budget_data.project_id,
-                code_id=budget_data.code_id,
-                session=session
-            )
+    # Create budget (without transaction for single MongoDB instance)
+    result = await db.project_budgets.insert_one(budget_dict)
+    budget_id = str(result.inserted_id)
+    
+    # Trigger financial recalculation
+    await financial_service.recalculate_project_code_financials(
+        project_id=budget_data.project_id,
+        code_id=budget_data.code_id
+    )
     
     # Audit log (after transaction commit)
     await audit_service.log_action(
