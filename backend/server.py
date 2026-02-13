@@ -528,7 +528,7 @@ async def update_code(
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
     
-    code = await db.code_master.find_one({"_id": code_id})
+    code = await db.code_master.find_one({"_id": ObjectId(code_id)})
     
     if not code:
         raise HTTPException(
