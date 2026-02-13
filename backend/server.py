@@ -540,7 +540,7 @@ async def update_code(
     update_dict["updated_at"] = datetime.utcnow()
     
     await db.code_master.update_one(
-        {"_id": code_id},
+        {"_id": ObjectId(code_id)},
         {"$set": update_dict}
     )
     
