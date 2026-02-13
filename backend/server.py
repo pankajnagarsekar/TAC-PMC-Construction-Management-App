@@ -899,7 +899,7 @@ async def delete_mapping(
             detail="Mapping not found"
         )
     
-    await db.user_project_map.delete_one({"_id": map_id})
+    await db.user_project_map.delete_one({"_id": ObjectId(map_id)})
     
     # Audit log
     await audit_service.log_action(
