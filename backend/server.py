@@ -675,6 +675,9 @@ async def create_budget(
     )
     
     budget_dict["budget_id"] = budget_id
+    # Remove MongoDB _id to avoid serialization issues
+    if "_id" in budget_dict:
+        del budget_dict["_id"]
     return budget_dict
 
 
