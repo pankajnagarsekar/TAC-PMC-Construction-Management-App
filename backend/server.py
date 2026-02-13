@@ -445,7 +445,7 @@ async def update_project(
         await financial_service.recalculate_all_project_financials(project_id)
     
     # Get updated project
-    updated_project = await db.projects.find_one({"_id": project_id})
+    updated_project = await db.projects.find_one({"_id": ObjectId(project_id)})
     updated_project["project_id"] = str(updated_project.pop("_id"))
     
     return updated_project
