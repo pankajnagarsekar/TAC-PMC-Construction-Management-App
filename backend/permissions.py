@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId
 from auth import get_current_user
 import logging
 
@@ -24,7 +25,7 @@ class PermissionChecker:
         user_id = current_user.get("user_id")
         
         # Fetch user from database
-        user = await self.db.users.find_one({"_id": user_id})
+        user = await self.db.users.find_one({"_id": ObjectId(user_id)})
         
         if not user:
             raise HTTPException(
