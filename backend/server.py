@@ -891,7 +891,7 @@ async def delete_mapping(
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
     
-    mapping = await db.user_project_map.find_one({"_id": map_id})
+    mapping = await db.user_project_map.find_one({"_id": ObjectId(map_id)})
     
     if not mapping:
         raise HTTPException(
