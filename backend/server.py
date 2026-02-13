@@ -712,7 +712,7 @@ async def update_budget(
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
     
-    budget = await db.project_budgets.find_one({"_id": budget_id})
+    budget = await db.project_budgets.find_one({"_id": ObjectId(budget_id)})
     
     if not budget:
         raise HTTPException(
