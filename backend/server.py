@@ -130,7 +130,12 @@ async def register_user(user_data: UserCreate):
 
 @api_router.post("/auth/login", response_model=Token)
 async def login(login_data: LoginRequest):
-    """Authenticate user and return JWT token"""
+    """
+    Authenticate user and return JWT tokens.
+    
+    CORRECTED: Access token expires in 30 minutes (not 30 days).
+    Refresh token expires in 7 days.
+    """
     # Find user by email
     user = await db.users.find_one({"email": login_data.email})
     
@@ -154,7 +159,7 @@ async def login(login_data: LoginRequest):
             detail="User account is inactive"
         )
     
-    # Create access token
+    # Create tokens
     user_id = str(user["_id"])
     token_data = {
         "user_id": user_id,
@@ -164,6 +169,22 @@ async def login(login_data: LoginRequest):
     }
     
     access_token = create_access_token(data=token_data)
+    refresh_token = create_refresh_token(user_id=user_id)
+    
+    # Store refresh token in database (for token rotation)
+    from auth import decode_refresh_token
+    refresh_payload = decode_refresh_token(refresh_token)
+    
+    refresh_token_doc = {
+        "jti": refresh_payload["jti"],
+        "user_id": user_id,
+        "token_hash": hash_password(refresh_token),  # Store hashed
+        "expires_at": datetime.utcfromtimestamp(refresh_payload["exp"]),
+        "is_revoked": False,
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.refresh_tokens.insert_one(refresh_token_doc)
     
     # Prepare user response
     user_response = UserResponse(
@@ -178,7 +199,108 @@ async def login(login_data: LoginRequest):
         updated_at=user["updated_at"]
     )
     
-    return Token(access_token=access_token, user=user_response)
+    return Token(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=1800,  # 30 minutes in seconds
+        user=user_response
+    )
+
+
+@api_router.post("/auth/refresh", response_model=Token)
+async def refresh_access_token(request: RefreshTokenRequest):
+    """
+    Refresh access token using refresh token.
+    
+    Token Rotation: Old refresh token is revoked, new one is issued.
+    """
+    try:
+        # Decode refresh token
+        payload = decode_refresh_token(request.refresh_token)
+        jti = payload["jti"]
+        user_id = payload["user_id"]
+        
+        # Check if refresh token exists and is not revoked
+        token_doc = await db.refresh_tokens.find_one({
+            "jti": jti,
+            "user_id": user_id,
+            "is_revoked": False
+        })
+        
+        if not token_doc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token is invalid or has been revoked"
+            )
+        
+        # Get user
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        
+        if not user or not user.get("active_status", False):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive"
+            )
+        
+        # Revoke old refresh token
+        await db.refresh_tokens.update_one(
+            {"jti": jti},
+            {"$set": {"is_revoked": True}}
+        )
+        
+        # Create new tokens (token rotation)
+        token_data = {
+            "user_id": user_id,
+            "email": user["email"],
+            "role": user["role"],
+            "organisation_id": user["organisation_id"]
+        }
+        
+        new_access_token = create_access_token(data=token_data)
+        new_refresh_token = create_refresh_token(user_id=user_id)
+        
+        # Store new refresh token
+        new_refresh_payload = decode_refresh_token(new_refresh_token)
+        
+        new_refresh_token_doc = {
+            "jti": new_refresh_payload["jti"],
+            "user_id": user_id,
+            "token_hash": hash_password(new_refresh_token),
+            "expires_at": datetime.utcfromtimestamp(new_refresh_payload["exp"]),
+            "is_revoked": False,
+            "created_at": datetime.utcnow()
+        }
+        
+        await db.refresh_tokens.insert_one(new_refresh_token_doc)
+        
+        # Prepare user response
+        user_response = UserResponse(
+            user_id=user_id,
+            organisation_id=user["organisation_id"],
+            name=user["name"],
+            email=user["email"],
+            role=user["role"],
+            active_status=user["active_status"],
+            dpr_generation_permission=user.get("dpr_generation_permission", False),
+            created_at=user["created_at"],
+            updated_at=user["updated_at"]
+        )
+        
+        return Token(
+            access_token=new_access_token,
+            refresh_token=new_refresh_token,
+            expires_in=1800,  # 30 minutes
+            user=user_response
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Refresh token error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
 
 
 # ============================================
