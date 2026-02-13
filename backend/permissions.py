@@ -65,8 +65,8 @@ class PermissionChecker:
         
         # Check user_project_map
         mapping = await self.db.user_project_map.find_one({
-            "user_id": user["user_id"],
-            "project_id": project_id
+            "user_id": ObjectId(user["user_id"]) if isinstance(user["user_id"], str) else user["user_id"],
+            "project_id": ObjectId(project_id) if isinstance(project_id, str) else project_id
         })
         
         if not mapping:
