@@ -250,9 +250,30 @@ class GlobalSettings(BaseModel):
 # ============================================
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+    expires_in: int = 1800  # 30 minutes in seconds
     user: UserResponse
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+# ============================================
+# REFRESH TOKEN STORAGE MODEL
+# ============================================
+class RefreshToken(BaseModel):
+    token_id: Optional[str] = Field(default=None, alias="_id")
+    jti: str  # JWT ID (unique identifier)
+    user_id: str
+    token_hash: str  # Hashed refresh token
+    expires_at: datetime
+    is_revoked: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+
+    class Config:
+        populate_by_name = True
+        json_encoders = {ObjectId: str}
