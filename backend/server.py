@@ -215,7 +215,7 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
     """Get specific user by ID"""
     user = await permission_checker.get_authenticated_user(current_user)
     
-    target_user = await db.users.find_one({"_id": user_id})
+    target_user = await db.users.find_one({"_id": ObjectId(user_id)})
     
     if not target_user:
         raise HTTPException(
