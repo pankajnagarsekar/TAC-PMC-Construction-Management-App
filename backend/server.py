@@ -809,14 +809,14 @@ async def create_mapping(
     await permission_checker.check_admin_role(user)
     
     # Verify user and project exist
-    target_user = await db.users.find_one({"_id": mapping_data.user_id})
+    target_user = await db.users.find_one({"_id": ObjectId(mapping_data.user_id)})
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
     
-    project = await db.projects.find_one({"_id": mapping_data.project_id})
+    project = await db.projects.find_one({"_id": ObjectId(mapping_data.project_id)})
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
