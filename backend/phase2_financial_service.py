@@ -255,9 +255,9 @@ class Phase2FinancialService:
             balance_budget_remaining = approved_budget - certified_value
             balance_to_pay = certified_value - paid_value
             
-            # Calculate flags
-            over_commit_flag = committed_value > approved_budget
-            over_certification_flag = certified_value > committed_value
+            # Calculate flags (LOCKED FORMULAS)
+            over_commit_flag = committed_value > approved_budget  # WARNING ONLY
+            over_certification_flag = certified_value > approved_budget  # CORRECTED: Compare to budget
             over_payment_flag = paid_value > certified_value
             
             # Update derived financial state
