@@ -385,7 +385,7 @@ async def get_project(
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_project_access(user, project_id, require_write=False)
     
-    project = await db.projects.find_one({"_id": project_id})
+    project = await db.projects.find_one({"_id": ObjectId(project_id)})
     
     if not project:
         raise HTTPException(
