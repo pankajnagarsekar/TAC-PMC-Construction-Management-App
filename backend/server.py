@@ -613,14 +613,14 @@ async def create_budget(
     await permission_checker.check_admin_role(user)
     
     # Verify project and code exist
-    project = await db.projects.find_one({"_id": budget_data.project_id})
+    project = await db.projects.find_one({"_id": ObjectId(budget_data.project_id)})
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
     
-    code = await db.code_master.find_one({"_id": budget_data.code_id})
+    code = await db.code_master.find_one({"_id": ObjectId(budget_data.code_id)})
     if not code:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
