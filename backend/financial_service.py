@@ -34,11 +34,16 @@ class FinancialRecalculationService:
         - certified_value = 0 (no Payment Certificates yet)
         - paid_value = 0 (no Payments yet)
         - retention_held = 0
-        - balance_budget_remaining = approved_budget_amount - committed_value
+        
+        CRITICAL FORMULAS (LOCKED):
+        - balance_budget_remaining = approved_budget_amount - certified_value
         - balance_to_pay = certified_value - paid_value
-        - over_commit_flag = committed_value > approved_budget_amount
+        - over_commit_flag = committed_value > approved_budget_amount (WARNING ONLY)
         - over_certification_flag = certified_value > committed_value
         - over_payment_flag = paid_value > certified_value
+        
+        NOTE: Balance_Budget_Remaining uses CERTIFIED_VALUE, not committed_value.
+        Committed_Value is only for over-commit warning.
         """
         try:
             # Get approved budget
@@ -59,8 +64,9 @@ class FinancialRecalculationService:
             paid_value = 0.0
             retention_held = 0.0
             
-            # Calculate derived values
-            balance_budget_remaining = approved_budget - committed_value
+            # Calculate derived values (LOCKED FORMULAS)
+            # CRITICAL: Balance_Budget_Remaining = Approved_Budget - Certified_Value
+            balance_budget_remaining = approved_budget - certified_value
             balance_to_pay = certified_value - paid_value
             
             # Calculate flags
