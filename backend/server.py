@@ -423,7 +423,7 @@ async def update_project(
     
     # Update project
     await db.projects.update_one(
-        {"_id": project_id},
+        {"_id": ObjectId(project_id)},
         {"$set": update_dict}
     )
     
