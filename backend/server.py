@@ -763,7 +763,7 @@ async def update_budget(
         new_value={"approved_budget_amount": update_data.approved_budget_amount}
     )
     
-    updated_budget = await db.project_budgets.find_one({"_id": budget_id})
+    updated_budget = await db.project_budgets.find_one({"_id": ObjectId(budget_id)})
     updated_budget["budget_id"] = str(updated_budget.pop("_id"))
     
     return updated_budget
