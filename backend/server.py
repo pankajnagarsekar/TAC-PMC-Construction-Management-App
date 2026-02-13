@@ -492,6 +492,9 @@ async def create_code(
     )
     
     code_dict["code_id"] = code_id
+    # Remove MongoDB _id to avoid serialization issues
+    if "_id" in code_dict:
+        del code_dict["_id"]
     return code_dict
 
 
