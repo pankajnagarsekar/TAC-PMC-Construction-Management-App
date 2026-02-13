@@ -556,7 +556,7 @@ async def update_code(
         new_value=update_dict
     )
     
-    updated_code = await db.code_master.find_one({"_id": code_id})
+    updated_code = await db.code_master.find_one({"_id": ObjectId(code_id)})
     updated_code["code_id"] = str(updated_code.pop("_id"))
     
     return updated_code
