@@ -292,7 +292,7 @@ async def update_user(
     )
     
     # Get updated user
-    updated_user = await db.users.find_one({"_id": user_id})
+    updated_user = await db.users.find_one({"_id": ObjectId(user_id)})
     
     return UserResponse(
         user_id=str(updated_user["_id"]),
