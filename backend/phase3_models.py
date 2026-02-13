@@ -190,6 +190,27 @@ class VoiceLogCreate(BaseModel):
     audio_base64: str
 
 # ============================================
+# PLANNED PROGRESS
+# ============================================
+class PlannedProgress(BaseModel):
+    planned_id: Optional[str] = Field(default=None, alias="_id")
+    project_id: str
+    code_id: Optional[str] = None  # Nullable for overall project plan
+    date: datetime  # UTC date
+    planned_percentage: float  # 0-100, non-decreasing
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+
+    class Config:
+        populate_by_name = True
+        json_encoders = {ObjectId: str}
+
+class PlannedProgressCreate(BaseModel):
+    project_id: str
+    code_id: Optional[str] = None
+    date: datetime
+    planned_percentage: float
+
+# ============================================
 # PROJECT OVERALL PROGRESS (Computed)
 # ============================================
 class ProjectOverallProgress(BaseModel):
@@ -198,3 +219,15 @@ class ProjectOverallProgress(BaseModel):
     latest_percentage: float
     weighted_progress: Optional[float] = None  # If weightage used
     last_updated: datetime
+
+# ============================================
+# DELAY ANALYSIS (Computed)
+# ============================================
+class DelayAnalysis(BaseModel):
+    project_id: str
+    code_id: str
+    actual_percentage: float
+    planned_percentage: float
+    delay_flag: bool
+    delay_difference: float  # planned - actual
+    analysis_date: datetime
