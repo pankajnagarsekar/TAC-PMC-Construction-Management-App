@@ -731,21 +731,17 @@ async def update_budget(
         "updated_at": datetime.utcnow()
     }
     
-    # Transaction-safe update + recalculation
-    async with await client.start_session() as session:
-        async with session.start_transaction():
-            await db.project_budgets.update_one(
-                {"_id": ObjectId(budget_id)},
-                {"$set": update_dict},
-                session=session
-            )
-            
-            # Trigger financial recalculation
-            await financial_service.recalculate_project_code_financials(
-                project_id=budget["project_id"],
-                code_id=budget["code_id"],
-                session=session
-            )
+    # Update budget (without transaction for single MongoDB instance)
+    await db.project_budgets.update_one(
+        {"_id": ObjectId(budget_id)},
+        {"$set": update_dict}
+    )
+    
+    # Trigger financial recalculation
+    await financial_service.recalculate_project_code_financials(
+        project_id=budget["project_id"],
+        code_id=budget["code_id"]
+    )
     
     # Audit log (after transaction commit)
     await audit_service.log_action(
