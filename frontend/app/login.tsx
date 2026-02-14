@@ -62,10 +62,15 @@ export default function LoginScreen() {
     if (!validateForm()) return;
 
     try {
-      await login({ email: email.trim(), password });
-      // Navigation will be handled by the root layout based on auth state
-      router.replace('/');
+      const response = await login({ email: email.trim(), password });
+      // Navigate based on user role
+      // The AuthContext stores the user, so we can access it from response
+      // But since login returns void, we navigate to index and let the router handle it
+      setTimeout(() => {
+        router.replace('/');
+      }, 100);
     } catch (err) {
+      console.error('Login error:', err);
       if (err instanceof ApiError) {
         setError(err.message || 'Login failed. Please check your credentials.');
       } else {
