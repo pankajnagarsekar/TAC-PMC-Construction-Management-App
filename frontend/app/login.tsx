@@ -146,7 +146,7 @@ export default function LoginScreen() {
               <View style={styles.demoHint}>
                 <Ionicons name="information-circle-outline" size={16} color={Colors.textMuted} />
                 <Text style={styles.demoHintText}>
-                  Demo: admin@example.com / adminpassword
+                  Demo: admin@example.com / admin123
                 </Text>
               </View>
             </View>
