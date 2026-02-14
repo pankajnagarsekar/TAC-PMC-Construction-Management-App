@@ -746,7 +746,7 @@ async def recalculate_financial_state(
     
     if code_id:
         state = await hardened_engine.recalculate_financials_with_precision(project_id, code_id)
-        return {"recalculated": [state]}
+        return {"recalculated": [serialize_doc(state)] if state else []}
     else:
         # Recalculate all codes in project
         budgets = await db.project_budgets.find({"project_id": project_id}).to_list(length=None)
@@ -756,7 +756,7 @@ async def recalculate_financial_state(
                 project_id, budget["code_id"]
             )
             if state:
-                results.append(state)
+                results.append(serialize_doc(state))
         return {"recalculated": results}
 
 
