@@ -449,14 +449,14 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 2 Wave 2 Lifecycle & Structural Integrity Lock - 5/7 scenarios tested successfully"
-    - "Lock enforcement test sequence needs fixing"
-    - "Version snapshot collection naming mismatch needs resolution"
+    - "Phase 2 Wave 3 Decimal128 Serialization Issue - CRITICAL"
+    - "Snapshot rendering and retrieval functionality"
+    - "Background job execution with financial data"
   stuck_tasks:
-    - "Locked Work Order Edit Protection"
-    - "Version Snapshot Creation"
+    - "Snapshot Immutability (rendering fails)"
+    - "Historical Report Preservation (retrieval fails)"
   test_all: true
-  test_priority: "high_first"
+  test_priority: "critical_first"
 
 # PHASE 2 WAVE 2 TESTING RESULTS
 # Lifecycle & Structural Integrity Lock Testing
