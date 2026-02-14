@@ -63,16 +63,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const login = useCallback(async (credentials: LoginRequest) => {
+    console.log('Login called with:', credentials.email);
     setState(prev => ({ ...prev, isLoading: true }));
     
     try {
+      console.log('Calling authApi.login...');
       const response = await authApi.login(credentials);
+      console.log('Login successful, user:', response.user?.email);
       setState({
         user: response.user,
         isLoading: false,
         isAuthenticated: true,
       });
     } catch (error) {
+      console.error('Login failed:', error);
       setState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
