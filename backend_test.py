@@ -511,11 +511,10 @@ class Wave2Tester:
         
         # Modify the work order
         revise_data = {
-            "description": "Modified for version snapshot test",
             "rate": 150.75
         }
         
-        async with self.session.put(
+        async with self.session.post(
             f"{API_V2_BASE}/work-orders/{self.wo_id}/revise",
             json=revise_data,
             headers=self.get_headers(self.admin_token)
