@@ -187,7 +187,8 @@ async def render_report_from_snapshot(
             raise HTTPException(status_code=403, detail="Access denied")
         
         report = await snapshot_engine.render_report_from_snapshot(snapshot_id, output_format)
-        return report
+        # Serialize to handle Decimal128
+        return serialize_mongo_doc(report)
     except SnapshotNotFoundError:
         raise HTTPException(status_code=404, detail="Snapshot not found")
 
