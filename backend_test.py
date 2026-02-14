@@ -209,7 +209,7 @@ class Phase2TestSuite:
             
             # Create code
             code_data = {
-                "code_short": "TEST001",
+                "code_short": f"TEST{int(time.time())}",  # Use timestamp for uniqueness
                 "code_name": "Test Code for Financial Hardening"
             }
             
