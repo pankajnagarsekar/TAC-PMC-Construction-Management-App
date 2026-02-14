@@ -246,7 +246,7 @@ def create_phase2_routes(
                         del wo_snapshot["_id"]
                     
                     await db.work_order_versions.insert_one({
-                        "wo_id": wo_id,
+                        "parent_id": wo_id,
                         "version_number": wo["version_number"],
                         "snapshot_data": wo_snapshot,
                         "created_at": datetime.utcnow()
