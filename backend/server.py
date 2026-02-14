@@ -1055,6 +1055,10 @@ app.include_router(api_router)
 from hardened_routes import hardened_router
 app.include_router(hardened_router)
 
+# Include Phase 2 Wave 2 lifecycle routes
+from wave2_routes import wave2_router
+app.include_router(wave2_router)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
