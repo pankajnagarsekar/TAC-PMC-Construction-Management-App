@@ -1,658 +1,603 @@
 #!/usr/bin/env python3
 """
-Construction Management System - Phase 1 API Testing
-Comprehensive test suite for all backend APIs
+PHASE 2 WAVE 1 FINANCIAL CORE HARDENING - COMPREHENSIVE TEST SUITE
+
+Tests all critical scenarios for the hardened financial engine:
+1. Health Check & Transaction Support
+2. Vendor Creation (prerequisite)
+3. Work Order Lifecycle Test
+4. Payment Certificate Lifecycle Test
+5. Decimal Precision Verification
+6. Financial Invariant Test (Over-certification)
+7. Payment Recording Test
+8. Retention Release Test
+
+Base URL: https://backend-hardening-3.preview.emergentagent.com/api
+Admin credentials: admin@example.com / admin123
 """
 
 import requests
 import json
-import sys
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from decimal import Decimal
+import sys
+import time
 
 # Configuration
 BASE_URL = "https://backend-hardening-3.preview.emergentagent.com/api"
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "admin123"
-SUPERVISOR_EMAIL = "supervisor@example.com"
-SUPERVISOR_PASSWORD = "super123"
 
-class APITester:
+class TestResults:
     def __init__(self):
+        self.passed = 0
+        self.failed = 0
+        self.errors = []
+        
+    def log_pass(self, test_name):
+        print(f"✅ PASS: {test_name}")
+        self.passed += 1
+        
+    def log_fail(self, test_name, error):
+        print(f"❌ FAIL: {test_name} - {error}")
+        self.failed += 1
+        self.errors.append(f"{test_name}: {error}")
+        
+    def summary(self):
+        total = self.passed + self.failed
+        print(f"\n{'='*60}")
+        print(f"TEST SUMMARY: {self.passed}/{total} PASSED")
+        print(f"{'='*60}")
+        if self.errors:
+            print("FAILURES:")
+            for error in self.errors:
+                print(f"  - {error}")
+        return self.failed == 0
+
+class Phase2TestSuite:
+    def __init__(self):
+        self.results = TestResults()
         self.session = requests.Session()
         self.admin_token = None
-        self.supervisor_token = None
-        self.admin_user_id = None
-        self.supervisor_user_id = None
-        self.organisation_id = None
-        self.test_results = []
-        self.created_entities = {
-            'projects': [],
-            'codes': [],
-            'budgets': [],
-            'mappings': []
-        }
+        self.test_data = {}
         
-    def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
-        """Log test results"""
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} {test_name}")
-        if details:
-            print(f"   Details: {details}")
-        if not success and response_data:
-            print(f"   Response: {response_data}")
-        print()
-        
-        self.test_results.append({
-            'test': test_name,
-            'success': success,
-            'details': details,
-            'response': response_data
-        })
-    
-    def make_request(self, method: str, endpoint: str, data: Dict = None, 
-                    token: str = None, params: Dict = None) -> tuple:
-        """Make HTTP request with proper headers"""
+    def make_request(self, method, endpoint, **kwargs):
+        """Make HTTP request with proper error handling"""
         url = f"{BASE_URL}{endpoint}"
-        headers = {"Content-Type": "application/json"}
         
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
+        # Add auth header if token available
+        if self.admin_token:
+            if 'headers' not in kwargs:
+                kwargs['headers'] = {}
+            kwargs['headers']['Authorization'] = f"Bearer {self.admin_token}"
         
         try:
-            if method.upper() == "GET":
-                response = self.session.get(url, headers=headers, params=params)
-            elif method.upper() == "POST":
-                response = self.session.post(url, headers=headers, json=data)
-            elif method.upper() == "PUT":
-                response = self.session.put(url, headers=headers, json=data)
-            elif method.upper() == "DELETE":
-                response = self.session.delete(url, headers=headers)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
+            response = self.session.request(method, url, **kwargs)
+            return response
+        except Exception as e:
+            print(f"Request failed: {method} {url} - {str(e)}")
+            return None
+    
+    def test_1_health_check_transaction_support(self):
+        """Test 1: Health Check & Transaction Support"""
+        print("\n🔍 TEST 1: Health Check & Transaction Support")
+        
+        try:
+            # Test v2 health endpoint
+            response = self.make_request('GET', '/v2/health')
             
-            return response.status_code, response.json() if response.content else {}
-        except requests.exceptions.RequestException as e:
-            return 0, {"error": str(e)}
-        except json.JSONDecodeError:
-            return response.status_code, {"error": "Invalid JSON response"}
+            if not response or response.status_code != 200:
+                self.results.log_fail("Health Check", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            
+            # Verify required fields
+            required_fields = ['status', 'timestamp', 'version', 'phase', 'features']
+            for field in required_fields:
+                if field not in data:
+                    self.results.log_fail("Health Check", f"Missing field: {field}")
+                    return
+            
+            # Verify transaction support
+            features = data.get('features', {})
+            if not features.get('transaction_support'):
+                self.results.log_fail("Health Check", "Transaction support not enabled")
+                return
+            
+            # Verify all 5 hardening features
+            expected_features = [
+                'decimal_precision',
+                'transaction_support', 
+                'invariant_enforcement',
+                'duplicate_protection',
+                'atomic_numbering'
+            ]
+            
+            for feature in expected_features:
+                if not features.get(feature):
+                    self.results.log_fail("Health Check", f"Feature not enabled: {feature}")
+                    return
+            
+            self.results.log_pass("Health Check - All 5 features enabled with transaction support")
+            
+        except Exception as e:
+            self.results.log_fail("Health Check", f"Exception: {str(e)}")
     
-    def test_health_check(self):
-        """Test 1: Health Check"""
-        status_code, response = self.make_request("GET", "/health")
-        
-        success = (status_code == 200 and 
-                  response.get("status") == "healthy" and
-                  "version" in response)
-        
-        self.log_test("Health Check", success, 
-                     f"Status: {status_code}, Response: {response}")
-        return success
-    
-    def test_admin_login(self):
+    def test_2_admin_login(self):
         """Test 2: Admin Authentication"""
-        login_data = {
-            "email": ADMIN_EMAIL,
-            "password": ADMIN_PASSWORD
-        }
+        print("\n🔍 TEST 2: Admin Authentication")
         
-        status_code, response = self.make_request("POST", "/auth/login", login_data)
-        
-        success = (status_code == 200 and 
-                  "access_token" in response and
-                  "user" in response)
-        
-        if success:
-            self.admin_token = response["access_token"]
-            self.admin_user_id = response["user"]["user_id"]
-            self.organisation_id = response["user"]["organisation_id"]
-            
-        self.log_test("Admin Login", success,
-                     f"Status: {status_code}, Token received: {bool(self.admin_token)}")
-        return success
-    
-    def test_supervisor_login(self):
-        """Test 3: Supervisor Authentication"""
-        login_data = {
-            "email": SUPERVISOR_EMAIL,
-            "password": SUPERVISOR_PASSWORD
-        }
-        
-        status_code, response = self.make_request("POST", "/auth/login", login_data)
-        
-        success = (status_code == 200 and 
-                  "access_token" in response and
-                  "user" in response)
-        
-        if success:
-            self.supervisor_token = response["access_token"]
-            self.supervisor_user_id = response["user"]["user_id"]
-            
-        self.log_test("Supervisor Login", success,
-                     f"Status: {status_code}, Token received: {bool(self.supervisor_token)}")
-        return success
-    
-    def test_get_all_users(self):
-        """Test 4: Get All Users"""
-        status_code, response = self.make_request("GET", "/users", token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  isinstance(response, list) and
-                  len(response) >= 2)  # Should have admin + supervisor
-        
-        user_emails = [user.get("email") for user in response] if isinstance(response, list) else []
-        has_admin = ADMIN_EMAIL in user_emails
-        has_supervisor = SUPERVISOR_EMAIL in user_emails
-        
-        self.log_test("Get All Users", success,
-                     f"Status: {status_code}, Users found: {len(response) if isinstance(response, list) else 0}, "
-                     f"Admin: {has_admin}, Supervisor: {has_supervisor}")
-        return success
-    
-    def test_get_user_by_id(self):
-        """Test 5: Get Specific User by ID"""
-        if not self.supervisor_user_id:
-            self.log_test("Get User by ID", False, "No supervisor user ID available")
-            return False
-            
-        status_code, response = self.make_request("GET", f"/users/{self.supervisor_user_id}", 
-                                                 token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  response.get("email") == SUPERVISOR_EMAIL)
-        
-        self.log_test("Get User by ID", success,
-                     f"Status: {status_code}, Email match: {response.get('email') == SUPERVISOR_EMAIL}")
-        return success
-    
-    def test_update_user(self):
-        """Test 6: Update User (change role, permissions)"""
-        if not self.supervisor_user_id:
-            self.log_test("Update User", False, "No supervisor user ID available")
-            return False
-            
-        update_data = {
-            "role": "Supervisor",
-            "dpr_generation_permission": True
-        }
-        
-        status_code, response = self.make_request("PUT", f"/users/{self.supervisor_user_id}",
-                                                 update_data, token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  response.get("role") == "Supervisor" and
-                  response.get("dpr_generation_permission") == True)
-        
-        self.log_test("Update User", success,
-                     f"Status: {status_code}, Role: {response.get('role')}, "
-                     f"DPR Permission: {response.get('dpr_generation_permission')}")
-        return success
-    
-    def test_get_all_codes(self):
-        """Test 7: Get All Code Master entries"""
-        status_code, response = self.make_request("GET", "/codes", token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  isinstance(response, list) and
-                  len(response) >= 5)  # Should have 5 seeded codes
-        
-        code_shorts = [code.get("code_short") for code in response] if isinstance(response, list) else []
-        expected_codes = ["CIV", "ELC", "PLB", "FIN", "SWP"]
-        has_expected = all(code in code_shorts for code in expected_codes)
-        
-        self.log_test("Get All Codes", success,
-                     f"Status: {status_code}, Codes found: {len(response) if isinstance(response, list) else 0}, "
-                     f"Expected codes present: {has_expected}")
-        return success
-    
-    def test_create_new_code(self):
-        """Test 8: Create New Code (MEP or alternative)"""
-        # Try MEP first, if it exists, try a different code
-        code_data = {
-            "code_short": "MEP",
-            "code_name": "Mechanical, Electrical & Plumbing"
-        }
-        
-        status_code, response = self.make_request("POST", "/codes", code_data, token=self.admin_token)
-        
-        # If MEP already exists, try a different code
-        if status_code == 400 and "already exists" in response.get("detail", ""):
-            code_data = {
-                "code_short": "HSE",
-                "code_name": "Health, Safety & Environment"
+        try:
+            login_data = {
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PASSWORD
             }
-            status_code, response = self.make_request("POST", "/codes", code_data, token=self.admin_token)
-        
-        success = (status_code == 201 and 
-                  "code_id" in response)
-        
-        if success:
-            self.created_entities['codes'].append(response["code_id"])
             
-        self.log_test("Create New Code", success,
-                     f"Status: {status_code}, Code created: {response.get('code_short')}")
-        return success
+            response = self.make_request('POST', '/auth/login', json=login_data)
+            
+            if not response or response.status_code != 200:
+                self.results.log_fail("Admin Login", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            
+            if 'access_token' not in data:
+                self.results.log_fail("Admin Login", "No access token in response")
+                return
+            
+            self.admin_token = data['access_token']
+            self.results.log_pass("Admin Login - Token obtained")
+            
+        except Exception as e:
+            self.results.log_fail("Admin Login", f"Exception: {str(e)}")
     
-    def test_update_code(self):
-        """Test 9: Update Code (change name, active status)"""
-        if not self.created_entities['codes']:
-            self.log_test("Update Code", False, "No created code available")
-            return False
+    def test_3_vendor_creation(self):
+        """Test 3: Vendor Creation (prerequisite)"""
+        print("\n🔍 TEST 3: Vendor Creation")
+        
+        try:
+            vendor_data = {
+                "vendor_name": "Test Vendor Corp",
+                "vendor_code": "V001",
+                "contact_person": "John Doe",
+                "email": "john@testvendor.com",
+                "phone": "+1234567890"
+            }
             
-        code_id = self.created_entities['codes'][0]
-        update_data = {
-            "code_name": "MEP - Updated Name",
-            "active_status": True
-        }
-        
-        status_code, response = self.make_request("PUT", f"/codes/{code_id}",
-                                                 update_data, token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  response.get("code_name") == "MEP - Updated Name")
-        
-        self.log_test("Update Code", success,
-                     f"Status: {status_code}, Updated name: {response.get('code_name')}")
-        return success
+            response = self.make_request('POST', '/v2/vendors', json=vendor_data)
+            
+            if not response or response.status_code != 201:
+                self.results.log_fail("Vendor Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            
+            if 'vendor_id' not in data:
+                self.results.log_fail("Vendor Creation", "No vendor_id in response")
+                return
+            
+            self.test_data['vendor_id'] = data['vendor_id']
+            self.results.log_pass("Vendor Creation - V001 created successfully")
+            
+        except Exception as e:
+            self.results.log_fail("Vendor Creation", f"Exception: {str(e)}")
     
-    def test_delete_referenced_code(self):
-        """Test 10: Try to Delete Referenced Code (should fail)"""
-        # First get a code that might be referenced (CIV)
-        status_code, codes = self.make_request("GET", "/codes", token=self.admin_token)
+    def test_4_create_project_and_code(self):
+        """Test 4: Create Project and Code (prerequisites)"""
+        print("\n🔍 TEST 4: Create Project and Code")
         
-        if status_code != 200 or not isinstance(codes, list):
-            self.log_test("Delete Referenced Code", False, "Could not get codes list")
-            return False
+        try:
+            # Create project
+            project_data = {
+                "project_name": "Phase 2 Test Project",
+                "project_description": "Test project for hardened financial engine",
+                "project_retention_percentage": 10.0,
+                "project_cgst_percentage": 9.0,
+                "project_sgst_percentage": 9.0
+            }
             
-        civ_code = next((code for code in codes if code.get("code_short") == "CIV"), None)
-        if not civ_code:
-            self.log_test("Delete Referenced Code", False, "CIV code not found")
-            return False
+            response = self.make_request('POST', '/projects', json=project_data)
             
-        code_id = civ_code["code_id"]
-        status_code, response = self.make_request("DELETE", f"/codes/{code_id}", token=self.admin_token)
-        
-        # Should fail with 400 if referenced in budgets
-        success = status_code == 400 or status_code == 204  # 204 if not referenced yet
-        
-        self.log_test("Delete Referenced Code", success,
-                     f"Status: {status_code}, Expected failure or success based on references")
-        return success
+            if not response or response.status_code != 201:
+                self.results.log_fail("Project Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            self.test_data['project_id'] = data['project_id']
+            
+            # Create code
+            code_data = {
+                "code_short": "TEST001",
+                "code_description": "Test Code for Financial Hardening"
+            }
+            
+            response = self.make_request('POST', '/codes', json=code_data)
+            
+            if not response or response.status_code != 201:
+                self.results.log_fail("Code Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            self.test_data['code_id'] = data['code_id']
+            
+            # Create budget
+            budget_data = {
+                "project_id": self.test_data['project_id'],
+                "code_id": self.test_data['code_id'],
+                "approved_budget_amount": 100.0  # Small budget for over-certification test
+            }
+            
+            response = self.make_request('POST', '/budgets', json=budget_data)
+            
+            if not response or response.status_code != 201:
+                self.results.log_fail("Budget Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            self.test_data['budget_id'] = data['budget_id']
+            
+            self.results.log_pass("Project, Code, and Budget Creation - All prerequisites created")
+            
+        except Exception as e:
+            self.results.log_fail("Prerequisites Creation", f"Exception: {str(e)}")
     
-    def test_create_project(self):
-        """Test 11: Create New Project"""
-        project_data = {
-            "project_name": "Test Construction Project",
-            "client_name": "Test Client Ltd",
-            "start_date": datetime.now().isoformat(),
-            "project_retention_percentage": 5.0,
-            "project_cgst_percentage": 9.0,
-            "project_sgst_percentage": 9.0,
-            "currency_code": "INR"
-        }
+    def test_5_work_order_lifecycle(self):
+        """Test 5: Work Order Lifecycle Test"""
+        print("\n🔍 TEST 5: Work Order Lifecycle Test")
         
-        status_code, response = self.make_request("POST", "/projects", project_data, token=self.admin_token)
-        
-        success = (status_code == 201 and 
-                  response.get("project_name") == "Test Construction Project" and
-                  "project_id" in response)
-        
-        if success:
-            self.created_entities['projects'].append(response["project_id"])
+        try:
+            # Create draft WO
+            wo_data = {
+                "project_id": self.test_data['project_id'],
+                "code_id": self.test_data['code_id'],
+                "vendor_id": self.test_data['vendor_id'],
+                "prefix": "WO",
+                "issue_date": datetime.utcnow().isoformat(),
+                "rate": 10.333,  # Test decimal precision
+                "quantity": 3,
+                "retention_percentage": 10.0
+            }
             
-        self.log_test("Create Project", success,
-                     f"Status: {status_code}, Project: {response.get('project_name')}")
-        return success
-    
-    def test_get_all_projects(self):
-        """Test 12: Get All Projects"""
-        status_code, response = self.make_request("GET", "/projects", token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  isinstance(response, list))
-        
-        self.log_test("Get All Projects", success,
-                     f"Status: {status_code}, Projects found: {len(response) if isinstance(response, list) else 0}")
-        return success
-    
-    def test_get_project_by_id(self):
-        """Test 13: Get Project by ID"""
-        if not self.created_entities['projects']:
-            self.log_test("Get Project by ID", False, "No created project available")
-            return False
+            response = self.make_request('POST', '/v2/work-orders', json=wo_data)
             
-        project_id = self.created_entities['projects'][0]
-        status_code, response = self.make_request("GET", f"/projects/{project_id}", token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  response.get("project_name") == "Test Construction Project")
-        
-        self.log_test("Get Project by ID", success,
-                     f"Status: {status_code}, Project: {response.get('project_name')}")
-        return success
-    
-    def test_update_project(self):
-        """Test 14: Update Project (change retention %)"""
-        if not self.created_entities['projects']:
-            self.log_test("Update Project", False, "No created project available")
-            return False
+            if not response or response.status_code != 201:
+                self.results.log_fail("WO Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
             
-        project_id = self.created_entities['projects'][0]
-        update_data = {
-            "project_retention_percentage": 7.5
-        }
-        
-        status_code, response = self.make_request("PUT", f"/projects/{project_id}",
-                                                 update_data, token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  response.get("project_retention_percentage") == 7.5)
-        
-        self.log_test("Update Project", success,
-                     f"Status: {status_code}, Retention %: {response.get('project_retention_percentage')}")
-        return success
-    
-    def test_create_budgets(self):
-        """Test 15: Create Budgets for Project + Codes"""
-        if not self.created_entities['projects']:
-            self.log_test("Create Budgets", False, "No created project available")
-            return False
+            data = response.json()
+            wo_id = data['wo_id']
             
-        # Get CIV and ELC codes
-        status_code, codes = self.make_request("GET", "/codes", token=self.admin_token)
-        if status_code != 200:
-            self.log_test("Create Budgets", False, "Could not get codes")
-            return False
+            # Verify decimal precision (10.333 * 3 = 30.999, should round to 31.00)
+            expected_base_amount = 31.00  # 10.333 * 3 rounded
+            if abs(data['base_amount'] - expected_base_amount) > 0.01:
+                self.results.log_fail("WO Decimal Precision", f"Expected {expected_base_amount}, got {data['base_amount']}")
+                return
             
-        civ_code = next((code for code in codes if code.get("code_short") == "CIV"), None)
-        elc_code = next((code for code in codes if code.get("code_short") == "ELC"), None)
-        
-        if not civ_code or not elc_code:
-            self.log_test("Create Budgets", False, "CIV or ELC code not found")
-            return False
+            # Verify draft status
+            if data['status'] != 'Draft':
+                self.results.log_fail("WO Draft Status", f"Expected Draft, got {data['status']}")
+                return
             
-        project_id = self.created_entities['projects'][0]
-        
-        # Create CIV budget
-        budget_data_civ = {
-            "project_id": project_id,
-            "code_id": civ_code["code_id"],
-            "approved_budget_amount": 1000000.0
-        }
-        
-        status_code, response = self.make_request("POST", "/budgets", budget_data_civ, token=self.admin_token)
-        success_civ = status_code == 201
-        
-        if success_civ:
-            self.created_entities['budgets'].append(response["budget_id"])
-        
-        # Create ELC budget
-        budget_data_elc = {
-            "project_id": project_id,
-            "code_id": elc_code["code_id"],
-            "approved_budget_amount": 500000.0
-        }
-        
-        status_code, response = self.make_request("POST", "/budgets", budget_data_elc, token=self.admin_token)
-        success_elc = status_code == 201
-        
-        if success_elc:
-            self.created_entities['budgets'].append(response["budget_id"])
-        
-        success = success_civ and success_elc
-        
-        self.log_test("Create Budgets", success,
-                     f"CIV Budget: {success_civ}, ELC Budget: {success_elc}")
-        return success
-    
-    def test_get_budgets_for_project(self):
-        """Test 16: Get Budgets for Project"""
-        if not self.created_entities['projects']:
-            self.log_test("Get Budgets for Project", False, "No created project available")
-            return False
+            if data['document_number'] != 'DRAFT':
+                self.results.log_fail("WO Draft Number", f"Expected DRAFT, got {data['document_number']}")
+                return
             
-        project_id = self.created_entities['projects'][0]
-        params = {"project_id": project_id}
-        
-        status_code, response = self.make_request("GET", "/budgets", token=self.admin_token, params=params)
-        
-        success = (status_code == 200 and 
-                  isinstance(response, list) and
-                  len(response) >= 2)  # Should have CIV and ELC budgets
-        
-        self.log_test("Get Budgets for Project", success,
-                     f"Status: {status_code}, Budgets found: {len(response) if isinstance(response, list) else 0}")
-        return success
-    
-    def test_update_budget(self):
-        """Test 17: Update Budget (should trigger financial recalculation)"""
-        if not self.created_entities['budgets']:
-            self.log_test("Update Budget", False, "No created budget available")
-            return False
+            # Issue the WO
+            response = self.make_request('POST', f'/v2/work-orders/{wo_id}/issue')
             
-        budget_id = self.created_entities['budgets'][0]
-        update_data = {
-            "approved_budget_amount": 1200000.0
-        }
-        
-        status_code, response = self.make_request("PUT", f"/budgets/{budget_id}",
-                                                 update_data, token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  response.get("approved_budget_amount") == 1200000.0)
-        
-        self.log_test("Update Budget", success,
-                     f"Status: {status_code}, Updated amount: {response.get('approved_budget_amount')}")
-        return success
-    
-    def test_get_financial_state(self):
-        """Test 18: Get Derived Financial State for Project"""
-        if not self.created_entities['projects']:
-            self.log_test("Get Financial State", False, "No created project available")
-            return False
+            if not response or response.status_code != 200:
+                self.results.log_fail("WO Issue", f"Status: {response.status_code if response else 'No response'}")
+                return
             
-        project_id = self.created_entities['projects'][0]
-        params = {"project_id": project_id}
-        
-        status_code, response = self.make_request("GET", "/financial-state", 
-                                                 token=self.admin_token, params=params)
-        
-        success = status_code == 200 and isinstance(response, list)
-        
-        # Verify Phase 1 logic: committed_value = 0, certified_value = 0, paid_value = 0
-        if success and response:
-            for state in response:
-                phase1_logic = (state.get("committed_value", -1) == 0.0 and
-                               state.get("certified_value", -1) == 0.0 and
-                               state.get("paid_value", -1) == 0.0 and
-                               state.get("over_commit_flag") == False and
-                               state.get("over_certification_flag") == False and
-                               state.get("over_payment_flag") == False)
-                
-                if not phase1_logic:
-                    success = False
-                    break
-        
-        self.log_test("Get Financial State", success,
-                     f"Status: {status_code}, States found: {len(response) if isinstance(response, list) else 0}, "
-                     f"Phase 1 logic verified: {success}")
-        return success
-    
-    def test_create_user_project_mapping(self):
-        """Test 19: Create User-Project Mapping"""
-        if not self.created_entities['projects'] or not self.supervisor_user_id:
-            self.log_test("Create User-Project Mapping", False, "Missing project or supervisor")
-            return False
+            data = response.json()
             
-        mapping_data = {
-            "user_id": self.supervisor_user_id,
-            "project_id": self.created_entities['projects'][0],
-            "read_access": True,
-            "write_access": True
-        }
-        
-        status_code, response = self.make_request("POST", "/mappings", mapping_data, token=self.admin_token)
-        
-        success = (status_code == 201 and 
-                  response.get("user_id") == self.supervisor_user_id and
-                  "map_id" in response)
-        
-        if success:
-            self.created_entities['mappings'].append(response["map_id"])
+            # Verify atomic document number assigned
+            if not data['document_number'].startswith('WO-'):
+                self.results.log_fail("WO Atomic Numbering", f"Expected WO-XXXXXX, got {data['document_number']}")
+                return
             
-        self.log_test("Create User-Project Mapping", success,
-                     f"Status: {status_code}, Mapping created: {bool(success)}")
-        return success
-    
-    def test_get_mappings(self):
-        """Test 20: Get Mappings"""
-        status_code, response = self.make_request("GET", "/mappings", token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  isinstance(response, list))
-        
-        self.log_test("Get Mappings", success,
-                     f"Status: {status_code}, Mappings found: {len(response) if isinstance(response, list) else 0}")
-        return success
-    
-    def test_delete_mapping(self):
-        """Test 21: Delete Mapping"""
-        if not self.created_entities['mappings']:
-            self.log_test("Delete Mapping", False, "No created mapping available")
-            return False
+            if data['status'] != 'Issued':
+                self.results.log_fail("WO Issue Status", f"Expected Issued, got {data['status']}")
+                return
             
-        map_id = self.created_entities['mappings'][0]
-        status_code, response = self.make_request("DELETE", f"/mappings/{map_id}", token=self.admin_token)
-        
-        success = status_code == 204
-        
-        self.log_test("Delete Mapping", success,
-                     f"Status: {status_code}")
-        return success
-    
-    def test_get_audit_logs(self):
-        """Test 22: Get Audit Logs (Admin only)"""
-        status_code, response = self.make_request("GET", "/audit-logs", token=self.admin_token)
-        
-        success = (status_code == 200 and 
-                  isinstance(response, list))
-        
-        # Verify CREATE and UPDATE actions are logged
-        create_actions = [log for log in response if log.get("action_type") == "CREATE"]
-        update_actions = [log for log in response if log.get("action_type") == "UPDATE"]
-        
-        self.log_test("Get Audit Logs", success,
-                     f"Status: {status_code}, Logs found: {len(response) if isinstance(response, list) else 0}, "
-                     f"CREATE actions: {len(create_actions)}, UPDATE actions: {len(update_actions)}")
-        return success
-    
-    def test_permission_enforcement_non_admin(self):
-        """Test 23: Permission Enforcement - Non-admin cannot access admin endpoints"""
-        # Try to create a project with supervisor token
-        project_data = {
-            "project_name": "Unauthorized Project",
-            "client_name": "Test Client",
-            "start_date": datetime.now().isoformat()
-        }
-        
-        status_code, response = self.make_request("POST", "/projects", project_data, token=self.supervisor_token)
-        
-        success = status_code == 403  # Should be forbidden
-        
-        self.log_test("Permission Enforcement - Non-admin", success,
-                     f"Status: {status_code}, Expected 403 Forbidden")
-        return success
-    
-    def test_permission_enforcement_no_mapping(self):
-        """Test 24: Permission Enforcement - Supervisor without mapping cannot access project"""
-        if not self.created_entities['projects']:
-            self.log_test("Permission Enforcement - No Mapping", False, "No created project available")
-            return False
+            self.test_data['wo_id'] = wo_id
+            self.results.log_pass("Work Order Lifecycle - Draft created, issued with atomic numbering")
             
-        # Since we deleted the mapping, supervisor should not have access
-        project_id = self.created_entities['projects'][0]
-        status_code, response = self.make_request("GET", f"/projects/{project_id}", token=self.supervisor_token)
+        except Exception as e:
+            self.results.log_fail("Work Order Lifecycle", f"Exception: {str(e)}")
+    
+    def test_6_payment_certificate_lifecycle(self):
+        """Test 6: Payment Certificate Lifecycle Test"""
+        print("\n🔍 TEST 6: Payment Certificate Lifecycle Test")
         
-        success = status_code == 403  # Should be forbidden
+        try:
+            # Create draft PC
+            pc_data = {
+                "project_id": self.test_data['project_id'],
+                "code_id": self.test_data['code_id'],
+                "vendor_id": self.test_data['vendor_id'],
+                "prefix": "PC",
+                "bill_date": datetime.utcnow().isoformat(),
+                "current_bill_amount": 25.0,
+                "retention_percentage": 10.0
+            }
+            
+            response = self.make_request('POST', '/v2/payment-certificates', json=pc_data)
+            
+            if not response or response.status_code != 201:
+                self.results.log_fail("PC Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            pc_id = data['pc_id']
+            
+            # Verify draft status
+            if data['status'] != 'Draft':
+                self.results.log_fail("PC Draft Status", f"Expected Draft, got {data['status']}")
+                return
+            
+            # Certify the PC with invoice number
+            invoice_number = f"INV-{int(time.time())}"
+            response = self.make_request('POST', f'/v2/payment-certificates/{pc_id}/certify', 
+                                       params={'invoice_number': invoice_number})
+            
+            if not response or response.status_code != 200:
+                self.results.log_fail("PC Certification", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            
+            # Verify atomic document number assigned
+            if not data['document_number'].startswith('PC-'):
+                self.results.log_fail("PC Atomic Numbering", f"Expected PC-XXXXXX, got {data['document_number']}")
+                return
+            
+            if data['status'] != 'Certified':
+                self.results.log_fail("PC Certification Status", f"Expected Certified, got {data['status']}")
+                return
+            
+            self.test_data['pc_id'] = pc_id
+            self.test_data['invoice_number'] = invoice_number
+            
+            self.results.log_pass("Payment Certificate Lifecycle - Draft created, certified with atomic numbering")
+            
+        except Exception as e:
+            self.results.log_fail("Payment Certificate Lifecycle", f"Exception: {str(e)}")
+    
+    def test_7_duplicate_invoice_protection(self):
+        """Test 7: Duplicate Invoice Protection"""
+        print("\n🔍 TEST 7: Duplicate Invoice Protection")
         
-        self.log_test("Permission Enforcement - No Mapping", success,
-                     f"Status: {status_code}, Expected 403 Forbidden")
-        return success
+        try:
+            # Create another PC with same invoice number
+            pc_data = {
+                "project_id": self.test_data['project_id'],
+                "code_id": self.test_data['code_id'],
+                "vendor_id": self.test_data['vendor_id'],
+                "prefix": "PC",
+                "bill_date": datetime.utcnow().isoformat(),
+                "current_bill_amount": 15.0,
+                "retention_percentage": 10.0
+            }
+            
+            response = self.make_request('POST', '/v2/payment-certificates', json=pc_data)
+            
+            if not response or response.status_code != 201:
+                self.results.log_fail("Duplicate PC Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            duplicate_pc_id = data['pc_id']
+            
+            # Try to certify with same invoice number - should FAIL
+            response = self.make_request('POST', f'/v2/payment-certificates/{duplicate_pc_id}/certify',
+                                       params={'invoice_number': self.test_data['invoice_number']})
+            
+            if response and response.status_code == 400:
+                error_data = response.json()
+                if 'duplicate' in error_data.get('detail', '').lower():
+                    self.results.log_pass("Duplicate Invoice Protection - Correctly blocked duplicate invoice")
+                else:
+                    self.results.log_fail("Duplicate Invoice Protection", f"Wrong error message: {error_data.get('detail')}")
+            else:
+                self.results.log_fail("Duplicate Invoice Protection", f"Expected 400 error, got {response.status_code if response else 'No response'}")
+            
+        except Exception as e:
+            self.results.log_fail("Duplicate Invoice Protection", f"Exception: {str(e)}")
+    
+    def test_8_financial_invariant_over_certification(self):
+        """Test 8: Financial Invariant Test (Over-certification)"""
+        print("\n🔍 TEST 8: Financial Invariant Test (Over-certification)")
+        
+        try:
+            # Create PC with amount greater than budget (budget is 100, try 200)
+            pc_data = {
+                "project_id": self.test_data['project_id'],
+                "code_id": self.test_data['code_id'],
+                "vendor_id": self.test_data['vendor_id'],
+                "prefix": "PC",
+                "bill_date": datetime.utcnow().isoformat(),
+                "current_bill_amount": 200.0,  # Exceeds budget of 100
+                "retention_percentage": 10.0
+            }
+            
+            response = self.make_request('POST', '/v2/payment-certificates', json=pc_data)
+            
+            if not response or response.status_code != 201:
+                self.results.log_fail("Over-cert PC Creation", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            over_cert_pc_id = data['pc_id']
+            
+            # Try to certify - should FAIL due to invariant violation
+            response = self.make_request('POST', f'/v2/payment-certificates/{over_cert_pc_id}/certify')
+            
+            if response and response.status_code == 400:
+                error_data = response.json()
+                if 'invariant' in error_data.get('detail', '').lower():
+                    self.results.log_pass("Financial Invariant - Correctly blocked over-certification")
+                else:
+                    self.results.log_fail("Financial Invariant", f"Wrong error message: {error_data.get('detail')}")
+            else:
+                self.results.log_fail("Financial Invariant", f"Expected 400 error, got {response.status_code if response else 'No response'}")
+            
+        except Exception as e:
+            self.results.log_fail("Financial Invariant", f"Exception: {str(e)}")
+    
+    def test_9_payment_recording(self):
+        """Test 9: Payment Recording Test"""
+        print("\n🔍 TEST 9: Payment Recording Test")
+        
+        try:
+            # Get the certified PC details first
+            response = self.make_request('GET', f'/v2/payment-certificates/{self.test_data["pc_id"]}')
+            
+            if not response or response.status_code != 200:
+                self.results.log_fail("Get PC for Payment", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            pc_data = response.json()
+            net_payable = pc_data.get('net_payable', 0)
+            
+            # Record valid payment
+            payment_data = {
+                "pc_id": self.test_data['pc_id'],
+                "payment_amount": net_payable * 0.5,  # Pay 50%
+                "payment_date": datetime.utcnow().isoformat(),
+                "payment_reference": "TEST-PAY-001"
+            }
+            
+            response = self.make_request('POST', '/v2/payments', json=payment_data)
+            
+            if not response or response.status_code != 201:
+                self.results.log_fail("Payment Recording", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            data = response.json()
+            payment_id = data['payment_id']
+            
+            # Try to overpay - should FAIL
+            overpay_data = {
+                "pc_id": self.test_data['pc_id'],
+                "payment_amount": net_payable,  # This would exceed remaining amount
+                "payment_date": datetime.utcnow().isoformat(),
+                "payment_reference": "TEST-OVERPAY-001"
+            }
+            
+            response = self.make_request('POST', '/v2/payments', json=overpay_data)
+            
+            if response and response.status_code == 400:
+                error_data = response.json()
+                if 'exceed' in error_data.get('detail', '').lower():
+                    self.results.log_pass("Payment Recording - Valid payment recorded, overpayment blocked")
+                else:
+                    self.results.log_fail("Payment Recording", f"Wrong overpay error: {error_data.get('detail')}")
+            else:
+                self.results.log_fail("Payment Recording", f"Expected 400 for overpay, got {response.status_code if response else 'No response'}")
+            
+        except Exception as e:
+            self.results.log_fail("Payment Recording", f"Exception: {str(e)}")
+    
+    def test_10_retention_release(self):
+        """Test 10: Retention Release Test"""
+        print("\n🔍 TEST 10: Retention Release Test")
+        
+        try:
+            # Get current financial state to see retention held
+            response = self.make_request('GET', f'/v2/financial-state/{self.test_data["project_id"]}',
+                                       params={'code_id': self.test_data['code_id']})
+            
+            if not response or response.status_code != 200:
+                self.results.log_fail("Get Financial State", f"Status: {response.status_code if response else 'No response'}")
+                return
+            
+            states = response.json()
+            if not states:
+                self.results.log_fail("Get Financial State", "No financial state found")
+                return
+            
+            retention_held = states[0].get('retention_held', 0)
+            
+            if retention_held <= 0:
+                self.results.log_fail("Retention Release", f"No retention to release: {retention_held}")
+                return
+            
+            # Try to release more than held - should FAIL
+            over_release_data = {
+                "project_id": self.test_data['project_id'],
+                "code_id": self.test_data['code_id'],
+                "vendor_id": self.test_data['vendor_id'],
+                "release_amount": retention_held + 10.0,  # More than available
+                "release_date": datetime.utcnow().isoformat()
+            }
+            
+            response = self.make_request('POST', '/v2/retention-releases', json=over_release_data)
+            
+            if response and response.status_code == 400:
+                error_data = response.json()
+                if 'exceed' in error_data.get('detail', '').lower():
+                    self.results.log_pass("Retention Release - Correctly blocked over-release")
+                else:
+                    self.results.log_fail("Retention Release", f"Wrong error message: {error_data.get('detail')}")
+            else:
+                self.results.log_fail("Retention Release", f"Expected 400 error, got {response.status_code if response else 'No response'}")
+            
+            # Valid release
+            valid_release_data = {
+                "project_id": self.test_data['project_id'],
+                "code_id": self.test_data['code_id'],
+                "vendor_id": self.test_data['vendor_id'],
+                "release_amount": retention_held * 0.5,  # Release 50%
+                "release_date": datetime.utcnow().isoformat()
+            }
+            
+            response = self.make_request('POST', '/v2/retention-releases', json=valid_release_data)
+            
+            if response and response.status_code == 201:
+                self.results.log_pass("Retention Release - Valid release processed successfully")
+            else:
+                self.results.log_fail("Retention Release", f"Valid release failed: {response.status_code if response else 'No response'}")
+            
+        except Exception as e:
+            self.results.log_fail("Retention Release", f"Exception: {str(e)}")
     
     def run_all_tests(self):
-        """Run all tests in sequence"""
-        print("=" * 80)
-        print("CONSTRUCTION MANAGEMENT SYSTEM - PHASE 1 API TESTING")
-        print("=" * 80)
-        print()
+        """Run all Phase 2 Wave 1 tests"""
+        print("🚀 STARTING PHASE 2 WAVE 1 FINANCIAL CORE HARDENING TESTS")
+        print(f"Base URL: {BASE_URL}")
+        print(f"Admin: {ADMIN_EMAIL}")
         
-        tests = [
-            self.test_health_check,
-            self.test_admin_login,
-            self.test_supervisor_login,
-            self.test_get_all_users,
-            self.test_get_user_by_id,
-            self.test_update_user,
-            self.test_get_all_codes,
-            self.test_create_new_code,
-            self.test_update_code,
-            self.test_delete_referenced_code,
-            self.test_create_project,
-            self.test_get_all_projects,
-            self.test_get_project_by_id,
-            self.test_update_project,
-            self.test_create_budgets,
-            self.test_get_budgets_for_project,
-            self.test_update_budget,
-            self.test_get_financial_state,
-            self.test_create_user_project_mapping,
-            self.test_get_mappings,
-            self.test_delete_mapping,
-            self.test_get_audit_logs,
-            self.test_permission_enforcement_non_admin,
-            self.test_permission_enforcement_no_mapping
-        ]
+        # Run tests in sequence
+        self.test_1_health_check_transaction_support()
+        self.test_2_admin_login()
         
-        passed = 0
-        failed = 0
+        if not self.admin_token:
+            print("❌ Cannot continue without admin token")
+            return False
         
-        for test in tests:
-            try:
-                if test():
-                    passed += 1
-                else:
-                    failed += 1
-            except Exception as e:
-                print(f"❌ FAIL {test.__name__} - Exception: {str(e)}")
-                failed += 1
+        self.test_3_vendor_creation()
+        self.test_4_create_project_and_code()
+        self.test_5_work_order_lifecycle()
+        self.test_6_payment_certificate_lifecycle()
+        self.test_7_duplicate_invoice_protection()
+        self.test_8_financial_invariant_over_certification()
+        self.test_9_payment_recording()
+        self.test_10_retention_release()
         
-        print("=" * 80)
-        print("TEST SUMMARY")
-        print("=" * 80)
-        print(f"Total Tests: {passed + failed}")
-        print(f"Passed: {passed}")
-        print(f"Failed: {failed}")
-        print(f"Success Rate: {(passed / (passed + failed) * 100):.1f}%")
-        print()
-        
-        if failed > 0:
-            print("FAILED TESTS:")
-            for result in self.test_results:
-                if not result['success']:
-                    print(f"- {result['test']}: {result['details']}")
-        
-        return failed == 0
+        return self.results.summary()
 
 def main():
-    """Main function"""
-    tester = APITester()
-    success = tester.run_all_tests()
+    """Main test execution"""
+    suite = Phase2TestSuite()
+    success = suite.run_all_tests()
     
     if success:
-        print("🎉 All tests passed! API is working correctly.")
+        print("\n🎉 ALL TESTS PASSED - Phase 2 Wave 1 Financial Core Hardening is working correctly!")
         sys.exit(0)
     else:
-        print("⚠️  Some tests failed. Check the details above.")
+        print("\n💥 SOME TESTS FAILED - Check the failures above")
         sys.exit(1)
 
 if __name__ == "__main__":
