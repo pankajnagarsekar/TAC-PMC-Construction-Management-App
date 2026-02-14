@@ -1082,6 +1082,10 @@ async def health_check():
 # Include router in main app
 app.include_router(api_router)
 
+# Include Phase 2 hardened routes
+from hardened_routes import hardened_router
+app.include_router(hardened_router)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
