@@ -36,16 +36,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const checkAuthStatus = async () => {
+    console.log('Checking auth status...');
     try {
       const isAuth = await authApi.isAuthenticated();
+      console.log('Is authenticated:', isAuth);
       if (isAuth) {
         const user = await authApi.getCurrentUser();
+        console.log('Found user:', user?.email);
         setState({
           user,
           isLoading: false,
           isAuthenticated: !!user,
         });
       } else {
+        console.log('No auth token found');
         setState({
           user: null,
           isLoading: false,
