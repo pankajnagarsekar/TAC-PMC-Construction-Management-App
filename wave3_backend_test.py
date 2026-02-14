@@ -324,13 +324,13 @@ class Wave3Tester:
         headers = {"Authorization": f"Bearer {self.admin_token}"}
         
         try:
-            # 5a) Generate signed URL
-            sign_data = {
+            # 5a) Generate signed URL - use query parameters
+            params = {
                 "resource_path": "test/image.jpg",
                 "expiration_hours": 1
             }
             
-            async with self.session.post(f"{BASE_URL}/v2/media/sign", json=sign_data, headers=headers) as resp:
+            async with self.session.post(f"{BASE_URL}/v2/media/sign", params=params, headers=headers) as resp:
                 if resp.status == 200:
                     result = await resp.json()
                     signed_url = result.get("signed_url")
