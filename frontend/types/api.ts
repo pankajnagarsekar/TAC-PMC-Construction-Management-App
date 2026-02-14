@@ -100,6 +100,21 @@ export interface BudgetPerCode {
   updated_at: string;
 }
 
+// Budget with computed financial state (joined view)
+export interface BudgetWithFinancials {
+  budget_id: string;
+  project_id: string;
+  code_id: string;
+  approved_budget: number;
+  committed_value: number;
+  certified_value: number;
+  paid_value: number;
+  balance_budget_remaining: number;
+  over_commit_flag: boolean;
+  over_certification_flag: boolean;
+  over_payment_flag: boolean;
+}
+
 export interface CreateBudgetRequest {
   project_id: string;
   code_id: string;
