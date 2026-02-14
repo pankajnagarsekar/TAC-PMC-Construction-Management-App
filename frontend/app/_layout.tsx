@@ -33,13 +33,13 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
         router.replace('/(supervisor)/dashboard');
       }
     } else if (isAuthenticated && user) {
-      // Check role-based access
-      if (user.role === 'Admin' && inSupervisorGroup) {
-        // Admin trying to access supervisor routes - allow but could redirect
-      } else if (user.role !== 'Admin' && inAdminGroup) {
-        // Non-admin trying to access admin routes - redirect
+      // STRICT ROLE-BASED ACCESS ENFORCEMENT
+      // Supervisor CANNOT access Admin routes - redirect immediately
+      if (user.role !== 'Admin' && inAdminGroup) {
         router.replace('/(supervisor)/dashboard');
       }
+      // Admin CAN access Supervisor routes (for oversight)
+      // But Supervisor is strictly blocked from Admin routes
     }
   }, [isAuthenticated, isLoading, segments, user]);
 
