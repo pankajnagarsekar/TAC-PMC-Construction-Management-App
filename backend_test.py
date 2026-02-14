@@ -236,18 +236,20 @@ class Wave2Tester:
         
         # Try to revise the locked work order
         revise_data = {
-            "description": "Trying to modify locked WO",
             "rate": 200.00
         }
         
-        async with self.session.put(
+        async with self.session.post(
             f"{API_V2_BASE}/work-orders/{self.wo_id}/revise",
             json=revise_data,
             headers=self.get_headers(self.admin_token)
         ) as resp:
             if resp.status == 400:
                 error_data = await resp.json()
-                if "locked" in error_data.get("detail", "").lower():
+                error_detail = error_data.get("detail", "")
+                if isinstance(error_detail, list):
+                    error_detail = str(error_detail)
+                if "locked" in error_detail.lower():
                     print("✅ PASS: Edit blocked on locked WO")
                     self.test_results["scenario_1"] = "PASS"
                     return True
@@ -256,7 +258,8 @@ class Wave2Tester:
                     self.test_results["scenario_1"] = "FAIL"
                     return False
             else:
-                print(f"❌ FAIL: Expected 400, got {resp.status}")
+                error_text = await resp.text()
+                print(f"❌ FAIL: Expected 400, got {resp.status}: {error_text}")
                 self.test_results["scenario_1"] = "FAIL"
                 return False
     
