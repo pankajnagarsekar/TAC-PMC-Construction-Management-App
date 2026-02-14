@@ -720,10 +720,13 @@ async def get_financial_state(
     
     states = await db.derived_financial_state.find(query).to_list(length=None)
     
+    # Serialize to handle Decimal128
+    result = []
     for s in states:
         s["state_id"] = str(s.pop("_id"))
+        result.append(serialize_doc(s))
     
-    return states
+    return result
 
 
 @hardened_router.post("/financial-state/{project_id}/recalculate")
