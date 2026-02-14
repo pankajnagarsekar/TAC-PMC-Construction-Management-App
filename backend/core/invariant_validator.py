@@ -88,7 +88,16 @@ class FinancialInvariantValidator:
         
         violations = []
         
-        # INVARIANT 1: certified_value <= approved_budget
+        # INVARIANT 1: certified_value <= committed_value (cannot certify more than committed)
+        if certified_value > committed_value and committed_value > Decimal('0'):
+            violations.append({
+                "type": "OVER_CERTIFICATION_VS_COMMITTED",
+                "message": f"certified_value ({to_float(certified_value)}) exceeds committed_value ({to_float(committed_value)})",
+                "certified_value": to_float(certified_value),
+                "committed_value": to_float(committed_value)
+            })
+        
+        # INVARIANT 2: certified_value <= approved_budget
         if certified_value > approved_budget:
             violations.append({
                 "type": "OVER_CERTIFICATION",
