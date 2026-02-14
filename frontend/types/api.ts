@@ -31,6 +31,16 @@ export interface User {
 }
 
 // ============================================
+// ORGANISATION
+// ============================================
+export interface Organisation {
+  organisation_id: string;
+  organisation_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
 // PROJECTS
 // ============================================
 export interface Project {
@@ -49,8 +59,59 @@ export interface Project {
   updated_at: string;
 }
 
+export interface CreateProjectRequest {
+  project_name: string;
+  client_name: string;
+  start_date: string;
+  end_date?: string;
+  dpr_enforcement_enabled?: boolean;
+  project_retention_percentage?: number;
+  project_cgst_percentage?: number;
+  project_sgst_percentage?: number;
+  currency_code?: string;
+}
+
 // ============================================
-// FINANCIAL STATE
+// CODES
+// ============================================
+export interface Code {
+  code_id: string;
+  code_short: string;
+  code_name: string;
+  active_status: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCodeRequest {
+  code_short: string;
+  code_name: string;
+}
+
+// ============================================
+// BUDGET PER CODE
+// ============================================
+export interface BudgetPerCode {
+  budget_id: string;
+  project_id: string;
+  code_id: string;
+  approved_budget_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateBudgetRequest {
+  project_id: string;
+  code_id: string;
+  approved_budget_amount: number;
+}
+
+export interface UpdateBudgetRequest {
+  approved_budget_amount: number;
+}
+
+// ============================================
+// FINANCIAL STATE (Derived/Computed)
 // ============================================
 export interface FinancialState {
   state_id: string;
@@ -69,24 +130,29 @@ export interface FinancialState {
 }
 
 // ============================================
-// BUDGET
+// VENDORS
 // ============================================
-export interface Budget {
-  budget_id: string;
-  project_id: string;
-  code_id: string;
-  approved_budget_amount: number;
+export interface Vendor {
+  vendor_id: string;
+  organisation_id: string;
+  vendor_name: string;
+  vendor_code: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  active_status: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface Code {
-  code_id: string;
-  code_short: string;
-  code_name: string;
-  active_status: boolean;
-  created_at: string;
-  updated_at: string;
+export interface CreateVendorRequest {
+  vendor_name: string;
+  vendor_code: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
 }
 
 // ============================================
@@ -124,6 +190,12 @@ export interface CreateWorkOrderRequest {
   issue_date: string;
   rate: number;
   quantity: number;
+  retention_percentage?: number;
+}
+
+export interface ReviseWorkOrderRequest {
+  rate?: number;
+  quantity?: number;
   retention_percentage?: number;
 }
 
@@ -171,6 +243,11 @@ export interface CreatePaymentCertificateRequest {
   retention_percentage?: number;
 }
 
+export interface RevisePaymentCertificateRequest {
+  current_bill_amount?: number;
+  retention_percentage?: number;
+}
+
 // ============================================
 // PAYMENTS
 // ============================================
@@ -215,24 +292,7 @@ export interface CreateRetentionReleaseRequest {
 }
 
 // ============================================
-// VENDORS
-// ============================================
-export interface Vendor {
-  vendor_id: string;
-  organisation_id: string;
-  vendor_name: string;
-  vendor_code: string;
-  contact_person?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  active_status: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// ============================================
-// PROGRESS
+// PROGRESS TRACKING
 // ============================================
 export interface ProgressEntry {
   progress_id: string;
@@ -250,6 +310,38 @@ export interface CreateProgressRequest {
   project_id: string;
   code_id: string;
   new_percentage: number;
+}
+
+// ============================================
+// PLANNED PROGRESS
+// ============================================
+export interface PlannedProgress {
+  planned_id: string;
+  project_id: string;
+  code_id?: string;
+  date: string;
+  planned_percentage: number;
+  created_at: string;
+}
+
+export interface CreatePlannedProgressRequest {
+  project_id: string;
+  code_id?: string;
+  date: string;
+  planned_percentage: number;
+}
+
+// ============================================
+// DELAY ANALYSIS (Computed)
+// ============================================
+export interface DelayAnalysis {
+  project_id: string;
+  code_id: string;
+  actual_percentage: number;
+  planned_percentage: number;
+  delay_flag: boolean;
+  delay_difference: number;
+  analysis_date: string;
 }
 
 // ============================================
@@ -299,6 +391,12 @@ export interface CreateIssueRequest {
   assigned_to?: string;
 }
 
+export interface UpdateIssueRequest {
+  status?: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  assigned_to?: string;
+  description?: string;
+}
+
 // ============================================
 // VOICE LOGS
 // ============================================
@@ -346,7 +444,32 @@ export interface CreatePettyCashRequest {
 }
 
 // ============================================
-// DPR
+// CSA (Contract Schedule of Amounts)
+// ============================================
+export interface CSA {
+  csa_id: string;
+  project_id: string;
+  code_id: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCSARequest {
+  project_id: string;
+  code_id: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  rate: number;
+}
+
+// ============================================
+// DPR (Daily Progress Report)
 // ============================================
 export interface DPR {
   dpr_id: string;
@@ -386,4 +509,149 @@ export interface CreateImageRequest {
   project_id: string;
   code_id: string;
   image_base64: string;
+}
+
+// ============================================
+// TIMELINE EVENT
+// ============================================
+export interface TimelineEvent {
+  event_id: string;
+  project_id: string;
+  event_type: 'WO_CREATED' | 'WO_ISSUED' | 'WO_REVISED' | 'PC_CREATED' | 'PC_CERTIFIED' | 'PAYMENT_MADE' | 'RETENTION_RELEASED' | 'PROGRESS_UPDATED' | 'ISSUE_CREATED' | 'ISSUE_RESOLVED' | 'DPR_GENERATED';
+  entity_id: string;
+  entity_type: 'WorkOrder' | 'PaymentCertificate' | 'Payment' | 'RetentionRelease' | 'Progress' | 'Issue' | 'DPR';
+  description: string;
+  actor_id: string;
+  actor_name: string;
+  amount?: number;
+  created_at: string;
+}
+
+// ============================================
+// SNAPSHOT (Immutable Point-in-Time Records)
+// ============================================
+export interface Snapshot {
+  snapshot_id: string;
+  project_id: string;
+  snapshot_type: 'FINANCIAL' | 'PROGRESS' | 'DPR';
+  snapshot_date: string;
+  data: SnapshotFinancialData | SnapshotProgressData;
+  created_by: string;
+  created_at: string;
+}
+
+export interface SnapshotFinancialData {
+  approved_budget: number;
+  committed_value: number;
+  certified_value: number;
+  paid_value: number;
+  retention_held: number;
+  outstanding_liability: number;
+  over_commit_flag: boolean;
+}
+
+export interface SnapshotProgressData {
+  physical_progress: number;
+  financial_progress: number;
+  delay_flag: boolean;
+  delay_percentage: number;
+}
+
+// ============================================
+// ALERT
+// ============================================
+export interface Alert {
+  alert_id: string;
+  project_id: string;
+  alert_type: 'OVER_COMMIT' | 'OVER_CERTIFICATION' | 'OVER_PAYMENT' | 'BUDGET_EXCEEDED' | 'DELAY_WARNING' | 'DPR_MISSING' | 'ATTENDANCE_MISSING';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  title: string;
+  message: string;
+  entity_id?: string;
+  entity_type?: string;
+  resolved: boolean;
+  resolved_at?: string;
+  resolved_by?: string;
+  created_at: string;
+}
+
+// ============================================
+// DASHBOARD AGGREGATES
+// ============================================
+export interface AdminDashboardData {
+  approved_budget: number;
+  committed_value: number;
+  certified_value: number;
+  paid_value: number;
+  retention_held: number;
+  outstanding_liability: number;
+  over_commit_indicator: boolean;
+  physical_progress_percentage: number;
+  financial_progress_percentage: number;
+  delay_indicator: boolean;
+  active_alerts: Alert[];
+  total_projects: number;
+  active_projects: number;
+  pending_work_orders: number;
+  pending_payment_certificates: number;
+}
+
+export interface SupervisorDashboardData {
+  attendance_status: 'CHECKED_IN' | 'NOT_CHECKED_IN';
+  check_in_time?: string;
+  image_count_today: number;
+  physical_progress_percentage: number;
+  assigned_project: Project | null;
+  open_issues_count: number;
+  pending_voice_logs: number;
+}
+
+// ============================================
+// OCR (Invoice Scan)
+// ============================================
+export interface OCRResult {
+  extracted_vendor_name?: string;
+  extracted_amount?: number;
+  extracted_date?: string;
+  extracted_invoice_number?: string;
+  confidence_score: number;
+  raw_text: string;
+}
+
+export interface OCRRequest {
+  image_base64: string;
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+export interface AuditLog {
+  audit_id: string;
+  organisation_id: string;
+  user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  old_values?: Record<string, unknown>;
+  new_values?: Record<string, unknown>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+// ============================================
+// API RESPONSE WRAPPERS
+// ============================================
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ApiErrorResponse {
+  detail: string;
+  error_code?: string;
+  field_errors?: Record<string, string[]>;
 }
