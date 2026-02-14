@@ -127,14 +127,32 @@ class Wave2Tester:
                 print(f"❌ Project fetch failed: {error}")
                 return False
         
+        # Get existing codes
+        async with self.session.get(
+            f"{API_BASE}/codes",
+            headers=self.get_headers(self.admin_token)
+        ) as resp:
+            if resp.status == 200:
+                codes = await resp.json()
+                if codes:
+                    self.code_id = codes[0]["code_id"]
+                    print(f"✅ Using code: {self.code_id}")
+                else:
+                    print("❌ No codes found")
+                    return False
+            else:
+                error = await resp.text()
+                print(f"❌ Code fetch failed: {error}")
+                return False
+        
         # Create work order
         wo_data = {
             "project_id": self.project_id,
+            "code_id": self.code_id,
             "vendor_id": self.vendor_id,
-            "description": "Test Work Order for Wave 2",
+            "issue_date": datetime.now().isoformat(),
             "rate": 100.50,
-            "quantity": 10,
-            "unit": "sqft"
+            "quantity": 10
         }
         
         async with self.session.post(
