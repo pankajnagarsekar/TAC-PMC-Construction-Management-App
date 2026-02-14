@@ -88,7 +88,8 @@ async def create_vendor(
     vendor_id = str(result.inserted_id)
     
     vendor_dict["vendor_id"] = vendor_id
-    del vendor_dict["_id"] if "_id" in vendor_dict else None
+    if "_id" in vendor_dict:
+        del vendor_dict["_id"]
     
     return vendor_dict
 
