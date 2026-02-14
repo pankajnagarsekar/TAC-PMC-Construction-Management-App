@@ -71,6 +71,10 @@ class Phase2TestSuite:
                 kwargs['headers'] = {}
             kwargs['headers']['Authorization'] = f"Bearer {self.admin_token}"
         
+        # Set timeout
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = 30
+        
         try:
             response = self.session.request(method, url, **kwargs)
             return response
