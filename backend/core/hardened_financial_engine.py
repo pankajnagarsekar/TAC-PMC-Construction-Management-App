@@ -1136,7 +1136,7 @@ class HardenedFinancialEngine:
         
         if wo:
             snapshot = {
-                "wo_id": wo_id,
+                "parent_id": wo_id,
                 "version_number": version,
                 "snapshot_data": {k: v for k, v in wo.items() if k != "_id"},
                 "created_at": datetime.utcnow()
