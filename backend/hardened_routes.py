@@ -14,9 +14,9 @@ They EXTEND existing functionality with hardening.
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
-from bson import ObjectId
-from datetime import datetime
-from typing import Optional, List
+from bson import ObjectId, Decimal128
+from datetime import datetime, date
+from typing import Optional, List, Dict, Any
 import logging
 import os
 
@@ -37,6 +37,34 @@ from core.financial_precision import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Serialize MongoDB document for JSON response (handles Decimal128)"""
+    if doc is None:
+        return None
+    result = {}
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, Decimal128):
+            result[key] = float(value.to_decimal())
+        elif isinstance(value, datetime):
+            result[key] = value.isoformat()
+        elif isinstance(value, dict):
+            result[key] = serialize_doc(value)
+        elif isinstance(value, list):
+            result[key] = [
+                serialize_doc(item) if isinstance(item, dict)
+                else float(item.to_decimal()) if isinstance(item, Decimal128)
+                else str(item) if isinstance(item, ObjectId)
+                else item
+                for item in value
+            ]
+        else:
+            result[key] = value
+    return result
+
 
 # Create router
 hardened_router = APIRouter(prefix="/api/v2", tags=["Phase 2 - Hardened Financial Operations"])
