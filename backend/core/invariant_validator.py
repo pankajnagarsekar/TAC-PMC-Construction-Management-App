@@ -88,11 +88,11 @@ class FinancialInvariantValidator:
                 details={"project_id": project_id, "code_id": code_id}
             )
         
-        approved_budget = to_decimal(budget["approved_budget_amount"])
-        committed_value = to_decimal(state.get("committed_value", 0))
-        certified_value = to_decimal(state.get("certified_value", 0))
-        paid_value = to_decimal(state.get("paid_value", 0))
-        retention_held = to_decimal(state.get("retention_held", 0))
+        approved_budget = from_decimal128(budget["approved_budget_amount"])
+        committed_value = from_decimal128(state.get("committed_value", 0))
+        certified_value = from_decimal128(state.get("certified_value", 0))
+        paid_value = from_decimal128(state.get("paid_value", 0))
+        retention_held = from_decimal128(state.get("retention_held", 0))
         
         violations = []
         
