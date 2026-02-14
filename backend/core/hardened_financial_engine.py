@@ -171,16 +171,16 @@ class HardenedFinancialEngine:
         over_certification_flag = certified_value > approved_budget
         over_payment_flag = paid_value > certified_value
         
-        # Round at boundary and convert to float for storage
+        # Store as Decimal128 for exact precision in MongoDB
         state_data = {
             "project_id": project_id,
             "code_id": code_id,
-            "committed_value": to_float(round_financial(committed_value)),
-            "certified_value": to_float(round_financial(certified_value)),
-            "paid_value": to_float(round_financial(paid_value)),
-            "retention_held": to_float(round_financial(retention_held)),
-            "balance_budget_remaining": to_float(round_financial(balance_budget_remaining)),
-            "balance_to_pay": to_float(round_financial(balance_to_pay)),
+            "committed_value": to_decimal128(committed_value),
+            "certified_value": to_decimal128(certified_value),
+            "paid_value": to_decimal128(paid_value),
+            "retention_held": to_decimal128(retention_held),
+            "balance_budget_remaining": to_decimal128(balance_budget_remaining),
+            "balance_to_pay": to_decimal128(balance_to_pay),
             "over_commit_flag": over_commit_flag,
             "over_certification_flag": over_certification_flag,
             "over_payment_flag": over_payment_flag,
