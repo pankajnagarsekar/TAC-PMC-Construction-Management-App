@@ -647,6 +647,13 @@ class HardenedFinancialEngine:
                             detail=f"Cannot revise PC in status: {pc['status']}"
                         )
                     
+                    # LOCK ENFORCEMENT at service layer
+                    if pc.get("locked_flag", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"Payment Certificate {pc_id} is locked. Unlock before modification."
+                        )
+                    
                     # Get project settings for GST
                     project = await self.db.projects.find_one(
                         {"_id": ObjectId(pc["project_id"])},
