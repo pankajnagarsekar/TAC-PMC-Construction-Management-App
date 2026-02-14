@@ -190,10 +190,10 @@ class Wave2Tester:
         # Create payment certificate
         pc_data = {
             "project_id": self.project_id,
+            "code_id": self.code_id,
             "vendor_id": self.vendor_id,
-            "work_order_id": self.wo_id,
-            "description": "Test Payment Certificate for Wave 2",
-            "certified_amount": 500.25
+            "bill_date": datetime.now().isoformat(),
+            "current_bill_amount": 500.25
         }
         
         async with self.session.post(
