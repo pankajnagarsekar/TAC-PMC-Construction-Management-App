@@ -11,13 +11,15 @@ All routes require authentication.
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Query, Request
+from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
-from bson import ObjectId
+from bson import ObjectId, Decimal128
 from datetime import datetime
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from pydantic import BaseModel, Field
 import logging
 import os
+import json
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -35,6 +37,23 @@ from core.security_hardening import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_mongo_doc(obj: Any) -> Any:
+    """Recursively serialize MongoDB objects for JSON response"""
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    elif isinstance(obj, Decimal128):
+        return float(obj.to_decimal())
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: serialize_mongo_doc(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_mongo_doc(item) for item in obj]
+    else:
+        return obj
+
 
 # Router
 wave3_router = APIRouter(prefix="/api/v2", tags=["Phase 2 Wave 3"])
