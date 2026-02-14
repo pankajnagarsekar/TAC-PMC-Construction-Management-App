@@ -293,6 +293,96 @@ test_plan:
   test_all: true
   test_priority: "critical_first"
 
+# PHASE 2 WAVE 2 TESTING RESULTS
+# Lifecycle & Structural Integrity Lock Testing
+
+phase2_wave2:
+  - task: "Locked Work Order Edit Protection"
+    implemented: true
+    working: false
+    file: "core/lifecycle_integrity_engine.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Lock enforcement not working properly - WO edit succeeded when it should be blocked. Issue: Work order gets unlocked during test sequence, affecting lock validation test."
+
+  - task: "Unlock Reason Validation"
+    implemented: true
+    working: true
+    file: "wave2_routes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Unlock without reason properly blocked with 422 error and appropriate validation message"
+
+  - task: "Hard Delete Protection"
+    implemented: true
+    working: true
+    file: "wave2_routes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Hard delete blocked with 405 error, correctly directing to soft disable endpoint"
+
+  - task: "Attendance Gate Enforcement"
+    implemented: true
+    working: true
+    file: "core/lifecycle_integrity_engine.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Progress submission blocked without attendance marking. AttendanceNotMarkedError properly raised"
+
+  - task: "DPR Image Requirement Enforcement"
+    implemented: true
+    working: true
+    file: "core/lifecycle_integrity_engine.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "DPR generation blocked with only 3 images (requires 4 minimum). DPRImageRequirementError properly raised"
+
+  - task: "Weightage Validation"
+    implemented: true
+    working: true
+    file: "core/lifecycle_integrity_engine.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Weightage sum validation working - blocked when sum equals 90 instead of required 100"
+
+  - task: "Version Snapshot Creation"
+    implemented: true
+    working: false
+    file: "core/hardened_financial_engine.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Version snapshots not being created. Issue: Collection name mismatch between hardened engine (work_order_versions) and lifecycle engine (workorder_versions)"
+
 agent_communication:
   - agent: "testing"
     message: "Phase 2 Wave 1 Financial Core Hardening testing completed successfully. All 5 critical hardening features are working correctly: 1) Decimal Precision Lock - verified with rate=10.333*quantity=3 properly rounded to 31.00, 2) Transaction Atomicity - confirmed via backend logs showing transaction commits/rollbacks, 3) Financial Invariant Enforcement - tested over-certification protection (certified_value > approved_budget), 4) Duplicate Invoice Protection - verified blocking duplicate invoice numbers for same vendor/project, 5) Atomic Document Numbering - confirmed WO-000001, PC-000001 generation. Core lifecycle tests: Work Order (Draft->Issue), Payment Certificate (Draft->Certify), Payment Recording, Retention Release all working with proper validation. Backend logs confirm all hardened engine components are functioning correctly. Some test timeout issues encountered but actual functionality verified through direct API testing and backend logs analysis."
+  - agent: "testing"
+    message: "Phase 2 Wave 2 Lifecycle & Structural Integrity Lock testing completed. Results: 5/7 scenarios PASS, 2/7 scenarios FAIL. PASSING: (1) Unlock reason validation - properly blocks empty reason with 422 error, (2) Hard delete protection - blocks with 405 directing to soft disable, (3) Attendance gate - blocks progress without attendance, (4) DPR image enforcement - blocks generation with insufficient images (3 vs required 4), (5) Weightage validation - blocks invalid sum (90 vs required 100). FAILING: (1) Lock enforcement - WO edit succeeds when should be blocked (test sequence issue), (2) Version snapshots - not created due to collection name mismatch between hardened_financial_engine.py (work_order_versions) and lifecycle_integrity_engine.py (workorder_versions). Core Wave 2 integrity features are functional but need fixes for lock testing sequence and version collection naming consistency."
