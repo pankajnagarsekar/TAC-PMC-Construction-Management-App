@@ -281,7 +281,7 @@ def create_phase2_routes(
                         del wo_copy["_id"]
                     
                     snapshot = {
-                        "wo_id": wo_id,
+                        "parent_id": wo_id,
                         "version_number": wo["version_number"],
                         "snapshot_data": wo_copy,
                         "created_at": datetime.utcnow()
