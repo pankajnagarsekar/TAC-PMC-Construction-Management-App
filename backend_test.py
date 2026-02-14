@@ -191,7 +191,8 @@ class Phase2TestSuite:
             # Create project
             project_data = {
                 "project_name": "Phase 2 Test Project",
-                "project_description": "Test project for hardened financial engine",
+                "client_name": "Test Client Corp",
+                "start_date": datetime.utcnow().isoformat(),
                 "project_retention_percentage": 10.0,
                 "project_cgst_percentage": 9.0,
                 "project_sgst_percentage": 9.0
