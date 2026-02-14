@@ -288,10 +288,14 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Phase 2 Wave 1 Financial Core Hardening - All critical scenarios tested"
-  stuck_tasks: []
+    - "Phase 2 Wave 2 Lifecycle & Structural Integrity Lock - 5/7 scenarios tested successfully"
+    - "Lock enforcement test sequence needs fixing"
+    - "Version snapshot collection naming mismatch needs resolution"
+  stuck_tasks:
+    - "Locked Work Order Edit Protection"
+    - "Version Snapshot Creation"
   test_all: true
-  test_priority: "critical_first"
+  test_priority: "high_first"
 
 # PHASE 2 WAVE 2 TESTING RESULTS
 # Lifecycle & Structural Integrity Lock Testing
