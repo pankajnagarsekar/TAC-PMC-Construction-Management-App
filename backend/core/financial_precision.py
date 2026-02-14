@@ -57,9 +57,23 @@ def to_float(value: Decimal) -> float:
     """
     Convert Decimal back to float for MongoDB storage.
     Rounds to 2 decimal places first.
+    
+    NOTE: For true Decimal128 storage, use to_decimal128() instead.
+    This function exists for backward compatibility.
     """
     rounded = round_financial(value)
     return float(rounded)
+
+
+def to_decimal128(value: Union[float, int, str, Decimal]) -> Decimal:
+    """
+    Convert to Decimal128-compatible Decimal for MongoDB storage.
+    MongoDB's Decimal128 preserves exact decimal representation.
+    
+    Use this for financial fields that require exact precision.
+    """
+    decimal_value = to_decimal(value)
+    return round_financial(decimal_value)
 
 
 def validate_non_negative(value: Union[float, int, Decimal], field_name: str) -> None:
