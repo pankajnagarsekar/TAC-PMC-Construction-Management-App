@@ -52,12 +52,10 @@ export default function AdminDashboard() {
       setError('');
       const projectsData = await projectsApi.getAll();
       setProjects(projectsData);
-      // Dashboard data will come from API in future
-      setDashboardData({
-        ...mockDashboardData,
-        total_projects: projectsData.length,
-        active_projects: projectsData.filter(p => !p.end_date || new Date(p.end_date) > new Date()).length,
-      });
+      // TODO: Replace with dashboardApi.getAdminDashboard() when backend provides it
+      // UI does NOT compute any financial values - all values come from backend
+      // Currently using mock data until dashboard API is available
+      setDashboardData(mockDashboardData);
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
     } finally {
