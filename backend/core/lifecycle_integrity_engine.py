@@ -861,8 +861,8 @@ class LifecycleIntegrityEngine:
     def _get_version_collection(self, entity_type: str):
         """Get version collection for entity type"""
         mapping = {
-            "WORK_ORDER": self.db.workorder_versions,
-            "PAYMENT_CERTIFICATE": self.db.paymentcertificate_versions,
+            "WORK_ORDER": self.db.work_order_versions,
+            "PAYMENT_CERTIFICATE": self.db.payment_certificate_versions,
         }
         return mapping.get(entity_type.upper())
     
