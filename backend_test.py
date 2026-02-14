@@ -87,9 +87,10 @@ class Wave2Tester:
         print("\n📋 Setting up test data...")
         
         # Create vendor
+        vendor_code = f"TV-W2-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         vendor_data = {
             "vendor_name": "Test Vendor Wave2",
-            "vendor_code": "TV-W2-001",
+            "vendor_code": vendor_code,
             "contact_person": "John Doe",
             "email": "john@testvendor.com",
             "phone": "1234567890"
