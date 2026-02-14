@@ -172,7 +172,7 @@ class HardenedFinancialEngine:
         over_payment_flag = paid_value > certified_value
         
         # Store as Decimal128 for exact precision in MongoDB
-        state_data = {
+        state_data_for_db = {
             "project_id": project_id,
             "code_id": code_id,
             "committed_value": to_decimal128(committed_value),
@@ -189,10 +189,26 @@ class HardenedFinancialEngine:
         
         await self.db.derived_financial_state.update_one(
             {"project_id": project_id, "code_id": code_id},
-            {"$set": state_data},
+            {"$set": state_data_for_db},
             upsert=True,
             session=session
         )
+        
+        # Return Python-native types for API response (not Decimal128)
+        state_data = {
+            "project_id": project_id,
+            "code_id": code_id,
+            "committed_value": to_float(round_financial(committed_value)),
+            "certified_value": to_float(round_financial(certified_value)),
+            "paid_value": to_float(round_financial(paid_value)),
+            "retention_held": to_float(round_financial(retention_held)),
+            "balance_budget_remaining": to_float(round_financial(balance_budget_remaining)),
+            "balance_to_pay": to_float(round_financial(balance_to_pay)),
+            "over_commit_flag": over_commit_flag,
+            "over_certification_flag": over_certification_flag,
+            "over_payment_flag": over_payment_flag,
+            "last_recalculated_at": datetime.utcnow().isoformat()
+        }
         
         logger.info(f"[PRECISION] Recalculated: project={project_id}, code={code_id}")
         logger.debug(f"  committed={state_data['committed_value']}, certified={state_data['certified_value']}, "
