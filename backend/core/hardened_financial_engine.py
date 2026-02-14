@@ -10,15 +10,16 @@ Implements:
 
 ALL financial operations wrapped in MongoDB transactions.
 ALL calculations use Decimal for precision.
+ALL financial values stored as Decimal128 in MongoDB.
 ALL mutations enforce invariants before commit.
 """
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from decimal import Decimal
 from datetime import datetime
-from bson import ObjectId
+from bson import ObjectId, Decimal128
 from fastapi import HTTPException, status
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 import logging
 import asyncio
 
@@ -40,6 +41,19 @@ from core.atomic_numbering import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def to_decimal128(value: Union[float, int, str, Decimal]) -> Decimal128:
+    """Convert to Decimal128 for MongoDB storage with exact precision"""
+    decimal_value = round_financial(to_decimal(value))
+    return Decimal128(decimal_value)
+
+
+def from_decimal128(value) -> Decimal:
+    """Convert from Decimal128/float/int back to Decimal for calculations"""
+    if isinstance(value, Decimal128):
+        return value.to_decimal()
+    return to_decimal(value)
 
 
 class TransactionError(Exception):
