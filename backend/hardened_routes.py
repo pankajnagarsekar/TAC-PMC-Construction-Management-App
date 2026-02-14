@@ -809,7 +809,7 @@ async def get_payment_certificate_versions(
     await permission_checker.check_project_access(user, pc["project_id"], require_write=False)
     
     versions = await db.payment_certificate_versions.find(
-        {"pc_id": pc_id}
+        {"parent_id": pc_id}
     ).sort("version_number", 1).to_list(length=None)
     
     for v in versions:
