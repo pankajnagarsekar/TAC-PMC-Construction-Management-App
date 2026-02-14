@@ -159,7 +159,7 @@ class Phase2TestSuite:
         try:
             vendor_data = {
                 "vendor_name": "Test Vendor Corp",
-                "vendor_code": "V001",
+                "vendor_code": f"V{int(time.time())}",  # Use timestamp for uniqueness
                 "contact_person": "John Doe",
                 "email": "john@testvendor.com",
                 "phone": "+1234567890"
