@@ -63,4 +63,7 @@ __all__ = [
     # Atomic Numbering
     'AtomicDocumentNumbering',
     'SequenceCollisionError',
+    # Hardened Financial Engine
+    'HardenedFinancialEngine',
+    'TransactionError',
 ]
