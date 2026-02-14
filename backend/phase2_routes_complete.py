@@ -433,7 +433,7 @@ def create_phase2_routes(
                         del pc_copy["_id"]
                     
                     await db.payment_certificate_versions.insert_one({
-                        "pc_id": pc_id,
+                        "parent_id": pc_id,
                         "version_number": pc["version_number"],
                         "snapshot_data": pc_copy,
                         "created_at": datetime.utcnow()
