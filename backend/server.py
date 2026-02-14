@@ -834,57 +834,26 @@ async def update_budget(
     update_data: ProjectBudgetUpdate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Update budget (Admin only) - triggers financial recalculation"""
+    """
+    Update budget (Admin only) - ROUTED TO HARDENED ENGINE.
+    
+    PHASE 2: This endpoint now uses the hardened financial engine
+    with transaction atomicity and invariant enforcement.
+    """
+    from hardened_routes import hardened_engine
+    
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
     
-    budget = await db.project_budgets.find_one({"_id": ObjectId(budget_id)})
-    
-    if not budget:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Budget not found"
-        )
-    
-    # Validate amount
-    if update_data.approved_budget_amount < 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Budget amount must be >= 0"
-        )
-    
-    old_amount = budget["approved_budget_amount"]
-    
-    update_dict = {
-        "approved_budget_amount": update_data.approved_budget_amount,
-        "updated_at": datetime.utcnow()
-    }
-    
-    # Update budget (without transaction for single MongoDB instance)
-    await db.project_budgets.update_one(
-        {"_id": ObjectId(budget_id)},
-        {"$set": update_dict}
-    )
-    
-    # Trigger financial recalculation
-    await financial_service.recalculate_project_code_financials(
-        project_id=budget["project_id"],
-        code_id=budget["code_id"]
-    )
-    
-    # Audit log (after transaction commit)
-    await audit_service.log_action(
+    # Route to hardened engine
+    result = await hardened_engine.modify_budget(
+        budget_id=budget_id,
         organisation_id=user["organisation_id"],
-        module_name="BUDGET_MANAGEMENT",
-        entity_type="BUDGET",
-        entity_id=budget_id,
-        action_type="UPDATE",
         user_id=user["user_id"],
-        project_id=budget["project_id"],
-        old_value={"approved_budget_amount": old_amount},
-        new_value={"approved_budget_amount": update_data.approved_budget_amount}
+        new_amount=update_data.approved_budget_amount
     )
     
+    # Return updated budget
     updated_budget = await db.project_budgets.find_one({"_id": ObjectId(budget_id)})
     updated_budget["budget_id"] = str(updated_budget.pop("_id"))
     
