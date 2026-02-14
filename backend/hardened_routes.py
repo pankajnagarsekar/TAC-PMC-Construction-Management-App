@@ -782,7 +782,7 @@ async def get_work_order_versions(
     await permission_checker.check_project_access(user, wo["project_id"], require_write=False)
     
     versions = await db.work_order_versions.find(
-        {"parent_id": wo_id}
+        {"$or": [{"parent_id": wo_id}, {"wo_id": wo_id}]}
     ).sort("version_number", 1).to_list(length=None)
     
     for v in versions:
