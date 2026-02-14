@@ -277,7 +277,10 @@ class Wave2Tester:
         ) as resp:
             if resp.status in [400, 422]:
                 error_data = await resp.json()
-                if "reason" in error_data.get("detail", "").lower():
+                error_detail = error_data.get("detail", "")
+                if isinstance(error_detail, list):
+                    error_detail = str(error_detail)
+                if "reason" in error_detail.lower():
                     print("✅ PASS: Unlock blocked without reason")
                     self.test_results["scenario_2"] = "PASS"
                     return True
@@ -286,7 +289,8 @@ class Wave2Tester:
                     self.test_results["scenario_2"] = "FAIL"
                     return False
             else:
-                print(f"❌ FAIL: Expected 400/422, got {resp.status}")
+                error_text = await resp.text()
+                print(f"❌ FAIL: Expected 400/422, got {resp.status}: {error_text}")
                 self.test_results["scenario_2"] = "FAIL"
                 return False
     
