@@ -14,11 +14,19 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from decimal import Decimal
 from typing import Optional, Dict, List
 from datetime import datetime
+from bson import Decimal128
 import logging
 
 from core.financial_precision import to_decimal, round_financial, to_float
 
 logger = logging.getLogger(__name__)
+
+
+def from_decimal128(value) -> Decimal:
+    """Convert from Decimal128/float/int back to Decimal for calculations"""
+    if isinstance(value, Decimal128):
+        return value.to_decimal()
+    return to_decimal(value)
 
 
 class InvariantViolationError(Exception):
