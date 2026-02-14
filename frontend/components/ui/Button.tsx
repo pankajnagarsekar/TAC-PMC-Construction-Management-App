@@ -134,6 +134,10 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
+
+  pressed: {
+    opacity: 0.8,
+  },
   
   // Text styles
   text: {
