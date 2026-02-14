@@ -379,6 +379,13 @@ class HardenedFinancialEngine:
                             detail=f"Cannot revise WO in status: {wo['status']}"
                         )
                     
+                    # LOCK ENFORCEMENT at service layer
+                    if wo.get("locked_flag", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"Work Order {wo_id} is locked. Unlock before modification."
+                        )
+                    
                     # Apply updates
                     new_rate = rate if rate is not None else wo["rate"]
                     new_quantity = quantity if quantity is not None else wo["quantity"]
