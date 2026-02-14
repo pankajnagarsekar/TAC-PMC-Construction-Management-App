@@ -1157,7 +1157,7 @@ class HardenedFinancialEngine:
         
         if pc:
             snapshot = {
-                "pc_id": pc_id,
+                "parent_id": pc_id,
                 "version_number": version,
                 "snapshot_data": {k: v for k, v in pc.items() if k != "_id"},
                 "created_at": datetime.utcnow()
