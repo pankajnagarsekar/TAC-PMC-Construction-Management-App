@@ -210,7 +210,7 @@ class Phase2TestSuite:
             # Create code
             code_data = {
                 "code_short": "TEST001",
-                "code_description": "Test Code for Financial Hardening"
+                "code_name": "Test Code for Financial Hardening"
             }
             
             response = self.make_request('POST', '/codes', json=code_data)
