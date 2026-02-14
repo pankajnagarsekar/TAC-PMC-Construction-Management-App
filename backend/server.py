@@ -1059,6 +1059,10 @@ app.include_router(hardened_router)
 from wave2_routes import wave2_router
 app.include_router(wave2_router)
 
+# Include Phase 2 Wave 3 routes
+from wave3_routes import wave3_router
+app.include_router(wave3_router)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
