@@ -43,13 +43,9 @@ export default function SupervisorDashboard() {
     try {
       const projectsData = await projectsApi.getAll();
       setProjects(projectsData);
-      // Set first project as assigned for demo
-      if (projectsData.length > 0) {
-        setDashboardData(prev => ({
-          ...prev,
-          assigned_project: projectsData[0],
-        }));
-      }
+      // TODO: Replace with dashboardApi.getSupervisorDashboard() when backend provides it
+      // UI does NOT compute any values - all values come from backend
+      // Currently using mock data until dashboard API is available
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
@@ -68,6 +64,9 @@ export default function SupervisorDashboard() {
   }, []);
 
   const handleCheckIn = () => {
+    // TODO: Call attendanceApi.checkIn() when backend is connected
+    // UI only updates state based on backend response
+    // For now, simulate the check-in locally (will be replaced with API call)
     setCheckedIn(true);
     setDashboardData(prev => ({
       ...prev,
