@@ -3,7 +3,7 @@
 
 import React from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   StyleSheet,
   ActivityIndicator,
@@ -58,11 +58,14 @@ export function Button({
   ];
 
   return (
-    <TouchableOpacity
-      style={buttonStyles}
+    <Pressable
+      style={({ pressed }) => [
+        ...buttonStyles,
+        pressed && styles.pressed,
+      ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
+      accessibilityRole="button"
     >
       {loading ? (
         <ActivityIndicator
@@ -75,7 +78,7 @@ export function Button({
           <Text style={textStyles}>{title}</Text>
         </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
