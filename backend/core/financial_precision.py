@@ -33,6 +33,7 @@ def to_decimal(value: Union[float, int, str, Decimal]) -> Decimal:
     """
     Convert any numeric value to Decimal.
     Does NOT round - preserves full precision for intermediate calculations.
+    Handles MongoDB Decimal128 objects.
     """
     if isinstance(value, Decimal):
         return value
@@ -41,6 +42,16 @@ def to_decimal(value: Union[float, int, str, Decimal]) -> Decimal:
         return Decimal(str(value))
     if isinstance(value, str):
         return Decimal(value)
+    # Handle MongoDB Decimal128
+    try:
+        from bson import Decimal128
+        if isinstance(value, Decimal128):
+            return value.to_decimal()
+    except ImportError:
+        pass
+    # Try to_decimal() method for Decimal128-like objects
+    if hasattr(value, 'to_decimal'):
+        return value.to_decimal()
     raise FinancialPrecisionError(f"Cannot convert {type(value)} to Decimal")
 
 
