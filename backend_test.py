@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://enterprise-cms-base.preview.emergentagent.com/api"
+BASE_URL = "https://sitemaster-21.preview.emergentagent.com/api"
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "admin123"
 SUPERVISOR_EMAIL = "supervisor@example.com"
