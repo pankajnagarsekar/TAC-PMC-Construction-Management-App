@@ -45,7 +45,11 @@ financial_service = FinancialRecalculationService(db)
 permission_checker = PermissionChecker(db)
 
 # Create the main app
-app = FastAPI(title="Construction Management System - Phase 1", version="1.0.0")
+app = FastAPI(
+    title="Construction Management System - Phase 2 Hardened",
+    version="2.0.0",
+    description="Enterprise Construction Management with Hardened Financial Core"
+)
 
 # Create router with /api prefix
 api_router = APIRouter(prefix="/api")
