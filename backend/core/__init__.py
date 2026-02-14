@@ -33,6 +33,11 @@ from .atomic_numbering import (
     SequenceCollisionError
 )
 
+from .hardened_financial_engine import (
+    HardenedFinancialEngine,
+    TransactionError
+)
+
 __all__ = [
     # Financial Precision
     'to_decimal',
