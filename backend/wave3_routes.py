@@ -160,7 +160,8 @@ async def get_snapshot(
         if snapshot.get("organisation_id") != user["organisation_id"]:
             raise HTTPException(status_code=403, detail="Access denied")
         
-        return snapshot
+        # Serialize to handle Decimal128
+        return serialize_mongo_doc(snapshot)
     except SnapshotNotFoundError:
         raise HTTPException(status_code=404, detail="Snapshot not found")
 
