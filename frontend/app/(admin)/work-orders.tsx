@@ -1,54 +1,246 @@
 // WORK ORDERS SCREEN
-// List and manage work orders
+// List and manage work orders with real data
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+  Pressable,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { workOrdersApi } from '../../services/apiClient';
 import { Card } from '../../components/ui';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
 
+interface WorkOrder {
+  work_order_id?: string;
+  _id?: string;
+  document_number: string;
+  project_id: string;
+  code_id: string;
+  vendor_id: string;
+  issue_date: string;
+  rate: number | { $numberDecimal: string };
+  quantity: number | { $numberDecimal: string };
+  base_amount: number | { $numberDecimal: string };
+  net_wo_value: number | { $numberDecimal: string };
+  status: string;
+}
+
+const parseDecimal = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val === 'number') return val;
+  if (val.$numberDecimal) return parseFloat(val.$numberDecimal);
+  return parseFloat(val) || 0;
+};
+
 export default function WorkOrdersScreen() {
   const router = useRouter();
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<string>('all');
+
+  const loadWorkOrders = useCallback(async () => {
+    try {
+      const data = await workOrdersApi.getAll();
+      setWorkOrders(data || []);
+    } catch (error) {
+      console.error('Error loading work orders:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWorkOrders();
+  }, [loadWorkOrders]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadWorkOrders();
+  };
+
+  const filteredOrders = workOrders.filter(wo => {
+    if (filter === 'all') return true;
+    return wo.status?.toLowerCase() === filter;
+  });
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const renderWorkOrder = ({ item }: { item: WorkOrder }) => (
+    <Pressable
+      style={({ pressed }) => [styles.woCard, pressed && styles.woCardPressed]}
+      onPress={() => console.log('View WO:', item.document_number)}
+    >
+      <View style={styles.woHeader}>
+        <Text style={styles.woNumber}>{item.document_number}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: item.status === 'Active' ? Colors.success + '20' : Colors.warning + '20' }]}>
+          <Text style={[styles.statusText, { color: item.status === 'Active' ? Colors.success : Colors.warning }]}>
+            {item.status}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.woDetails}>
+        <View style={styles.woRow}>
+          <Ionicons name="calendar-outline" size={16} color={Colors.textMuted} />
+          <Text style={styles.woLabel}>Issue Date:</Text>
+          <Text style={styles.woValue}>{new Date(item.issue_date).toLocaleDateString()}</Text>
+        </View>
+        <View style={styles.woRow}>
+          <Ionicons name="cube-outline" size={16} color={Colors.textMuted} />
+          <Text style={styles.woLabel}>Qty × Rate:</Text>
+          <Text style={styles.woValue}>
+            {parseDecimal(item.quantity).toFixed(0)} × {formatCurrency(parseDecimal(item.rate))}
+          </Text>
+        </View>
+        <View style={styles.woRow}>
+          <Ionicons name="cash-outline" size={16} color={Colors.textMuted} />
+          <Text style={styles.woLabel}>Net Value:</Text>
+          <Text style={styles.woValueBold}>{formatCurrency(parseDecimal(item.net_wo_value))}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading work orders...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.headerCard}>
-          <Ionicons name="document-text" size={48} color={Colors.primary} />
-          <Text style={styles.title}>Work Orders</Text>
-          <Text style={styles.subtitle}>Create, issue, and manage work orders</Text>
-        </Card>
+      {/* Filter Chips */}
+      <View style={styles.filterRow}>
+        {['all', 'active', 'draft', 'closed'].map((f) => (
+          <Pressable
+            key={f}
+            style={[styles.filterChip, filter === f && styles.filterChipActive]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
-        {/* Placeholder for WO list */}
-        <View style={styles.placeholderList}>
-          <Text style={styles.placeholderText}>Work orders will be listed here</Text>
-          <Text style={styles.placeholderSubtext}>Filter by status: Draft | Issued | Revised</Text>
+      {/* Summary Card */}
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryValue}>{workOrders.length}</Text>
+          <Text style={styles.summaryLabel}>Total WOs</Text>
         </View>
-      </ScrollView>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryValue}>
+            {formatCurrency(workOrders.reduce((sum, wo) => sum + parseDecimal(wo.net_wo_value), 0))}
+          </Text>
+          <Text style={styles.summaryLabel}>Total Value</Text>
+        </View>
+      </View>
 
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(admin)/work-orders/create')}>
+      {/* Work Orders List */}
+      <FlatList
+        data={filteredOrders}
+        renderItem={renderWorkOrder}
+        keyExtractor={(item) => item.work_order_id || item._id || item.document_number}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="document-text-outline" size={48} color={Colors.textMuted} />
+            <Text style={styles.emptyText}>No work orders found</Text>
+          </View>
+        }
+      />
+
+      {/* FAB */}
+      <Pressable
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+        onPress={() => router.push('/(admin)/work-orders/create')}
+      >
         <Ionicons name="add" size={28} color={Colors.white} />
-      </TouchableOpacity>
+      </Pressable>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.md },
-  headerCard: { alignItems: 'center', padding: Spacing.xl, marginBottom: Spacing.lg },
-  title: { fontSize: FontSizes.xl, fontWeight: '600', color: Colors.text, marginTop: Spacing.md },
-  subtitle: { fontSize: FontSizes.md, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.xs },
-  placeholderList: { alignItems: 'center', padding: Spacing.xl },
-  placeholderText: { fontSize: FontSizes.md, color: Colors.textSecondary },
-  placeholderSubtext: { fontSize: FontSizes.sm, color: Colors.textMuted, marginTop: Spacing.xs },
-  fab: {
-    position: 'absolute', right: Spacing.lg, bottom: Spacing.lg,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: Colors.accent, justifyContent: 'center', alignItems: 'center',
-    shadowColor: Colors.accent, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: Spacing.md, fontSize: FontSizes.md, color: Colors.textSecondary },
+  filterRow: { flexDirection: 'row', padding: Spacing.md, gap: Spacing.sm },
+  filterChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
+  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  filterText: { fontSize: FontSizes.sm, color: Colors.textSecondary },
+  filterTextActive: { color: Colors.white, fontWeight: '600' },
+  summaryCard: {
+    flexDirection: 'row',
+    backgroundColor: Colors.white,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+  },
+  summaryItem: { flex: 1, alignItems: 'center' },
+  summaryValue: { fontSize: FontSizes.xl, fontWeight: 'bold', color: Colors.primary },
+  summaryLabel: { fontSize: FontSizes.sm, color: Colors.textSecondary },
+  listContent: { padding: Spacing.md, paddingTop: 0 },
+  woCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  woCardPressed: { opacity: 0.7 },
+  woHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
+  woNumber: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.text },
+  statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.sm },
+  statusText: { fontSize: FontSizes.xs, fontWeight: '600' },
+  woDetails: { gap: Spacing.xs },
+  woRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  woLabel: { fontSize: FontSizes.sm, color: Colors.textSecondary, width: 80 },
+  woValue: { fontSize: FontSizes.sm, color: Colors.text },
+  woValueBold: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.primary },
+  emptyContainer: { alignItems: 'center', padding: Spacing.xl },
+  emptyText: { fontSize: FontSizes.md, color: Colors.textMuted, marginTop: Spacing.md },
+  fab: {
+    position: 'absolute',
+    right: Spacing.lg,
+    bottom: Spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  fabPressed: { opacity: 0.8 },
 });
