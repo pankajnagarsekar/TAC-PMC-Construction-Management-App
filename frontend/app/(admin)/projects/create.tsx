@@ -1,13 +1,13 @@
 // CREATE PROJECT SCREEN
 // Functional form to create new project
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
   Platform,
@@ -17,6 +17,16 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { projectsApi } from '../../../services/apiClient';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../../constants/theme';
+
+// Cross-platform alert helper
+const showAlert = (title: string, message: string, onOk?: () => void) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+    if (onOk) onOk();
+  } else {
+    Alert.alert(title, message, onOk ? [{ text: 'OK', onPress: onOk }] : undefined);
+  }
+};
 
 export default function CreateProjectScreen() {
   const router = useRouter();
@@ -31,29 +41,29 @@ export default function CreateProjectScreen() {
   const [retentionPercentage, setRetentionPercentage] = useState('5');
 
   // Validation
-  const validateForm = (): boolean => {
+  const validateForm = useCallback((): boolean => {
     if (!projectName.trim()) {
-      Alert.alert('Validation Error', 'Project Name is required');
+      showAlert('Validation Error', 'Project Name is required');
       return false;
     }
     if (!startDate.trim()) {
-      Alert.alert('Validation Error', 'Start Date is required');
+      showAlert('Validation Error', 'Start Date is required');
       return false;
     }
-    // Validate date format (YYYY-MM-DD)
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(startDate)) {
-      Alert.alert('Validation Error', 'Start Date must be in YYYY-MM-DD format');
+      showAlert('Validation Error', 'Start Date must be in YYYY-MM-DD format');
       return false;
     }
     if (endDate.trim() && !dateRegex.test(endDate)) {
-      Alert.alert('Validation Error', 'End Date must be in YYYY-MM-DD format');
+      showAlert('Validation Error', 'End Date must be in YYYY-MM-DD format');
       return false;
     }
     return true;
-  };
+  }, [projectName, startDate, endDate]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
+    console.log('handleSubmit called');
     if (!validateForm()) return;
 
     setLoading(true);
@@ -67,20 +77,23 @@ export default function CreateProjectScreen() {
         project_retention_percentage: parseFloat(retentionPercentage) || 5,
       };
 
+      console.log('Submitting payload:', payload);
       await projectsApi.create(payload);
-      Alert.alert('Success', 'Project created successfully', [
-        { text: 'OK', onPress: () => router.replace('/(admin)/projects') }
-      ]);
+      console.log('Project created successfully');
+      showAlert('Success', 'Project created successfully', () => {
+        router.replace('/(admin)/projects');
+      });
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create project');
+      console.error('Error creating project:', error);
+      showAlert('Error', error.message || 'Failed to create project');
     } finally {
       setLoading(false);
     }
-  };
+  }, [validateForm, projectName, clientName, startDate, endDate, currencyCode, retentionPercentage, router]);
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Project Name */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Project Name *</Text>
@@ -114,7 +127,6 @@ export default function CreateProjectScreen() {
             onChangeText={setStartDate}
             placeholder="2024-01-01"
             placeholderTextColor={Colors.textMuted}
-            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
           />
         </View>
 
@@ -127,7 +139,6 @@ export default function CreateProjectScreen() {
             onChangeText={setEndDate}
             placeholder="2024-12-31"
             placeholderTextColor={Colors.textMuted}
-            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
           />
         </View>
 
@@ -159,8 +170,12 @@ export default function CreateProjectScreen() {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.submitButton,
+            loading && styles.submitButtonDisabled,
+            pressed && styles.submitButtonPressed,
+          ]}
           onPress={handleSubmit}
           disabled={loading}
         >
@@ -172,7 +187,7 @@ export default function CreateProjectScreen() {
               <Text style={styles.submitButtonText}>Create Project</Text>
             </>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -209,6 +224,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
   submitButtonDisabled: { opacity: 0.6 },
+  submitButtonPressed: { opacity: 0.8 },
   submitButtonText: {
     color: Colors.white,
     fontSize: FontSizes.md,
