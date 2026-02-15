@@ -179,6 +179,44 @@ export default function CreateDPRScreen() {
     setImages(images.filter(img => img.id !== imageId));
   };
 
+  const generateAICaption = async (imageId: string) => {
+    const image = images.find(img => img.id === imageId);
+    if (!image) return;
+
+    setGeneratingCaption(imageId);
+    try {
+      const response = await apiClient.post('/api/v2/dpr/ai-caption', {
+        image_data: image.base64,
+      });
+
+      // Update image with AI caption
+      setImages(prevImages => prevImages.map(img => 
+        img.id === imageId 
+          ? { 
+              ...img, 
+              caption: response.ai_caption,
+              aiCaption: response.ai_caption,
+              aiAlternatives: response.alternatives || []
+            }
+          : img
+      ));
+
+      showAlert('AI Caption Generated', `Caption: "${response.ai_caption}"\n\nYou can edit or select from alternatives.`);
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to generate AI caption');
+    } finally {
+      setGeneratingCaption(null);
+    }
+  };
+
+  const updateImageCaption = (imageId: string, newCaption: string) => {
+    setImages(prevImages => prevImages.map(img => 
+      img.id === imageId 
+        ? { ...img, caption: newCaption }
+        : img
+    ));
+  };
+
   const uploadImages = async () => {
     if (!dprId) {
       showAlert('Error', 'Please create DPR first');
