@@ -1073,8 +1073,60 @@ async def get_dpr(
     if dpr.get("organisation_id") != user["organisation_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
+    # Get project name
+    project = await db.projects.find_one({"_id": ObjectId(dpr.get("project_id"))})
+    if project:
+        dpr["project_name"] = project.get("project_name", "Unknown")
+    
     dpr["dpr_id"] = str(dpr.pop("_id"))
     return serialize_mongo_doc(dpr)
+
+
+class UpdateDPRRequest(BaseModel):
+    progress_notes: Optional[str] = None
+    weather_conditions: Optional[str] = None
+    manpower_count: Optional[int] = None
+    issues_encountered: Optional[str] = None
+
+
+@wave3_router.put("/dpr/{dpr_id}")
+async def update_dpr(
+    dpr_id: str,
+    request: UpdateDPRRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a draft DPR"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    dpr = await db.dpr.find_one({"_id": ObjectId(dpr_id)})
+    if not dpr:
+        raise HTTPException(status_code=404, detail="DPR not found")
+    
+    if dpr.get("organisation_id") != user["organisation_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    if dpr.get("status") != "draft":
+        raise HTTPException(status_code=400, detail="Cannot edit a submitted DPR")
+    
+    # Build update dict
+    update_data = {}
+    if request.progress_notes is not None:
+        update_data["progress_notes"] = request.progress_notes
+    if request.weather_conditions is not None:
+        update_data["weather_conditions"] = request.weather_conditions
+    if request.manpower_count is not None:
+        update_data["manpower_count"] = request.manpower_count
+    if request.issues_encountered is not None:
+        update_data["issues_encountered"] = request.issues_encountered
+    
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.dpr.update_one(
+        {"_id": ObjectId(dpr_id)},
+        {"$set": update_data}
+    )
+    
+    return {"status": "success", "message": "DPR updated"}
 
 
 # =============================================================================
