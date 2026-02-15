@@ -310,6 +310,9 @@ const styles = StyleSheet.create({
   loginButtonDisabled: {
     opacity: 0.6,
   },
+  loginButtonPressed: {
+    opacity: 0.8,
+  },
   loginButtonText: {
     color: Colors.white,
     fontSize: FontSizes.md,
