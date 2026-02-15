@@ -150,7 +150,7 @@ export default function LoginScreen() {
                   onSubmitEditing={handleLogin}
                   autoComplete="password"
                 />
-                <TouchableOpacity 
+                <Pressable 
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeButton}
                 >
@@ -159,7 +159,7 @@ export default function LoginScreen() {
                     size={20} 
                     color={Colors.textMuted} 
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
 
