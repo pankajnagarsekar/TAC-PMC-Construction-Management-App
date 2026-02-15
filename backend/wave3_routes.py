@@ -649,15 +649,15 @@ async def generate_ai_caption(
 ):
     """
     Generate AI-recommended caption for a construction progress image.
-    Uses OpenAI GPT-4 Vision API to analyze the actual photo content.
+    Uses OpenAI GPT-4o Vision API to analyze the actual photo content.
     User can override with manual caption.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
-    # Get OpenAI API key - prefer Emergent LLM key, fallback to user's key
-    openai_key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('OPENAI_API_KEY')
+    # Get API key - prefer Emergent LLM key
+    api_key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('OPENAI_API_KEY')
     
-    if not openai_key:
+    if not api_key:
         # Fallback to mock captions if no API key
         import random
         suggested_captions = [
@@ -671,40 +671,30 @@ async def generate_ai_caption(
             "ai_caption": random.choice(suggested_captions),
             "confidence": 0.5,
             "alternatives": [],
-            "note": "Mock caption - OpenAI API key not configured"
+            "note": "Mock caption - API key not configured"
         }
     
     try:
-        from openai import OpenAI
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        import uuid
         
-        # Use Emergent base URL if using Emergent key
-        if openai_key.startswith('sk-emergent'):
-            client = OpenAI(
-                api_key=openai_key,
-                base_url="https://api.emergentagent.com/v1"
-            )
-        else:
-            client = OpenAI(api_key=openai_key)
-        
-        # Prepare image data for OpenAI Vision API
+        # Prepare image data
         image_data = request.image_data
         
-        # Handle base64 data URL format
+        # Remove data URL prefix if present
         if image_data.startswith('data:'):
-            # Already in correct format
-            image_url = image_data
-        else:
-            # Add data URL prefix for JPEG (most common from cameras)
-            image_url = f"data:image/jpeg;base64,{image_data}"
+            # Extract base64 part after the comma
+            image_data = image_data.split(',')[1] if ',' in image_data else image_data
         
-        # Call OpenAI Vision API to analyze the image
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": """You are an expert construction site supervisor and photographer.
-                    
+        # Create image content
+        image_content = ImageContent(image_base64=image_data)
+        
+        # Initialize chat with vision-capable model
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"dpr-caption-{uuid.uuid4()}",
+            system_message="""You are an expert construction site supervisor and photographer.
+            
 Your task is to analyze construction progress images and provide:
 1. A detailed yet concise caption describing what you SEE in the image
 2. Identify the type of construction work visible (foundation, structural, MEP, finishing, etc.)
@@ -713,13 +703,11 @@ Your task is to analyze construction progress images and provide:
 
 Keep captions professional and under 20 words.
 Focus on factual observations from the image content."""
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": """Analyze this construction site photo and provide:
+        ).with_model("openai", "gpt-4o")
+        
+        # Create message with image
+        user_message = UserMessage(
+            text="""Analyze this construction site photo and provide:
 1. MAIN CAPTION: A single professional caption describing what you see (max 20 words)
 2. ALTERNATIVE 1: Another way to describe the same scene
 3. ALTERNATIVE 2: A third variation
@@ -729,23 +717,12 @@ Format your response exactly like this:
 MAIN: [your main caption]
 ALT1: [alternative 1]
 ALT2: [alternative 2]  
-ALT3: [alternative 3]"""
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": image_url,
-                                "detail": "low"  # Use low detail to reduce costs
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=300
+ALT3: [alternative 3]""",
+            image_contents=[image_content]
         )
         
-        # Parse the response
-        ai_response = response.choices[0].message.content.strip()
+        # Send message and get response
+        ai_response = await chat.send_message(user_message)
         logger.info(f"AI Vision response: {ai_response}")
         
         # Parse structured response
@@ -766,13 +743,11 @@ ALT3: [alternative 3]"""
         
         # If parsing failed, try line-by-line approach
         if main_caption == "Construction progress captured" and len(lines) > 0:
-            # First non-empty line as main caption
             for line in lines:
                 clean_line = line.strip()
-                if clean_line and not clean_line.startswith(('MAIN', 'ALT', '1.', '2.', '3.', '4.', '-')):
-                    main_caption = clean_line[:100]  # Limit length
+                if clean_line and not clean_line.upper().startswith(('MAIN', 'ALT', '1.', '2.', '3.', '4.', '-')):
+                    main_caption = clean_line[:100]
                     break
-            # Remaining lines as alternatives
             for line in lines[1:4]:
                 clean_line = line.strip()
                 for prefix in ['1.', '2.', '3.', '4.', '-', '*', 'ALT:', 'Alternative:']:
@@ -788,7 +763,7 @@ ALT3: [alternative 3]"""
         }
         
     except Exception as e:
-        logger.error(f"OpenAI Vision API error: {str(e)}")
+        logger.error(f"AI Vision API error: {str(e)}")
         # Fallback to construction-specific suggestions
         import random
         fallback_captions = [
