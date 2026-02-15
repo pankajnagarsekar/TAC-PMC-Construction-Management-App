@@ -241,14 +241,183 @@ export default function CreateDPRScreen() {
         });
       }
 
-      showAlert('Success', 'All photos uploaded!', () => {
-        // Auto-submit if we have enough images
-        submitDPR();
-      });
+      // Generate PDF after uploading images
+      await generateAndSharePDF();
+      
+      // Then submit to backend
+      await submitDPR();
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to upload photos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateAndSharePDF = async () => {
+    // Format date for filename: MMMM, DD, YYYY
+    const dateObj = new Date(dprDate);
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+    const formattedDate = `${monthNames[dateObj.getMonth()]}, ${String(dateObj.getDate()).padStart(2, '0')}, ${dateObj.getFullYear()}`;
+    
+    // Get project name
+    const selectedProject = projects.find(p => (p.project_id || p._id) === projectId);
+    const projectName = selectedProject?.project_name || 'Project';
+    
+    // Generate HTML content for PDF
+    const imagesHtml = images.map((img, idx) => `
+      <div style="page-break-inside: avoid; margin-bottom: 20px;">
+        <img src="data:image/jpeg;base64,${img.base64}" 
+             style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px;" />
+        <p style="margin-top: 8px; font-size: 12px; color: #666;">
+          <strong>Photo ${idx + 1}:</strong> ${img.caption || 'No caption'}
+        </p>
+      </div>
+    `).join('');
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Daily Progress Report - ${formattedDate}</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              padding: 20px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #007AFF;
+              padding-bottom: 15px;
+              margin-bottom: 20px;
+            }
+            .header h1 {
+              color: #007AFF;
+              margin: 0;
+              font-size: 24px;
+            }
+            .header p {
+              color: #666;
+              margin: 5px 0 0;
+            }
+            .info-section {
+              background: #f5f5f5;
+              padding: 15px;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            .info-row {
+              display: flex;
+              margin-bottom: 8px;
+            }
+            .info-label {
+              font-weight: 600;
+              width: 140px;
+              color: #333;
+            }
+            .info-value {
+              color: #666;
+            }
+            .section-title {
+              font-size: 18px;
+              color: #333;
+              border-bottom: 1px solid #ddd;
+              padding-bottom: 8px;
+              margin: 20px 0 15px;
+            }
+            .notes {
+              background: #fafafa;
+              padding: 12px;
+              border-radius: 6px;
+              border-left: 3px solid #007AFF;
+              margin-bottom: 15px;
+            }
+            .photo-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 15px;
+              border-top: 1px solid #ddd;
+              color: #999;
+              font-size: 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Daily Progress Report</h1>
+            <p>${formattedDate}</p>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-row">
+              <span class="info-label">Project:</span>
+              <span class="info-value">${projectName}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Date:</span>
+              <span class="info-value">${formattedDate}</span>
+            </div>
+            ${weatherConditions ? `
+            <div class="info-row">
+              <span class="info-label">Weather:</span>
+              <span class="info-value">${weatherConditions}</span>
+            </div>` : ''}
+            ${manpowerCount ? `
+            <div class="info-row">
+              <span class="info-label">Manpower:</span>
+              <span class="info-value">${manpowerCount} workers</span>
+            </div>` : ''}
+          </div>
+          
+          ${progressNotes ? `
+          <h2 class="section-title">Progress Notes</h2>
+          <div class="notes">${progressNotes}</div>` : ''}
+          
+          ${issuesEncountered ? `
+          <h2 class="section-title">Issues Encountered</h2>
+          <div class="notes" style="border-color: #ff9500;">${issuesEncountered}</div>` : ''}
+          
+          <h2 class="section-title">Progress Photos (${images.length})</h2>
+          <div class="photo-grid">
+            ${imagesHtml}
+          </div>
+          
+          <div class="footer">
+            Generated on ${new Date().toLocaleString()} | DPR System
+          </div>
+        </body>
+      </html>
+    `;
+    
+    try {
+      // Generate PDF
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+      
+      // Share the PDF
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `DPR - ${formattedDate}`,
+          UTI: 'com.adobe.pdf',
+        });
+        showAlert('PDF Generated', `Daily Progress Report has been created.\nFilename: ${formattedDate}.pdf`);
+      } else {
+        showAlert('PDF Generated', `PDF saved at: ${uri}`);
+      }
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      showAlert('Warning', 'PDF generation failed, but DPR will still be submitted.');
     }
   };
 
