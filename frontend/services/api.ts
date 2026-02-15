@@ -24,14 +24,17 @@ import {
 const getBaseUrl = (): string => {
   // For web, use relative paths (same origin)
   if (typeof window !== 'undefined' && Platform.OS === 'web') {
+    console.log('Using relative paths for web');
     return '';  // Use relative paths
   }
   // For native apps, use the backend URL from env
   const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://backend-hardening-3.preview.emergentagent.com';
+  console.log('Using backend URL:', backendUrl);
   return backendUrl;
 };
 
 const BASE_URL = getBaseUrl();
+console.log('BASE_URL set to:', BASE_URL);
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = 'access_token';
