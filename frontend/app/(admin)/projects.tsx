@@ -19,6 +19,7 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme'
 import { Project } from '../../types/api';
 
 export default function AdminProjects() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
