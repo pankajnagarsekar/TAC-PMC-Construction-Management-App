@@ -101,7 +101,16 @@ export default function AdminProjects() {
         }
       />
 
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => {
+          Alert.alert(
+            'Create Project',
+            'Project creation form will be implemented here.',
+            [{ text: 'OK', style: 'default' }]
+          );
+        }}
+      >
         <Ionicons name="add" size={28} color={Colors.white} />
       </TouchableOpacity>
     </SafeAreaView>
