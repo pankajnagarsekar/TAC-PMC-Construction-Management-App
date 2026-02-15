@@ -264,14 +264,24 @@ export default function CreateDPRScreen() {
     const selectedProject = projects.find(p => (p.project_id || p._id) === projectId);
     const projectName = selectedProject?.project_name || 'Project';
     
-    // Generate HTML content for PDF
-    const imagesHtml = images.map((img, idx) => `
-      <div style="page-break-inside: avoid; margin-bottom: 20px;">
-        <img src="data:image/jpeg;base64,${img.base64}" 
-             style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px;" />
-        <p style="margin-top: 8px; font-size: 12px; color: #666;">
-          <strong>Photo ${idx + 1}:</strong> ${img.caption || 'No caption'}
-        </p>
+    // Generate HTML for each photo page (one photo per page)
+    const photoPages = images.map((img, idx) => `
+      <div style="page-break-after: always; height: 100vh; display: flex; flex-direction: column; padding: 30px; box-sizing: border-box;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #007AFF; margin: 0; font-size: 16px;">Photo ${idx + 1} of ${images.length}</h2>
+          <p style="color: #666; margin: 5px 0 0; font-size: 12px;">${formattedDate}</p>
+        </div>
+        
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <img src="data:image/jpeg;base64,${img.base64}" 
+               style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007AFF;">
+          <p style="margin: 0; font-size: 14px; color: #333; font-weight: 500;">
+            ${img.caption || 'No caption provided'}
+          </p>
+        </div>
       </div>
     `).join('');
     
@@ -282,117 +292,136 @@ export default function CreateDPRScreen() {
           <meta charset="utf-8">
           <title>Daily Progress Report - ${formattedDate}</title>
           <style>
+            @page {
+              margin: 0;
+              size: A4 portrait;
+            }
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              padding: 20px;
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            .header {
-              text-align: center;
-              border-bottom: 2px solid #007AFF;
-              padding-bottom: 15px;
-              margin-bottom: 20px;
-            }
-            .header h1 {
-              color: #007AFF;
               margin: 0;
-              font-size: 24px;
+              padding: 0;
             }
-            .header p {
-              color: #666;
-              margin: 5px 0 0;
-            }
-            .info-section {
-              background: #f5f5f5;
-              padding: 15px;
-              border-radius: 8px;
-              margin-bottom: 20px;
-            }
-            .info-row {
+            .cover-page {
+              height: 100vh;
               display: flex;
-              margin-bottom: 8px;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              padding: 40px;
+              box-sizing: border-box;
+              background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+              page-break-after: always;
             }
-            .info-label {
-              font-weight: 600;
-              width: 140px;
-              color: #333;
+            .cover-logo {
+              width: 80px;
+              height: 80px;
+              background: #007AFF;
+              border-radius: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin-bottom: 30px;
             }
-            .info-value {
-              color: #666;
+            .cover-title {
+              font-size: 32px;
+              font-weight: bold;
+              color: #1a1a1a;
+              margin: 0 0 10px;
+              text-align: center;
             }
-            .section-title {
+            .cover-subtitle {
               font-size: 18px;
-              color: #333;
-              border-bottom: 1px solid #ddd;
-              padding-bottom: 8px;
-              margin: 20px 0 15px;
+              color: #666;
+              margin: 0 0 40px;
             }
-            .notes {
-              background: #fafafa;
-              padding: 12px;
-              border-radius: 6px;
-              border-left: 3px solid #007AFF;
+            .cover-info {
+              background: white;
+              padding: 30px 40px;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+              width: 100%;
+              max-width: 400px;
+            }
+            .cover-info-row {
+              display: flex;
               margin-bottom: 15px;
+              padding-bottom: 15px;
+              border-bottom: 1px solid #eee;
             }
-            .photo-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
+            .cover-info-row:last-child {
+              margin-bottom: 0;
+              padding-bottom: 0;
+              border-bottom: none;
+            }
+            .cover-info-label {
+              font-weight: 600;
+              color: #333;
+              width: 100px;
+            }
+            .cover-info-value {
+              color: #666;
+              flex: 1;
             }
             .footer {
+              position: absolute;
+              bottom: 30px;
+              left: 0;
+              right: 0;
               text-align: center;
-              margin-top: 30px;
-              padding-top: 15px;
-              border-top: 1px solid #ddd;
-              color: #999;
               font-size: 10px;
+              color: #999;
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>Daily Progress Report</h1>
-            <p>${formattedDate}</p>
-          </div>
-          
-          <div class="info-section">
-            <div class="info-row">
-              <span class="info-label">Project:</span>
-              <span class="info-value">${projectName}</span>
+          <!-- Cover Page -->
+          <div class="cover-page">
+            <div class="cover-logo">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
             </div>
-            <div class="info-row">
-              <span class="info-label">Date:</span>
-              <span class="info-value">${formattedDate}</span>
+            <h1 class="cover-title">Daily Progress Report</h1>
+            <p class="cover-subtitle">${formattedDate}</p>
+            
+            <div class="cover-info">
+              <div class="cover-info-row">
+                <span class="cover-info-label">Project</span>
+                <span class="cover-info-value">${projectName}</span>
+              </div>
+              <div class="cover-info-row">
+                <span class="cover-info-label">Date</span>
+                <span class="cover-info-value">${formattedDate}</span>
+              </div>
+              ${weatherConditions ? `
+              <div class="cover-info-row">
+                <span class="cover-info-label">Weather</span>
+                <span class="cover-info-value">${weatherConditions}</span>
+              </div>` : ''}
+              ${manpowerCount ? `
+              <div class="cover-info-row">
+                <span class="cover-info-label">Manpower</span>
+                <span class="cover-info-value">${manpowerCount} workers</span>
+              </div>` : ''}
+              <div class="cover-info-row">
+                <span class="cover-info-label">Photos</span>
+                <span class="cover-info-value">${images.length} progress photos</span>
+              </div>
             </div>
-            ${weatherConditions ? `
-            <div class="info-row">
-              <span class="info-label">Weather:</span>
-              <span class="info-value">${weatherConditions}</span>
+            
+            ${progressNotes ? `
+            <div style="margin-top: 30px; max-width: 400px; text-align: left;">
+              <h3 style="font-size: 14px; color: #333; margin: 0 0 10px;">Progress Notes</h3>
+              <p style="font-size: 12px; color: #666; margin: 0; line-height: 1.5;">${progressNotes}</p>
             </div>` : ''}
-            ${manpowerCount ? `
-            <div class="info-row">
-              <span class="info-label">Manpower:</span>
-              <span class="info-value">${manpowerCount} workers</span>
-            </div>` : ''}
+            
+            <div class="footer">
+              Generated on ${new Date().toLocaleString()} | DPR System
+            </div>
           </div>
           
-          ${progressNotes ? `
-          <h2 class="section-title">Progress Notes</h2>
-          <div class="notes">${progressNotes}</div>` : ''}
-          
-          ${issuesEncountered ? `
-          <h2 class="section-title">Issues Encountered</h2>
-          <div class="notes" style="border-color: #ff9500;">${issuesEncountered}</div>` : ''}
-          
-          <h2 class="section-title">Progress Photos (${images.length})</h2>
-          <div class="photo-grid">
-            ${imagesHtml}
-          </div>
-          
-          <div class="footer">
-            Generated on ${new Date().toLocaleString()} | DPR System
-          </div>
+          <!-- Photo Pages (One per page) -->
+          ${photoPages}
         </body>
       </html>
     `;
@@ -411,7 +440,7 @@ export default function CreateDPRScreen() {
           dialogTitle: `DPR - ${formattedDate}`,
           UTI: 'com.adobe.pdf',
         });
-        showAlert('PDF Generated', `Daily Progress Report has been created.\nFilename: ${formattedDate}.pdf`);
+        showAlert('PDF Generated', `Daily Progress Report created with ${images.length} pages.\nFilename: ${formattedDate}.pdf`);
       } else {
         showAlert('PDF Generated', `PDF saved at: ${uri}`);
       }
