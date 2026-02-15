@@ -553,6 +553,230 @@ async def update_settings(
 
 
 # =============================================================================
+# DPR (DAILY PROGRESS REPORT) ENDPOINTS
+# =============================================================================
+
+class DPRCreate(BaseModel):
+    project_id: str
+    dpr_date: str  # YYYY-MM-DD format
+    progress_notes: Optional[str] = None
+    weather_conditions: Optional[str] = None
+    manpower_count: Optional[int] = None
+    activities_completed: Optional[List[str]] = []
+    issues_encountered: Optional[str] = None
+
+
+class DPRImage(BaseModel):
+    dpr_id: str
+    image_data: str  # Base64 encoded
+    caption: Optional[str] = None
+    activity_code: Optional[str] = None
+
+
+@wave3_router.post("/dpr", status_code=201)
+async def create_dpr(
+    dpr_data: DPRCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Create a new Daily Progress Report.
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_project_access(user, dpr_data.project_id, require_write=True)
+    
+    # Parse date
+    try:
+        dpr_date = datetime.strptime(dpr_data.dpr_date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    # Check if DPR already exists for this date/project/user
+    existing = await db.dpr.find_one({
+        "project_id": dpr_data.project_id,
+        "supervisor_id": user["user_id"],
+        "dpr_date": dpr_date
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="DPR already exists for this date")
+    
+    # Create DPR
+    dpr_doc = {
+        "project_id": dpr_data.project_id,
+        "organisation_id": user["organisation_id"],
+        "supervisor_id": user["user_id"],
+        "dpr_date": dpr_date,
+        "progress_notes": dpr_data.progress_notes,
+        "weather_conditions": dpr_data.weather_conditions,
+        "manpower_count": dpr_data.manpower_count,
+        "activities_completed": dpr_data.activities_completed or [],
+        "issues_encountered": dpr_data.issues_encountered,
+        "images": [],
+        "image_count": 0,
+        "status": "Draft",
+        "locked_flag": False,
+        "version_number": 1,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    result = await db.dpr.insert_one(dpr_doc)
+    
+    return {
+        "dpr_id": str(result.inserted_id),
+        "status": "created",
+        "message": "DPR created. Add images to complete."
+    }
+
+
+@wave3_router.post("/dpr/{dpr_id}/images", status_code=201)
+async def add_dpr_image(
+    dpr_id: str,
+    image_data: DPRImage,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Add image to DPR.
+    
+    Images stored as base64 in document.
+    Minimum 4 images required for DPR submission.
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    # Get DPR
+    dpr = await db.dpr.find_one({"_id": ObjectId(dpr_id)})
+    if not dpr:
+        raise HTTPException(status_code=404, detail="DPR not found")
+    
+    if dpr.get("locked_flag"):
+        raise HTTPException(status_code=400, detail="DPR is locked and cannot be modified")
+    
+    if dpr.get("organisation_id") != user["organisation_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Create image document
+    image_doc = {
+        "image_id": str(ObjectId()),
+        "image_data": image_data.image_data,
+        "caption": image_data.caption,
+        "activity_code": image_data.activity_code,
+        "uploaded_by": user["user_id"],
+        "uploaded_at": datetime.utcnow().isoformat()
+    }
+    
+    # Add to DPR
+    await db.dpr.update_one(
+        {"_id": ObjectId(dpr_id)},
+        {
+            "$push": {"images": image_doc},
+            "$inc": {"image_count": 1},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    return {
+        "image_id": image_doc["image_id"],
+        "status": "added",
+        "message": "Image added to DPR"
+    }
+
+
+@wave3_router.post("/dpr/{dpr_id}/submit")
+async def submit_dpr(
+    dpr_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Submit DPR for review.
+    
+    Requires minimum 4 images.
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    # Get DPR
+    dpr = await db.dpr.find_one({"_id": ObjectId(dpr_id)})
+    if not dpr:
+        raise HTTPException(status_code=404, detail="DPR not found")
+    
+    if dpr.get("organisation_id") != user["organisation_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    if dpr.get("locked_flag"):
+        raise HTTPException(status_code=400, detail="DPR is already submitted")
+    
+    image_count = dpr.get("image_count", 0)
+    if image_count < 4:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"DPR requires minimum 4 images. Current: {image_count}"
+        )
+    
+    # Submit
+    await db.dpr.update_one(
+        {"_id": ObjectId(dpr_id)},
+        {
+            "$set": {
+                "status": "Submitted",
+                "locked_flag": True,
+                "submitted_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {"dpr_id": dpr_id, "status": "submitted"}
+
+
+@wave3_router.get("/dpr")
+async def list_dprs(
+    project_id: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """List DPRs"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    query = {"organisation_id": user["organisation_id"]}
+    
+    if project_id:
+        query["project_id"] = project_id
+    
+    if status_filter:
+        query["status"] = status_filter
+    
+    dprs = await db.dpr.find(query).sort("dpr_date", -1).limit(limit).to_list(length=limit)
+    
+    result = []
+    for dpr in dprs:
+        dpr["dpr_id"] = str(dpr.pop("_id"))
+        # Don't include full image data in list
+        dpr["images"] = [{"image_id": img.get("image_id"), "caption": img.get("caption")} for img in dpr.get("images", [])]
+        result.append(serialize_mongo_doc(dpr))
+    
+    return {"dprs": result}
+
+
+@wave3_router.get("/dpr/{dpr_id}")
+async def get_dpr(
+    dpr_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get single DPR with all details including images"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    dpr = await db.dpr.find_one({"_id": ObjectId(dpr_id)})
+    if not dpr:
+        raise HTTPException(status_code=404, detail="DPR not found")
+    
+    if dpr.get("organisation_id") != user["organisation_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    dpr["dpr_id"] = str(dpr.pop("_id"))
+    return serialize_mongo_doc(dpr)
+
+
+# =============================================================================
 # SYSTEM
 # =============================================================================
 
