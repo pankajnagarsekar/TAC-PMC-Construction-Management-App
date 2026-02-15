@@ -304,10 +304,12 @@ async def get_work_orders(
     
     work_orders = await db.work_orders.find(query).to_list(length=None)
     
+    result = []
     for wo in work_orders:
-        wo["wo_id"] = str(wo.pop("_id"))
+        wo["work_order_id"] = str(wo.pop("_id"))
+        result.append(serialize_doc(wo))
     
-    return work_orders
+    return result
 
 
 @hardened_router.get("/work-orders/{wo_id}")
