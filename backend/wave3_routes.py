@@ -649,13 +649,13 @@ async def generate_ai_caption(
 ):
     """
     Generate AI-recommended caption for a construction progress image.
+    Uses OpenAI GPT-4 Vision API to analyze the actual photo content.
     User can override with manual caption.
-    Uses OpenAI GPT-4 Vision API for intelligent image analysis.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
-    # Get OpenAI API key
-    openai_key = os.environ.get('OPENAI_API_KEY')
+    # Get OpenAI API key - prefer Emergent LLM key, fallback to user's key
+    openai_key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('OPENAI_API_KEY')
     
     if not openai_key:
         # Fallback to mock captions if no API key
@@ -676,7 +676,15 @@ async def generate_ai_caption(
     
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=openai_key)
+        
+        # Use Emergent base URL if using Emergent key
+        if openai_key.startswith('sk-emergent'):
+            client = OpenAI(
+                api_key=openai_key,
+                base_url="https://api.emergentagent.com/v1"
+            )
+        else:
+            client = OpenAI(api_key=openai_key)
         
         # Prepare image data for OpenAI Vision API
         image_data = request.image_data
@@ -689,23 +697,39 @@ async def generate_ai_caption(
             # Add data URL prefix for JPEG (most common from cameras)
             image_url = f"data:image/jpeg;base64,{image_data}"
         
-        # Call OpenAI Vision API
+        # Call OpenAI Vision API to analyze the image
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
                     "role": "system",
-                    "content": """You are an expert construction site supervisor. 
-                    Analyze construction progress images and provide concise, professional captions.
-                    Focus on: construction activity visible, materials used, stage of work, safety aspects.
-                    Keep captions under 15 words. Be specific and technical."""
+                    "content": """You are an expert construction site supervisor and photographer.
+                    
+Your task is to analyze construction progress images and provide:
+1. A detailed yet concise caption describing what you SEE in the image
+2. Identify the type of construction work visible (foundation, structural, MEP, finishing, etc.)
+3. Note any materials, equipment, or workers visible
+4. Comment on the stage/phase of work
+
+Keep captions professional and under 20 words.
+Focus on factual observations from the image content."""
                 },
                 {
                     "role": "user",
                     "content": [
                         {
                             "type": "text",
-                            "text": "Generate a professional caption for this construction site progress photo. Provide ONE main caption and THREE alternative captions."
+                            "text": """Analyze this construction site photo and provide:
+1. MAIN CAPTION: A single professional caption describing what you see (max 20 words)
+2. ALTERNATIVE 1: Another way to describe the same scene
+3. ALTERNATIVE 2: A third variation
+4. ALTERNATIVE 3: A fourth variation
+
+Format your response exactly like this:
+MAIN: [your main caption]
+ALT1: [alternative 1]
+ALT2: [alternative 2]  
+ALT3: [alternative 3]"""
                         },
                         {
                             "type": "image_url",
@@ -717,35 +741,50 @@ async def generate_ai_caption(
                     ]
                 }
             ],
-            max_tokens=200
+            max_tokens=300
         )
         
         # Parse the response
         ai_response = response.choices[0].message.content.strip()
+        logger.info(f"AI Vision response: {ai_response}")
         
-        # Try to extract main caption and alternatives
-        lines = [line.strip() for line in ai_response.split('\n') if line.strip()]
-        
-        # First non-empty line is main caption (clean it)
-        main_caption = lines[0] if lines else "Construction progress captured"
-        # Remove any numbering or prefixes
-        for prefix in ['1.', '2.', '3.', '4.', '-', '*', 'Main:', 'Caption:']:
-            main_caption = main_caption.replace(prefix, '').strip()
-        
-        # Rest are alternatives
+        # Parse structured response
+        lines = ai_response.split('\n')
+        main_caption = "Construction progress captured"
         alternatives = []
-        for line in lines[1:4]:  # Take up to 3 alternatives
-            clean_line = line
-            for prefix in ['1.', '2.', '3.', '4.', '-', '*', 'Alternative:', 'Alt:']:
-                clean_line = clean_line.replace(prefix, '').strip()
-            if clean_line and clean_line != main_caption:
-                alternatives.append(clean_line)
+        
+        for line in lines:
+            line = line.strip()
+            if line.upper().startswith('MAIN:'):
+                main_caption = line[5:].strip()
+            elif line.upper().startswith('ALT1:'):
+                alternatives.append(line[5:].strip())
+            elif line.upper().startswith('ALT2:'):
+                alternatives.append(line[5:].strip())
+            elif line.upper().startswith('ALT3:'):
+                alternatives.append(line[5:].strip())
+        
+        # If parsing failed, try line-by-line approach
+        if main_caption == "Construction progress captured" and len(lines) > 0:
+            # First non-empty line as main caption
+            for line in lines:
+                clean_line = line.strip()
+                if clean_line and not clean_line.startswith(('MAIN', 'ALT', '1.', '2.', '3.', '4.', '-')):
+                    main_caption = clean_line[:100]  # Limit length
+                    break
+            # Remaining lines as alternatives
+            for line in lines[1:4]:
+                clean_line = line.strip()
+                for prefix in ['1.', '2.', '3.', '4.', '-', '*', 'ALT:', 'Alternative:']:
+                    clean_line = clean_line.replace(prefix, '').strip()
+                if clean_line and clean_line != main_caption and len(clean_line) > 5:
+                    alternatives.append(clean_line[:100])
         
         return {
             "ai_caption": main_caption,
             "confidence": 0.92,
             "alternatives": alternatives[:3],
-            "note": "AI-generated caption. You can override with your own description."
+            "note": "AI analyzed your image. You can edit or select alternatives."
         }
         
     except Exception as e:
