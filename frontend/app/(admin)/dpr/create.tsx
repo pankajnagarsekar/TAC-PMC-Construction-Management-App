@@ -62,6 +62,8 @@ export default function CreateDPRScreen() {
 
   // DPR state after creation
   const [dprId, setDprId] = useState<string | null>(null);
+  const [generatingCaption, setGeneratingCaption] = useState<string | null>(null);
+  const [selectedImageForCaption, setSelectedImageForCaption] = useState<string | null>(null);
 
   useEffect(() => {
     loadProjects();
