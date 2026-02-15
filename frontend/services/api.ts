@@ -22,7 +22,11 @@ import {
 
 // Get base URL from environment
 const getBaseUrl = (): string => {
-  // Use the backend URL from env
+  // For web, use relative paths (same origin)
+  if (typeof window !== 'undefined' && Platform.OS === 'web') {
+    return '';  // Use relative paths
+  }
+  // For native apps, use the backend URL from env
   const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://backend-hardening-3.preview.emergentagent.com';
   return backendUrl;
 };
