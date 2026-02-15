@@ -20,7 +20,7 @@ from datetime import datetime, date
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://confix.preview.emergentagent.com"
+BASE_URL = "https://build-report-1.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 API_V2_BASE = f"{BASE_URL}/api/v2"
 
