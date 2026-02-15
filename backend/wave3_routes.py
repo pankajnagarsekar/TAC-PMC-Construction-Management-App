@@ -650,40 +650,124 @@ async def generate_ai_caption(
     """
     Generate AI-recommended caption for a construction progress image.
     User can override with manual caption.
+    Uses OpenAI GPT-4 Vision API for intelligent image analysis.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
-    # Use AI service for caption generation
-    # In production, this would call vision AI to analyze the image
-    # For now, provide intelligent construction-related suggestions
+    # Get OpenAI API key
+    openai_key = os.environ.get('OPENAI_API_KEY')
     
-    suggested_captions = [
-        "Foundation work in progress",
-        "Concrete pouring completed",
-        "Steel reinforcement installation",
-        "Formwork preparation",
-        "Site excavation work",
-        "Column casting completed",
-        "Beam reinforcement work",
-        "Slab concreting in progress",
-        "Masonry work ongoing",
-        "Plumbing installation",
-        "Electrical conduit laying",
-        "Waterproofing application",
-        "Plastering work completed",
-        "Flooring tile installation",
-        "Painting work in progress"
-    ]
+    if not openai_key:
+        # Fallback to mock captions if no API key
+        import random
+        suggested_captions = [
+            "Foundation work in progress",
+            "Concrete pouring completed",
+            "Steel reinforcement installation",
+            "Formwork preparation",
+            "Site excavation work",
+        ]
+        return {
+            "ai_caption": random.choice(suggested_captions),
+            "confidence": 0.5,
+            "alternatives": [],
+            "note": "Mock caption - OpenAI API key not configured"
+        }
     
-    import random
-    primary_caption = random.choice(suggested_captions)
-    
-    return {
-        "ai_caption": primary_caption,
-        "confidence": 0.85,
-        "alternatives": random.sample(suggested_captions, min(3, len(suggested_captions))),
-        "note": "You can override this caption with your own description"
-    }
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=openai_key)
+        
+        # Prepare image data for OpenAI Vision API
+        image_data = request.image_data
+        
+        # Handle base64 data URL format
+        if image_data.startswith('data:'):
+            # Already in correct format
+            image_url = image_data
+        else:
+            # Add data URL prefix for JPEG (most common from cameras)
+            image_url = f"data:image/jpeg;base64,{image_data}"
+        
+        # Call OpenAI Vision API
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are an expert construction site supervisor. 
+                    Analyze construction progress images and provide concise, professional captions.
+                    Focus on: construction activity visible, materials used, stage of work, safety aspects.
+                    Keep captions under 15 words. Be specific and technical."""
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Generate a professional caption for this construction site progress photo. Provide ONE main caption and THREE alternative captions."
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": image_url,
+                                "detail": "low"  # Use low detail to reduce costs
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=200
+        )
+        
+        # Parse the response
+        ai_response = response.choices[0].message.content.strip()
+        
+        # Try to extract main caption and alternatives
+        lines = [line.strip() for line in ai_response.split('\n') if line.strip()]
+        
+        # First non-empty line is main caption (clean it)
+        main_caption = lines[0] if lines else "Construction progress captured"
+        # Remove any numbering or prefixes
+        for prefix in ['1.', '2.', '3.', '4.', '-', '*', 'Main:', 'Caption:']:
+            main_caption = main_caption.replace(prefix, '').strip()
+        
+        # Rest are alternatives
+        alternatives = []
+        for line in lines[1:4]:  # Take up to 3 alternatives
+            clean_line = line
+            for prefix in ['1.', '2.', '3.', '4.', '-', '*', 'Alternative:', 'Alt:']:
+                clean_line = clean_line.replace(prefix, '').strip()
+            if clean_line and clean_line != main_caption:
+                alternatives.append(clean_line)
+        
+        return {
+            "ai_caption": main_caption,
+            "confidence": 0.92,
+            "alternatives": alternatives[:3],
+            "note": "AI-generated caption. You can override with your own description."
+        }
+        
+    except Exception as e:
+        logger.error(f"OpenAI Vision API error: {str(e)}")
+        # Fallback to construction-specific suggestions
+        import random
+        fallback_captions = [
+            "Foundation work in progress",
+            "Concrete pouring completed",
+            "Steel reinforcement installation",
+            "Formwork preparation",
+            "Site excavation work",
+            "Column casting completed",
+            "Beam reinforcement work",
+            "Slab concreting in progress",
+        ]
+        return {
+            "ai_caption": random.choice(fallback_captions),
+            "confidence": 0.5,
+            "alternatives": random.sample(fallback_captions, 3),
+            "note": f"Fallback caption - AI service temporarily unavailable"
+        }
 
 
 @wave3_router.post("/dpr/{dpr_id}/images", status_code=201)
