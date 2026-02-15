@@ -269,55 +269,57 @@ export const financialApi = {
 // VENDORS API
 // ============================================
 export const vendorsApi = {
-  getAll: (activeOnly = true): Promise<Vendor[]> => request(`/api/phase2/vendors?active_only=${activeOnly}`),
-  getById: (id: string): Promise<Vendor> => request(`/api/phase2/vendors/${id}`),
-  create: (data: CreateVendorRequest): Promise<Vendor> => request('/api/phase2/vendors', { method: 'POST', body: JSON.stringify(data) }),
+  getAll: (activeOnly = true): Promise<Vendor[]> => request(`/api/v2/vendors?active_only=${activeOnly}`),
+  getById: (id: string): Promise<Vendor> => request(`/api/v2/vendors/${id}`),
+  create: (data: CreateVendorRequest): Promise<Vendor> => request('/api/v2/vendors', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ============================================
 // WORK ORDERS API
 // ============================================
 export const workOrdersApi = {
-  getAll: (projectId: string, status?: string): Promise<WorkOrder[]> => {
-    const params = new URLSearchParams({ project_id: projectId });
-    if (status) params.append('status', status);
-    return request(`/api/phase2/work-orders?${params}`);
+  getAll: (projectId?: string, status?: string): Promise<WorkOrder[]> => {
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', projectId);
+    if (status) params.append('status_filter', status);
+    return request(`/api/v2/work-orders?${params}`);
   },
-  getById: (id: string): Promise<WorkOrder> => request(`/api/phase2/work-orders/${id}`),
-  create: (data: CreateWorkOrderRequest): Promise<WorkOrder> => request('/api/phase2/work-orders', { method: 'POST', body: JSON.stringify(data) }),
-  issue: (id: string): Promise<WorkOrder> => request(`/api/phase2/work-orders/${id}/issue`, { method: 'POST' }),
-  revise: (id: string, data: ReviseWorkOrderRequest): Promise<WorkOrder> => request(`/api/phase2/work-orders/${id}/revise`, { method: 'POST', body: JSON.stringify(data) }),
+  getById: (id: string): Promise<WorkOrder> => request(`/api/v2/work-orders/${id}`),
+  create: (data: CreateWorkOrderRequest): Promise<WorkOrder> => request('/api/v2/work-orders', { method: 'POST', body: JSON.stringify(data) }),
+  issue: (id: string): Promise<WorkOrder> => request(`/api/v2/work-orders/${id}/issue`, { method: 'POST' }),
+  revise: (id: string, data: ReviseWorkOrderRequest): Promise<WorkOrder> => request(`/api/v2/work-orders/${id}/revise`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ============================================
 // PAYMENT CERTIFICATES API
 // ============================================
 export const paymentCertificatesApi = {
-  getAll: (projectId: string, status?: string): Promise<PaymentCertificate[]> => {
-    const params = new URLSearchParams({ project_id: projectId });
-    if (status) params.append('status', status);
-    return request(`/api/phase2/payment-certificates?${params}`);
+  getAll: (projectId?: string, status?: string): Promise<PaymentCertificate[]> => {
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', projectId);
+    if (status) params.append('status_filter', status);
+    return request(`/api/v2/payment-certificates?${params}`);
   },
-  getById: (id: string): Promise<PaymentCertificate> => request(`/api/phase2/payment-certificates/${id}`),
-  create: (data: CreatePaymentCertificateRequest): Promise<PaymentCertificate> => request('/api/phase2/payment-certificates', { method: 'POST', body: JSON.stringify(data) }),
-  certify: (id: string): Promise<PaymentCertificate> => request(`/api/phase2/payment-certificates/${id}/certify`, { method: 'POST' }),
-  revise: (id: string, data: RevisePaymentCertificateRequest): Promise<PaymentCertificate> => request(`/api/phase2/payment-certificates/${id}/revise`, { method: 'POST', body: JSON.stringify(data) }),
+  getById: (id: string): Promise<PaymentCertificate> => request(`/api/v2/payment-certificates/${id}`),
+  create: (data: CreatePaymentCertificateRequest): Promise<PaymentCertificate> => request('/api/v2/payment-certificates', { method: 'POST', body: JSON.stringify(data) }),
+  certify: (id: string, invoiceNumber?: string): Promise<PaymentCertificate> => request(`/api/v2/payment-certificates/${id}/certify${invoiceNumber ? `?invoice_number=${invoiceNumber}` : ''}`, { method: 'POST' }),
+  revise: (id: string, data: RevisePaymentCertificateRequest): Promise<PaymentCertificate> => request(`/api/v2/payment-certificates/${id}/revise`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ============================================
 // PAYMENTS API
 // ============================================
 export const paymentsApi = {
-  getByPC: (pcId: string): Promise<Payment[]> => request(`/api/phase2/payment-certificates/${pcId}/payments`),
-  create: (data: CreatePaymentRequest): Promise<Payment> => request('/api/phase2/payments', { method: 'POST', body: JSON.stringify(data) }),
+  getByPC: (pcId: string): Promise<Payment[]> => request(`/api/v2/payments?pc_id=${pcId}`),
+  create: (data: CreatePaymentRequest): Promise<Payment> => request('/api/v2/payments', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ============================================
 // RETENTION RELEASES API
 // ============================================
 export const retentionApi = {
-  getAll: (projectId: string): Promise<RetentionRelease[]> => request(`/api/phase2/retention-releases?project_id=${projectId}`),
-  create: (data: CreateRetentionReleaseRequest): Promise<RetentionRelease> => request('/api/phase2/retention-releases', { method: 'POST', body: JSON.stringify(data) }),
+  getAll: (projectId: string): Promise<RetentionRelease[]> => request(`/api/v2/retention-releases?project_id=${projectId}`),
+  create: (data: CreateRetentionReleaseRequest): Promise<RetentionRelease> => request('/api/v2/retention-releases', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ============================================
