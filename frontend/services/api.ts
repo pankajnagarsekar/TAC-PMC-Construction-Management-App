@@ -233,10 +233,11 @@ export const financialApi = {
 // WORK ORDERS API (Phase 2)
 // ============================================
 export const workOrdersApi = {
-  async getAll(projectId: string, status?: string): Promise<WorkOrder[]> {
-    const params = new URLSearchParams({ project_id: projectId });
-    if (status) params.append('status', status);
-    return fetchApi<WorkOrder[]>(`/api/phase2/work-orders?${params}`);
+  async getAll(projectId?: string, status?: string): Promise<WorkOrder[]> {
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', projectId);
+    if (status) params.append('status_filter', status);
+    return fetchApi<WorkOrder[]>(`/api/v2/work-orders?${params}`);
   },
 };
 
@@ -244,10 +245,11 @@ export const workOrdersApi = {
 // PAYMENT CERTIFICATES API (Phase 2)
 // ============================================
 export const paymentCertificatesApi = {
-  async getAll(projectId: string, status?: string): Promise<PaymentCertificate[]> {
-    const params = new URLSearchParams({ project_id: projectId });
-    if (status) params.append('status', status);
-    return fetchApi<PaymentCertificate[]>(`/api/phase2/payment-certificates?${params}`);
+  async getAll(projectId?: string, status?: string): Promise<PaymentCertificate[]> {
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', projectId);
+    if (status) params.append('status_filter', status);
+    return fetchApi<PaymentCertificate[]>(`/api/v2/payment-certificates?${params}`);
   },
 };
 
@@ -257,7 +259,7 @@ export const paymentCertificatesApi = {
 export const vendorsApi = {
   async getAll(activeOnly = true): Promise<Vendor[]> {
     const params = new URLSearchParams({ active_only: String(activeOnly) });
-    return fetchApi<Vendor[]>(`/api/phase2/vendors?${params}`);
+    return fetchApi<Vendor[]>(`/api/v2/vendors?${params}`);
   },
 };
 
