@@ -87,6 +87,8 @@ export default function AdminTabLayout() {
       {/* Hidden screens - accessible via navigation but not shown in tab bar */}
       <Tabs.Screen name="csa" options={{ href: null, headerTitle: 'CSA Management' }} />
       <Tabs.Screen name="dpr" options={{ href: null, headerTitle: 'Daily Progress Reports' }} />
+      <Tabs.Screen name="dpr/create" options={{ href: null, headerTitle: 'Create DPR' }} />
+      <Tabs.Screen name="dpr/[id]" options={{ href: null, headerTitle: 'DPR Details' }} />
       <Tabs.Screen name="ocr" options={{ href: null, headerTitle: 'OCR Processing' }} />
       <Tabs.Screen name="alerts" options={{ href: null, headerTitle: 'Alerts' }} />
       <Tabs.Screen name="budget" options={{ href: null, headerTitle: 'Budget Management' }} />
