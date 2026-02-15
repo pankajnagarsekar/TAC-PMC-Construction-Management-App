@@ -61,7 +61,7 @@ import {
 // ============================================
 // CONFIGURATION
 // ============================================
-const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://backend-hardening-3.preview.emergentagent.com';
+const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://confix.preview.emergentagent.com';
 
 const TOKEN_KEYS = {
   ACCESS: 'access_token',

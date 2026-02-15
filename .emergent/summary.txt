@@ -1,0 +1,199 @@
+<analysis>
+
+**original_problem_statement**: The user initiated a multi-wave backend hardening and compliance lock for a feature-complete enterprise construction management system. The frontend was considered frozen.
+
+- **Wave 1**: Implemented  precision, atomic transactions, financial invariants, and duplicate protection. This involved enabling a MongoDB replica set, creating a hardened financial engine, and fixing numerous data type and indexing issues.
+- **Wave 2**: Implemented lifecycle and structural integrity, including versioning tables, a lock engine, a no-hard-delete policy, and backend enforcement for attendance and DPR rules.
+- **Wave 3**: Scaffolded a snapshot engine, background job runner, AI integration layer, and security hardening features. This involved fixing complex  JSON serialization issues.
+
+After completing the backend work, the user reported multiple critical runtime issues on the frontend. The agent has now pivoted to debugging these frontend issues. The backend is considered architecturally locked.
+
+The current user request is to fix a list of specific frontend bugs:
+1.  Projects Screen is empty.
+2.  FAB (Floating Action Button) is not working.
+3.  Reports screen has infinite loading.
+4.  Navigation from the Settings screen is broken.
+5.  Filtering on the Alerts screen is not working.
+6.  The Recent Projects section on the Dashboard is empty.
+
+**User's preferred language**: English
+
+**what currently exists?**
+- A full-stack application with a React Native (Expo) frontend and a FastAPI backend using MongoDB.
+- A significantly hardened backend with three waves of features implemented:
+    - **Wave 1 (Financial Core):**  precision, atomic transactions via a MongoDB replica set, financial invariants, and unique document/invoice constraints.
+    - **Wave 2 (Lifecycle):** Versioning tables (, ), a document lock engine, soft-delete policies, and backend validation for attendance and DPRs.
+    - **Wave 3 (Advanced Features):** Scaffolding and API routes for a snapshot report engine, background jobs, an AI service layer, and security hardening.
+- A frontend that was previously considered stable but is now exhibiting multiple runtime bugs after the extensive backend changes.
+- The agent has already fixed the most critical frontend issues: a complete login failure and a broken bottom tab navigation layout.
+
+**Last working item**:
+-   **Last item agent was working**: The agent had just finished debugging and fixing the most critical frontend runtime issues: Login Failure and Broken Bottom Navigation. It successfully logged in and verified the main tab bar layout is now correct. It then received a new, more specific list of 6 frontend bugs to address on the now-accessible screens. The agent's last action was to start reading the entire frontend folder structure to prepare for this new debugging session.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N (Just started the new bug list)
+-   **Which testing method agent to use?**: screenshot tool
+-   **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+- **Issue 1: Projects Screen Empty (P0)**
+- **Issue 2: FAB Not Working (P1)**
+- **Issue 3: Reports Infinite Loading (P1)**
+- **Issue 4: Settings Navigation Broken (P1)**
+- **Issue 5: Alert Filters Not Working (P1)**
+- **Issue 6: Dashboard Recent Projects Empty (P1)**
+
+**Issues Detail**:
+-   **Issue 1: Projects Screen Empty**
+    -   **Attempted fixes**: None yet for this specific issue.
+    -   **Next debug checklist**:
+        1.  Inspect .
+        2.  Check the data fetching logic (, ).
+        3.  Verify the correct API endpoint is being called (should be ).
+        4.  Log the raw API response to check its structure (e.g.,  vs ).
+        5.  Ensure the component's state is being updated correctly and triggering a re-render.
+    -   **Why fix this issue and what will be achieved with the fix?**: The projects screen is a core part of the admin functionality. Fixing it will allow users to view and manage projects.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on other issue**: None
+
+- All other issues from the list (2-6) follow a similar pattern: they are  and require frontend debugging by inspecting the relevant screen component, its data fetching, state management, and event handlers ().
+
+**In progress Task List**:
+-   **Task 1: Frontend Runtime Debugging (P0)**
+    -   **Where to resume**: The agent has just listed the frontend directory structure. The next step is to start debugging Issue 1: Projects Screen Empty by examining .
+    -   **What will be achieved with this?**: A stable and functional frontend where all primary screens load data and interactions work as expected.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on something**: None
+
+**Upcoming and Future Tasks**
+-   **Upcoming Tasks:**
+    1.  **Full implementation of Background Job Engine (P1)**: The engine () is currently a scaffold. It needs to be integrated with a task runner like Celery or FastAPI's  to perform scheduled financial integrity checks, data purges, etc.
+    2.  **Full implementation of AI Integration Layer (P1)**: The service () is a mock. It needs to be connected to actual AI providers (e.g., OpenAI, Google) for OCR, STT, and vision tagging. This will likely require handling .
+-   **Future Tasks:**
+    1.  **Full implementation of Snapshot Report Engine**: The engine for creating immutable reports is scaffolded. The frontend needs to be wired to generate and view these reports via the snapshot system.
+    2.  **PDF Generation from Snapshots**: A service needs to be built to generate PDF reports from the immutable  in the  collection.
+
+**Completed work in this session**
+-   **Backend Hardening (Phase 2 - Waves 1, 2, 3):**
+    -   **MongoDB Replica Set**: Enabled and configured for transaction support.
+    -   **Financial Precision**: Migrated all financial calculations and DB storage from  to .
+    -   **Transaction Atomicity**: Wrapped all critical financial operations in atomic database transactions.
+    -   **DB Constraints**: Added numerous DB-level unique indexes for data integrity (document numbers, invoices, etc.).
+    -   **Invariants & Bypasses**: Fixed missing financial invariant checks and closed a v1 endpoint bypass vulnerability.
+    -   **Lifecycle Engine**: Implemented versioning, document locking, and soft-delete policies.
+    -   **Backend Rules**: Added server-side validation for attendance and DPR image counts.
+    -   **API Scaffolding**: Created routes and service stubs for Snapshots, Background Jobs, and AI.
+    -   **Bug Fixes**: Resolved multiple  serialization errors in API responses.
+-   **Frontend Debugging (Initial Pass):**
+    -   **Login Failure (FIXED)**: Resolved by fixing the MongoDB replica set, re-seeding the database, and correcting the frontend API client to use relative paths ().
+    -   **Bottom Navigation Broken (FIXED)**: Corrected the tab bar layout by explicitly hiding non-tab screens using  in the   files.
+
+**Earlier issues found/mentioned but not fixed**
+The current pending issue list is comprehensive and comes directly from the user's latest message. No prior issues have been missed.
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork**: The instability of the MongoDB replica set. The agent had to restart and re-initialize it multiple times. This seems to be an environment issue.
+-   **Recurrence count**: 2+ times in this session.
+-   **Status**: RESOLVED (for now), but could reoccur. The agent knows how to fix it (check supervisor config, kill rogue processes, re-initiate replica set).
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Backend**: FastAPI, Motor (async MongoDB driver), Pydantic, JWT Authentication, MongoDB Transactions,  for financial precision.
+-   **Frontend**: React Native, Expo, Expo Router (file-based routing with tab bar hiding), TypeScript, React Context API.
+-   **Database**: MongoDB running as a single-node Replica Set () to support ACID transactions.
+-   **Architecture**: Monorepo with distinct  and . Role-Based Access Control (RBAC) enforced at the API layer.
+
+**key DB schema**
+-   **New Collections**: , , , , , .
+-   **Key Indexes**:
+    -   Unique composite index on  for atomic numbering.
+    -   Unique composite indexes on  and  for .
+    -   Unique index on  for .
+-   **Key Data Type**:  is now used for all financial fields in the database (, , etc.).
+
+**changes in tech stack**
+-   MongoDB was reconfigured from a standalone instance to a **single-node replica set** to enable transaction support. This is a critical environmental change.
+
+**All files of reference**
+-   **/app/backend/core/hardened_financial_engine.py**: Contains the core logic for all transactional financial operations.
+-   **/app/backend/core/lifecycle_integrity_engine.py**: Contains the logic for versioning, locking, and other Wave 2 rules.
+-   **/app/frontend/app/(admin)/_layout.tsx**: Key file for the admin tab bar navigation. The  fix was applied here.
+-   **/app/frontend/services/apiClient.ts**: The primary frontend API service, now patched to use correct  routes.
+-   **/app/frontend/app/(admin)/projects.tsx**: The next file to be debugged.
+-   **/etc/supervisor/conf.d/mongodb.conf**: The supervisor config that was being bypassed. The agent now knows to use a custom config to start MongoDB with .
+
+**Critical Info for New Agent**
+-   **You are in a debugging phase.** Your goal is to fix the 6 specific frontend issues listed by the user. Do not add new features or refactor code. Apply minimal, targeted fixes.
+-   **The backend is architecturally locked.** Do not change API contracts, financial logic, or database schemas.
+-   **API paths are relative and use **. The frontend and backend are served via a proxy. Ensure all frontend API calls use relative paths (e.g., ), not absolute URLs.
+-   **MongoDB Instability**: The MongoDB replica set has been unstable. If you encounter backend 500 errors, the first step is to check if the replica set PRIMARY is running. You may need to kill rogue {"t":{"$date":"2026-02-15T09:45:27.069+00:00"},"s":"I",  "c":"NETWORK",  "id":4915701, "ctx":"main","msg":"Initialized wire specification","attr":{"spec":{"incomingExternalClient":{"minWireVersion":0,"maxWireVersion":21},"incomingInternalClient":{"minWireVersion":0,"maxWireVersion":21},"outgoing":{"minWireVersion":6,"maxWireVersion":21},"isInternalClient":true}}}
+{"t":{"$date":"2026-02-15T09:45:27.070+00:00"},"s":"I",  "c":"CONTROL",  "id":23285,   "ctx":"main","msg":"Automatically disabling TLS 1.0, to force-enable TLS 1.0 specify --sslDisabledProtocols 'none'"}
+{"t":{"$date":"2026-02-15T09:45:27.070+00:00"},"s":"I",  "c":"NETWORK",  "id":4648601, "ctx":"main","msg":"Implicit TCP FastOpen unavailable. If TCP FastOpen is required, set tcpFastOpenServer, tcpFastOpenClient, and tcpFastOpenQueueSize."}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationDonorService","namespace":"config.tenantMigrationDonors"}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationRecipientService","namespace":"config.tenantMigrationRecipients"}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"main","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"CONTROL",  "id":5945603, "ctx":"main","msg":"Multi threading initialized"}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"TENANT_M", "id":7091600, "ctx":"main","msg":"Starting TenantMigrationAccessBlockerRegistry"}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"CONTROL",  "id":4615611, "ctx":"initandlisten","msg":"MongoDB starting","attr":{"pid":289,"port":27017,"dbPath":"/data/db","architecture":"64-bit","host":"agent-env-bcddb34d-d3eb-4ea9-a47c-e7fa783199eb"}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"W",  "c":"CONTROL",  "id":20720,   "ctx":"initandlisten","msg":"Memory available to mongo process is less than total system memory","attr":{"availableMemSizeMB":8192,"systemMemSizeMB":15975}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"CONTROL",  "id":23403,   "ctx":"initandlisten","msg":"Build Info","attr":{"buildInfo":{"version":"7.0.29","gitVersion":"415cc13e900a82a2e00e4f4417dc7159a883e975","openSSLVersion":"OpenSSL 3.0.18 30 Sep 2025","modules":[],"allocator":"tcmalloc","environment":{"distmod":"ubuntu2204","distarch":"aarch64","target_arch":"aarch64"}}}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"CONTROL",  "id":51765,   "ctx":"initandlisten","msg":"Operating System","attr":{"os":{"name":"PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"","version":"Kernel 6.6.113+"}}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"I",  "c":"CONTROL",  "id":21951,   "ctx":"initandlisten","msg":"Options set by command line","attr":{"options":{}}}
+{"t":{"$date":"2026-02-15T09:45:27.071+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"initandlisten","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"E",  "c":"CONTROL",  "id":20568,   "ctx":"initandlisten","msg":"Error setting up listener","attr":{"error":{"code":9001,"codeName":"SocketException","errmsg":"setup bind :: caused by :: Address already in use"}}}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"REPL",     "id":4784900, "ctx":"initandlisten","msg":"Stepping down the ReplicationCoordinator for shutdown","attr":{"waitTimeMillis":15000}}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"REPL",     "id":4794602, "ctx":"initandlisten","msg":"Attempting to enter quiesce mode"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"-",        "id":6371601, "ctx":"initandlisten","msg":"Shutting down the FLE Crud thread pool"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"COMMAND",  "id":4784901, "ctx":"initandlisten","msg":"Shutting down the MirrorMaestro"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"SHARDING", "id":4784902, "ctx":"initandlisten","msg":"Shutting down the WaitForMajorityService"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"NETWORK",  "id":4784905, "ctx":"initandlisten","msg":"Shutting down the global connection pool"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"NETWORK",  "id":4784918, "ctx":"initandlisten","msg":"Shutting down the ReplicaSetMonitor"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"SHARDING", "id":4784921, "ctx":"initandlisten","msg":"Shutting down the MigrationUtilExecutor"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"ASIO",     "id":22582,   "ctx":"MigrationUtil-TaskExecutor","msg":"Killing all outstanding egress activity."}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"COMMAND",  "id":4784923, "ctx":"initandlisten","msg":"Shutting down the ServiceEntryPoint"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"CONTROL",  "id":4784928, "ctx":"initandlisten","msg":"Shutting down the TTL monitor"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"CONTROL",  "id":6278511, "ctx":"initandlisten","msg":"Shutting down the Change Stream Expired Pre-images Remover"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"CONTROL",  "id":4784929, "ctx":"initandlisten","msg":"Acquiring the global lock for shutdown"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"-",        "id":4784931, "ctx":"initandlisten","msg":"Dropping the scope cache for shutdown"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"CONTROL",  "id":20565,   "ctx":"initandlisten","msg":"Now exiting"}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"CONTROL",  "id":8423404, "ctx":"initandlisten","msg":"mongod shutdown complete","attr":{"Summary of time elapsed":{"Statistics":{"Enter terminal shutdown":"0 ms","Step down the replication coordinator for shutdown":"0 ms","Time spent in quiesce mode":"0 ms","Shut down FLE Crud subsystem":"0 ms","Shut down MirrorMaestro":"0 ms","Shut down WaitForMajorityService":"0 ms","Shut down the global connection pool":"0 ms","Shut down the replica set monitor":"0 ms","Shut down the migration util executor":"0 ms","Shut down the TTL monitor":"0 ms","Shut down expired pre-images and documents removers":"0 ms","Wait for the oplog cap maintainer thread to stop":"0 ms","Shut down full-time data capture":"0 ms","shutdownTask total elapsed time":"0 ms"}}}}
+{"t":{"$date":"2026-02-15T09:45:27.072+00:00"},"s":"I",  "c":"CONTROL",  "id":23138,   "ctx":"initandlisten","msg":"Shutting down","attr":{"exitCode":48}} processes and re-initiate the set. The  script may also need to be run again if the database connection was lost.
+-   ** Tab Bar**: Remember that  creates tabs for all files in a directory unless they are explicitly hidden with  in the  file.
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **Msg 393 (PENDING)**: User provided a new, detailed list of 6 frontend bugs to fix, including empty screens, non-working buttons, and infinite loaders. This is the current task list.
+2.  **Msg 392**: Agent provided a summary of the fixes for Login and Navigation issues. (Completed)
+3.  **Msg 389**: Agent confirmed the Reports tab is rendering correctly. (Completed)
+4.  **Msg 387**: Agent confirmed the Settings page is visible for Admins. (Completed)
+5.  **Msg 381**: Agent confirmed the bottom navigation tab bar is now fixed. (Completed)
+6.  **Msg 377**: Agent restarted Expo to apply the navigation fix. (Completed)
+7.  **Msg 367**: Agent identified the root cause of the broken navigation (unhidden screens) and planned the  fix. (Completed)
+8.  **Msg 363**: Agent successfully logged in and observed the broken bottom navigation. (Completed)
+9.  **Msg 261**: Agent acknowledged the initial list of 6 runtime bugs and began debugging. (Completed)
+10. **Msg 260**: User pivoted from backend implementation to reporting 6 critical frontend runtime issues and requested debugging. (Superseded by Msg 393)
+
+**Project Health Check:**
+-   **Broken**: Yes. While login and navigation are fixed, several core screens are not functional (empty, infinite loading, broken interactions).
+
+**3rd Party Integrations**
+-   **AI Services (Planned)**: OCR, STT, and CV integrations are scaffolded in . These will likely use the .
+
+**Testing status**
+-   **Testing agent used after significant changes**: YES (for backend changes).
+-   **Troubleshoot agent used after agent stuck in loop**: NO.
+-   **Test files created**: None.
+-   **Known regressions**: Multiple frontend screens that were presumably working before the backend overhaul are now broken.
+
+**Credentials to test flow:**
+-   **Admin**:  / 
+-   **Supervisor**:  / 
+-   (Requires running  if the database is reset).
+
+**What agent forgot to execute**
+The agent has been diligent in following user instructions. It has not forgotten to execute any tasks; rather, the current task is a large, multi-part debugging effort that is still in progress.
+
+</analysis>
