@@ -2,13 +2,16 @@
 // Reports hub placeholder
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Card } from '../../components/ui';
 import { Colors, Spacing, FontSizes } from '../../constants/theme';
 
 export default function AdminReports() {
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -22,22 +25,26 @@ export default function AdminReports() {
           <ReportItem 
             icon="pie-chart" 
             title="Financial Summary" 
-            description="Budget vs Actual spending" 
+            description="Budget vs Actual spending"
+            onPress={() => router.push('/(admin)/reports/financial')}
           />
           <ReportItem 
             icon="trending-up" 
             title="Progress Report" 
-            description="Physical vs planned progress" 
+            description="Physical vs planned progress"
+            onPress={() => router.push('/(admin)/reports/progress')}
           />
           <ReportItem 
             icon="calendar" 
             title="DPR Summary" 
-            description="Daily progress report overview" 
+            description="Daily progress report overview"
+            onPress={() => router.push('/(admin)/reports/dpr-summary')}
           />
           <ReportItem 
             icon="people" 
             title="Attendance Report" 
-            description="Supervisor attendance tracking" 
+            description="Supervisor attendance tracking"
+            onPress={() => router.push('/(admin)/reports/attendance')}
           />
         </View>
       </ScrollView>
@@ -45,18 +52,20 @@ export default function AdminReports() {
   );
 }
 
-function ReportItem({ icon, title, description }: { icon: keyof typeof Ionicons.glyphMap; title: string; description: string }) {
+function ReportItem({ icon, title, description, onPress }: { icon: keyof typeof Ionicons.glyphMap; title: string; description: string; onPress: () => void }) {
   return (
-    <Card style={styles.reportCard}>
-      <View style={styles.reportIcon}>
-        <Ionicons name={icon} size={24} color={Colors.accent} />
-      </View>
-      <View style={styles.reportContent}>
-        <Text style={styles.reportTitle}>{title}</Text>
-        <Text style={styles.reportDescription}>{description}</Text>
-      </View>
-      <Ionicons name="download-outline" size={20} color={Colors.primary} />
-    </Card>
+    <TouchableOpacity onPress={onPress}>
+      <Card style={styles.reportCard}>
+        <View style={styles.reportIcon}>
+          <Ionicons name={icon} size={24} color={Colors.accent} />
+        </View>
+        <View style={styles.reportContent}>
+          <Text style={styles.reportTitle}>{title}</Text>
+          <Text style={styles.reportDescription}>{description}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
+      </Card>
+    </TouchableOpacity>
   );
 }
 
