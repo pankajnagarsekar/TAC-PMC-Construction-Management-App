@@ -20,6 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, CameraView } from 'expo-camera';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { apiClient, projectsApi } from '../../../services/apiClient';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../../constants/theme';
 
