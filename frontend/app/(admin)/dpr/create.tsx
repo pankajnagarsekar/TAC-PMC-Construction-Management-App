@@ -462,16 +462,60 @@ export default function CreateDPRScreen() {
             {/* Photo Grid */}
             <View style={styles.photoGrid}>
               {images.map((img) => (
-                <View key={img.id} style={styles.photoItem}>
-                  <Image source={{ uri: img.uri }} style={styles.photoImage} />
-                  <Pressable
-                    style={styles.removePhotoButton}
-                    onPress={() => removeImage(img.id)}
-                  >
-                    <Ionicons name="close-circle" size={24} color={Colors.error} />
-                  </Pressable>
-                  {img.caption && (
-                    <Text style={styles.photoCaption} numberOfLines={1}>{img.caption}</Text>
+                <View key={img.id} style={styles.photoItemContainer}>
+                  <View style={styles.photoItem}>
+                    <Image source={{ uri: img.uri }} style={styles.photoImage} />
+                    <Pressable
+                      style={styles.removePhotoButton}
+                      onPress={() => removeImage(img.id)}
+                    >
+                      <Ionicons name="close-circle" size={24} color={Colors.error} />
+                    </Pressable>
+                  </View>
+                  
+                  {/* Caption section below photo */}
+                  <View style={styles.captionSection}>
+                    <TextInput
+                      style={styles.imageCaptionInput}
+                      value={img.caption}
+                      onChangeText={(text) => updateImageCaption(img.id, text)}
+                      placeholder="Add caption..."
+                      placeholderTextColor={Colors.textMuted}
+                      multiline
+                    />
+                    <Pressable
+                      style={[
+                        styles.aiCaptionButton,
+                        generatingCaption === img.id && styles.aiCaptionButtonLoading
+                      ]}
+                      onPress={() => generateAICaption(img.id)}
+                      disabled={generatingCaption === img.id}
+                    >
+                      {generatingCaption === img.id ? (
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      ) : (
+                        <>
+                          <Ionicons name="sparkles" size={14} color={Colors.white} />
+                          <Text style={styles.aiCaptionButtonText}>AI</Text>
+                        </>
+                      )}
+                    </Pressable>
+                  </View>
+                  
+                  {/* Show AI alternatives if available */}
+                  {img.aiAlternatives && img.aiAlternatives.length > 0 && (
+                    <View style={styles.alternativesContainer}>
+                      <Text style={styles.alternativesTitle}>Alternatives:</Text>
+                      {img.aiAlternatives.map((alt, idx) => (
+                        <Pressable
+                          key={idx}
+                          style={styles.alternativeChip}
+                          onPress={() => updateImageCaption(img.id, alt)}
+                        >
+                          <Text style={styles.alternativeText} numberOfLines={1}>{alt}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
                   )}
                 </View>
               ))}
@@ -496,17 +540,14 @@ export default function CreateDPRScreen() {
               </Pressable>
             </View>
 
-            {/* Caption input for next photo */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Caption for next photo</Text>
-              <TextInput
-                style={styles.input}
-                value={currentCaption}
-                onChangeText={setCurrentCaption}
-                placeholder="e.g., Foundation work progress"
-                placeholderTextColor={Colors.textMuted}
-              />
-            </View>
+            {/* Gallery Button for picking existing photos */}
+            <Pressable
+              style={styles.galleryButton}
+              onPress={pickImage}
+            >
+              <Ionicons name="images" size={20} color={Colors.primary} />
+              <Text style={styles.galleryButtonText}>Pick from Gallery</Text>
+            </Pressable>
 
             {/* Photo count indicator */}
             <View style={styles.photoCountContainer}>
