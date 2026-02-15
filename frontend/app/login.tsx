@@ -57,16 +57,23 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
+    console.log('handleLogin called');
     Keyboard.dismiss();
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('Form validation failed');
+      return;
+    }
 
+    console.log('Form validated, attempting login...');
     try {
       const response = await login({ email: email.trim(), password });
+      console.log('Login response received');
       // Navigate based on user role
       // The AuthContext stores the user, so we can access it from response
       // But since login returns void, we navigate to index and let the router handle it
       setTimeout(() => {
+        console.log('Navigating to home...');
         router.replace('/');
       }, 100);
     } catch (err) {
