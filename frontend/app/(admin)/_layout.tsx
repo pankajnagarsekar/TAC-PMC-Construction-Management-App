@@ -94,6 +94,24 @@ export default function AdminTabLayout() {
       <Tabs.Screen name="petty-cash" options={{ href: null, headerTitle: 'Petty Cash' }} />
       <Tabs.Screen name="work-orders" options={{ href: null, headerTitle: 'Work Orders' }} />
       <Tabs.Screen name="payment-certificates" options={{ href: null, headerTitle: 'Payment Certificates' }} />
+      {/* Nested route folders - hidden from tab bar */}
+      <Tabs.Screen name="projects/create" options={{ href: null, headerTitle: 'Create Project' }} />
+      <Tabs.Screen name="work-orders/create" options={{ href: null, headerTitle: 'Create Work Order' }} />
+      <Tabs.Screen name="payment-certificates/create" options={{ href: null, headerTitle: 'Create Payment Certificate' }} />
+      <Tabs.Screen name="budget/create" options={{ href: null, headerTitle: 'Create Budget' }} />
+      <Tabs.Screen name="reports/financial" options={{ href: null, headerTitle: 'Financial Report' }} />
+      <Tabs.Screen name="reports/progress" options={{ href: null, headerTitle: 'Progress Report' }} />
+      <Tabs.Screen name="reports/dpr-summary" options={{ href: null, headerTitle: 'DPR Summary' }} />
+      <Tabs.Screen name="reports/attendance" options={{ href: null, headerTitle: 'Attendance Report' }} />
+      <Tabs.Screen name="settings/users" options={{ href: null, headerTitle: 'User Management' }} />
+      <Tabs.Screen name="settings/organization" options={{ href: null, headerTitle: 'Organization Settings' }} />
+      <Tabs.Screen name="settings/codes" options={{ href: null, headerTitle: 'Activity Codes' }} />
+      <Tabs.Screen name="settings/notifications" options={{ href: null, headerTitle: 'Notifications' }} />
+      <Tabs.Screen name="settings/currency" options={{ href: null, headerTitle: 'Currency Settings' }} />
+      <Tabs.Screen name="settings/appearance" options={{ href: null, headerTitle: 'Appearance' }} />
+      <Tabs.Screen name="settings/help" options={{ href: null, headerTitle: 'Help & FAQ' }} />
+      <Tabs.Screen name="settings/terms" options={{ href: null, headerTitle: 'Terms of Service' }} />
+      <Tabs.Screen name="settings/privacy" options={{ href: null, headerTitle: 'Privacy Policy' }} />
     </Tabs>
   );
 }
