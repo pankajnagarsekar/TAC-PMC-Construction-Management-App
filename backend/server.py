@@ -849,10 +849,12 @@ async def get_budgets(
     
     budgets = await db.project_budgets.find(query).to_list(length=None)
     
+    result = []
     for b in budgets:
         b["budget_id"] = str(b.pop("_id"))
+        result.append(serialize_doc(b))
     
-    return budgets
+    return result
 
 
 @api_router.put("/budgets/{budget_id}")
