@@ -515,10 +515,12 @@ async def get_payment_certificates(
     
     pcs = await db.payment_certificates.find(query).to_list(length=None)
     
+    result = []
     for pc in pcs:
-        pc["pc_id"] = str(pc.pop("_id"))
+        pc["payment_certificate_id"] = str(pc.pop("_id"))
+        result.append(serialize_doc(pc))
     
-    return pcs
+    return result
 
 
 @hardened_router.get("/payment-certificates/{pc_id}")
