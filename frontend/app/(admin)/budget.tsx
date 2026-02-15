@@ -27,7 +27,7 @@ export default function BudgetScreen() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(admin)/budget/create')}>
         <Ionicons name="add" size={28} color={Colors.white} />
       </TouchableOpacity>
     </SafeAreaView>
