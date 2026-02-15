@@ -84,6 +84,16 @@ export default function AdminTabLayout() {
           ),
         }}
       />
+      {/* Hidden screens - accessible via navigation but not shown in tab bar */}
+      <Tabs.Screen name="csa" options={{ href: null, headerTitle: 'CSA Management' }} />
+      <Tabs.Screen name="dpr" options={{ href: null, headerTitle: 'Daily Progress Reports' }} />
+      <Tabs.Screen name="ocr" options={{ href: null, headerTitle: 'OCR Processing' }} />
+      <Tabs.Screen name="alerts" options={{ href: null, headerTitle: 'Alerts' }} />
+      <Tabs.Screen name="budget" options={{ href: null, headerTitle: 'Budget Management' }} />
+      <Tabs.Screen name="timeline" options={{ href: null, headerTitle: 'Timeline' }} />
+      <Tabs.Screen name="petty-cash" options={{ href: null, headerTitle: 'Petty Cash' }} />
+      <Tabs.Screen name="work-orders" options={{ href: null, headerTitle: 'Work Orders' }} />
+      <Tabs.Screen name="payment-certificates" options={{ href: null, headerTitle: 'Payment Certificates' }} />
     </Tabs>
   );
 }
