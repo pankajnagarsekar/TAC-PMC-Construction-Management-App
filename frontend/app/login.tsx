@@ -164,8 +164,12 @@ export default function LoginScreen() {
             </View>
 
             {/* Login Button */}
-            <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.loginButton,
+                isLoading && styles.loginButtonDisabled,
+                pressed && styles.loginButtonPressed,
+              ]}
               onPress={handleLogin}
               disabled={isLoading}
             >
@@ -174,7 +178,7 @@ export default function LoginScreen() {
               ) : (
                 <Text style={styles.loginButtonText}>Sign In</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Demo Credentials Hint */}
             <View style={styles.demoHint}>
