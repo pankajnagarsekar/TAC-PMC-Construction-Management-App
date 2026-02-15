@@ -166,6 +166,22 @@ async function request<T>(
   return response.json();
 }
 
+// ============================================
+// GENERIC API CLIENT HELPER
+// ============================================
+export const apiClient = {
+  get: <T>(endpoint: string): Promise<T> => request<T>(endpoint),
+  post: <T>(endpoint: string, body?: object): Promise<T> => request<T>(endpoint, {
+    method: 'POST',
+    body: body ? JSON.stringify(body) : undefined,
+  }),
+  put: <T>(endpoint: string, body?: object): Promise<T> => request<T>(endpoint, {
+    method: 'PUT',
+    body: body ? JSON.stringify(body) : undefined,
+  }),
+  delete: <T>(endpoint: string): Promise<T> => request<T>(endpoint, { method: 'DELETE' }),
+};
+
 async function attemptTokenRefresh(): Promise<boolean> {
   try {
     const refreshToken = await storage.get(TOKEN_KEYS.REFRESH);
