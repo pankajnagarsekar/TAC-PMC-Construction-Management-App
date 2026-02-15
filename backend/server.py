@@ -3,11 +3,11 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from bson import ObjectId
+from bson import ObjectId, Decimal128
 import os
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 # Import custom modules
@@ -30,6 +30,33 @@ from auth import (
 from audit_service import AuditService
 from financial_service import FinancialRecalculationService
 from permissions import PermissionChecker
+
+
+def serialize_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Serialize MongoDB document for JSON response (handles Decimal128, ObjectId, datetime)"""
+    if doc is None:
+        return None
+    result = {}
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, Decimal128):
+            result[key] = float(value.to_decimal())
+        elif isinstance(value, datetime):
+            result[key] = value.isoformat()
+        elif isinstance(value, dict):
+            result[key] = serialize_doc(value)
+        elif isinstance(value, list):
+            result[key] = [
+                serialize_doc(item) if isinstance(item, dict)
+                else float(item.to_decimal()) if isinstance(item, Decimal128)
+                else str(item) if isinstance(item, ObjectId)
+                else item
+                for item in value
+            ]
+        else:
+            result[key] = value
+    return result
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
