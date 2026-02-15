@@ -95,6 +95,7 @@ export default function AdminTabLayout() {
       <Tabs.Screen name="work-orders" options={{ href: null, headerTitle: 'Work Orders' }} />
       <Tabs.Screen name="payment-certificates" options={{ href: null, headerTitle: 'Payment Certificates' }} />
       {/* Nested route folders - hidden from tab bar */}
+      <Tabs.Screen name="projects/[id]" options={{ href: null, headerTitle: 'Project Details' }} />
       <Tabs.Screen name="projects/create" options={{ href: null, headerTitle: 'Create Project' }} />
       <Tabs.Screen name="work-orders/create" options={{ href: null, headerTitle: 'Create Work Order' }} />
       <Tabs.Screen name="payment-certificates/create" options={{ href: null, headerTitle: 'Create Payment Certificate' }} />
