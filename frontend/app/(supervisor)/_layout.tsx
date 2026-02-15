@@ -84,6 +84,8 @@ export default function SupervisorTabLayout() {
           ),
         }}
       />
+      {/* Hidden screens - accessible via navigation but not shown in tab bar */}
+      <Tabs.Screen name="voice-log" options={{ href: null, headerTitle: 'Voice Log' }} />
     </Tabs>
   );
 }
