@@ -161,7 +161,8 @@ class BackendTester:
                         "current_bill_amount", "cumulative_certified", "retention_held"
                     ]
                     
-                    if any(field in key.lower() for field in monetary_fields):
+                    # Only check if the key contains monetary terms, not if it's an ID field
+                    if any(field in key.lower() for field in monetary_fields) and not key.lower().endswith('_id'):
                         if not isinstance(value, (int, float, type(None))):
                             return {
                                 "success": False,
