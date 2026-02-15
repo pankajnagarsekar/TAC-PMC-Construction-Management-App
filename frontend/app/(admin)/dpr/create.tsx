@@ -28,6 +28,8 @@ interface CapturedImage {
   uri: string;
   base64: string;
   caption: string;
+  aiCaption?: string;
+  aiAlternatives?: string[];
 }
 
 const showAlert = (title: string, message: string, onOk?: () => void) => {
