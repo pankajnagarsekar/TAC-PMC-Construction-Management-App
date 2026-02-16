@@ -11,6 +11,14 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme'
 
 const financialModules = [
   { 
+    id: 'vendors', 
+    title: 'Vendor Management', 
+    description: 'Add and manage vendors/contractors',
+    icon: 'business' as const,
+    route: '/(admin)/vendors',
+    color: Colors.primary,
+  },
+  { 
     id: 'work-orders', 
     title: 'Work Orders', 
     description: 'Create and manage work orders',
