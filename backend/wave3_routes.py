@@ -943,6 +943,9 @@ async def submit_dpr(
     - Requires minimum 4 portrait images
     - Auto-generates PDF if not already generated
     - Locks DPR from further edits
+    
+    SNAPSHOT: Creates immutable snapshot with embedded data and settings.
+    LOCKING: Sets locked_flag = true after submission.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
@@ -965,6 +968,7 @@ async def submit_dpr(
         )
     
     # Auto-generate PDF if not done
+    pdf_checksum = None
     if not dpr.get("pdf_generated"):
         # Generate PDF
         dpr_date = dpr.get("dpr_date")
@@ -975,6 +979,11 @@ async def submit_dpr(
         total_image_size = sum(img.get("size_kb", 0) for img in dpr.get("images", []))
         estimated_pdf_size = min(total_image_size * 0.8, 2800)
         
+        # Generate dummy PDF bytes for checksum (in real implementation, this would be actual PDF)
+        import hashlib
+        pdf_content = f"DPR_{dpr_id}_{datetime.utcnow().isoformat()}"
+        pdf_checksum = hashlib.sha256(pdf_content.encode()).hexdigest()
+        
         await db.dpr.update_one(
             {"_id": ObjectId(dpr_id)},
             {
@@ -983,17 +992,31 @@ async def submit_dpr(
                     "file_name": file_name,
                     "file_size_kb": round(estimated_pdf_size, 2),
                     "pdf_generated_at": datetime.utcnow(),
+                    "pdf_checksum": pdf_checksum,
                 }
             }
         )
     
-    # Submit
+    # Build complete embedded snapshot
+    snapshot_data = await build_dpr_snapshot(db, dpr_id)
+    
+    # Create immutable snapshot (with settings embedded)
+    snapshot = await dpr_snapshot_service.create_snapshot(
+        entity_type=SnapshotEntityType.DPR,
+        entity_id=dpr_id,
+        data=snapshot_data,
+        organisation_id=user["organisation_id"],
+        user_id=user["user_id"]
+    )
+    
+    # Submit and lock
     await db.dpr.update_one(
         {"_id": ObjectId(dpr_id)},
         {
             "$set": {
                 "status": "Submitted",
                 "locked_flag": True,
+                "locked_snapshot_version": snapshot.get("version", 1),
                 "submitted_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }
@@ -1004,7 +1027,9 @@ async def submit_dpr(
         "dpr_id": dpr_id,
         "status": "submitted",
         "pdf_generated": True,
-        "message": "DPR submitted successfully with PDF export"
+        "snapshot_version": snapshot.get("version"),
+        "locked": True,
+        "message": "DPR submitted successfully with immutable snapshot"
     }
 
 
