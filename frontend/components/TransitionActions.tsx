@@ -192,6 +192,7 @@ export function TransitionActions({
           color: Colors.primary,
         };
         const isLoading = loading === targetStatus;
+        const isDisabled = !!loading || periodLocked.isLocked;
 
         return (
           <Pressable
@@ -199,18 +200,30 @@ export function TransitionActions({
             style={({ pressed }) => [
               styles.actionButton,
               compact && styles.actionButtonCompact,
-              { backgroundColor: meta.color + '15', borderColor: meta.color },
-              pressed && styles.actionButtonPressed,
+              { 
+                backgroundColor: periodLocked.isLocked ? Colors.textMuted + '10' : meta.color + '15', 
+                borderColor: periodLocked.isLocked ? Colors.textMuted : meta.color 
+              },
+              pressed && !isDisabled && styles.actionButtonPressed,
+              periodLocked.isLocked && styles.actionButtonDisabled,
             ]}
             onPress={() => handleTransition(targetStatus)}
-            disabled={!!loading}
+            disabled={isDisabled}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color={meta.color} />
             ) : (
               <>
-                <Ionicons name={meta.icon as any} size={compact ? 16 : 18} color={meta.color} />
-                <Text style={[styles.actionText, compact && styles.actionTextCompact, { color: meta.color }]}>
+                <Ionicons 
+                  name={meta.icon as any} 
+                  size={compact ? 16 : 18} 
+                  color={periodLocked.isLocked ? Colors.textMuted : meta.color} 
+                />
+                <Text style={[
+                  styles.actionText, 
+                  compact && styles.actionTextCompact, 
+                  { color: periodLocked.isLocked ? Colors.textMuted : meta.color }
+                ]}>
                   {meta.label}
                 </Text>
               </>
