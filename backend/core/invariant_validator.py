@@ -62,20 +62,23 @@ class FinancialInvariantValidator:
         2. paid_value <= certified_value  
         3. retention_held >= 0
         
+        Phase 6C: Reads ONLY from FinancialAggregate and base tables.
+        NO read_models. NO derived tables.
+        
         Raises InvariantViolationError if any constraint violated.
         Returns True if all constraints pass.
         """
-        # Get current financial state
-        state = await self.db.derived_financial_state.find_one(
+        # Phase 6C: Read from FinancialAggregate (canonical source)
+        aggregate = await self.db.financial_aggregates.find_one(
             {"project_id": project_id, "code_id": code_id},
             session=session
         )
         
-        if not state:
-            logger.warning(f"No financial state for project:{project_id}, code:{code_id}")
-            return True  # No state yet, nothing to validate
+        if not aggregate:
+            logger.warning(f"No financial aggregate for project:{project_id}, code:{code_id}")
+            return True  # No aggregate yet, nothing to validate
         
-        # Get approved budget
+        # Get approved budget from base table
         budget = await self.db.project_budgets.find_one(
             {"project_id": project_id, "code_id": code_id},
             session=session
@@ -88,11 +91,12 @@ class FinancialInvariantValidator:
                 details={"project_id": project_id, "code_id": code_id}
             )
         
+        # Read from FinancialAggregate (canonical) and base budget table
         approved_budget = from_decimal128(budget["approved_budget_amount"])
-        committed_value = from_decimal128(state.get("committed_value", 0))
-        certified_value = from_decimal128(state.get("certified_value", 0))
-        paid_value = from_decimal128(state.get("paid_value", 0))
-        retention_held = from_decimal128(state.get("retention_held", 0))
+        committed_value = from_decimal128(aggregate.get("committed_value", 0))
+        certified_value = from_decimal128(aggregate.get("certified_value", 0))
+        paid_value = from_decimal128(aggregate.get("paid_value", 0))
+        retention_held = from_decimal128(aggregate.get("retention_held", 0))
         
         violations = []
         
@@ -114,7 +118,7 @@ class FinancialInvariantValidator:
                 "approved_budget": to_float(approved_budget)
             })
         
-        # INVARIANT 2: paid_value <= certified_value
+        # INVARIANT 3: paid_value <= certified_value
         if paid_value > certified_value:
             violations.append({
                 "type": "OVER_PAYMENT",
@@ -123,7 +127,7 @@ class FinancialInvariantValidator:
                 "certified_value": to_float(certified_value)
             })
         
-        # INVARIANT 3: retention_held >= 0
+        # INVARIANT 4: retention_held >= 0
         if retention_held < Decimal('0'):
             violations.append({
                 "type": "NEGATIVE_RETENTION",
