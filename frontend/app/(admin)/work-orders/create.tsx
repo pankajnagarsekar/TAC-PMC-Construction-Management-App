@@ -57,16 +57,21 @@ export default function CreateWorkOrderScreen() {
 
   const loadDropdownData = async () => {
     try {
+      console.log('Loading dropdown data...');
       const [projectsData, codesData, vendorsData] = await Promise.all([
         projectsApi.getAll(),
         codesApi.getAll(),
         vendorsApi.getAll(),
       ]);
-      setProjects(projectsData);
-      setCodes(codesData);
-      setVendors(vendorsData);
+      console.log('Projects loaded:', projectsData?.length);
+      console.log('Codes loaded:', codesData?.length);
+      console.log('Vendors loaded:', vendorsData?.length, vendorsData);
+      setProjects(projectsData || []);
+      setCodes(codesData || []);
+      setVendors(vendorsData || []);
     } catch (error: any) {
-      showAlert('Error', 'Failed to load form data');
+      console.error('Error loading dropdown data:', error);
+      showAlert('Error', 'Failed to load form data: ' + (error.message || 'Unknown error'));
     } finally {
       setLoadingData(false);
     }
