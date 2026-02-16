@@ -311,7 +311,7 @@ class DeterministicFinancialService:
         delta_retention = new_retention - old_retention
         
         async def mutation_fn(aggregate, session):
-            result = await self.hardened_engine.revise_payment_certificate(
+            await self.hardened_engine.revise_payment_certificate(
                 pc_id=pc_id,
                 organisation_id=organisation_id,
                 user_id=user_id,
