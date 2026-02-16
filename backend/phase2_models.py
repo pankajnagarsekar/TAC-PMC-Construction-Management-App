@@ -222,3 +222,12 @@ class DocumentSequence(BaseModel):
     class Config:
         populate_by_name = True
         json_encoders = {ObjectId: str}
+
+
+
+# ============================================
+# BUDGET UPDATE MODEL (for deterministic mutation)
+# ============================================
+class BudgetUpdate(BaseModel):
+    operation_id: Optional[str] = None  # UUID for idempotency - auto-generated if not provided
+    approved_budget_amount: float
