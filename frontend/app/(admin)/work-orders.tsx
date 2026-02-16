@@ -1,5 +1,6 @@
 // WORK ORDERS SCREEN
 // List and manage work orders with real data
+// UI-1: Dynamic transition buttons based on state machine
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -16,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { workOrdersApi } from '../../services/apiClient';
 import { Card } from '../../components/ui';
+import { TransitionActions, StatusBadge } from '../../components/TransitionActions';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
 
 interface WorkOrder {
@@ -31,6 +33,7 @@ interface WorkOrder {
   base_amount: number | { $numberDecimal: string };
   net_wo_value: number | { $numberDecimal: string };
   status: string;
+  allowed_transitions?: string[];
 }
 
 const parseDecimal = (val: any): number => {
@@ -45,7 +48,7 @@ export default function WorkOrdersScreen() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<string>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadWorkOrders = useCallback(async () => {
     try {
@@ -68,10 +71,14 @@ export default function WorkOrdersScreen() {
     loadWorkOrders();
   };
 
-  const filteredOrders = workOrders.filter(wo => {
-    if (filter === 'all') return true;
-    return wo.status?.toLowerCase() === filter;
-  });
+  const handleTransitionComplete = (woId: string, newStatus: string) => {
+    setWorkOrders(prev => prev.map(wo => 
+      (wo.work_order_id || wo._id) === woId 
+        ? { ...wo, status: newStatus }
+        : wo
+    ));
+    setExpandedId(null);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -81,40 +88,52 @@ export default function WorkOrdersScreen() {
     }).format(amount);
   };
 
-  const renderWorkOrder = ({ item }: { item: WorkOrder }) => (
-    <Pressable
-      style={({ pressed }) => [styles.woCard, pressed && styles.woCardPressed]}
-      onPress={() => console.log('View WO:', item.document_number)}
-    >
-      <View style={styles.woHeader}>
-        <Text style={styles.woNumber}>{item.document_number}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: item.status === 'Active' ? Colors.success + '20' : Colors.warning + '20' }]}>
-          <Text style={[styles.statusText, { color: item.status === 'Active' ? Colors.success : Colors.warning }]}>
-            {item.status}
-          </Text>
+  const renderWorkOrder = ({ item }: { item: WorkOrder }) => {
+    const woId = item.work_order_id || item._id || '';
+    const isExpanded = expandedId === woId;
+
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.woCard, pressed && !isExpanded && styles.woCardPressed]}
+        onPress={() => setExpandedId(isExpanded ? null : woId)}
+      >
+        <View style={styles.woHeader}>
+          <Text style={styles.woNumber}>{item.document_number}</Text>
+          <StatusBadge status={item.status} />
         </View>
-      </View>
-      <View style={styles.woDetails}>
-        <View style={styles.woRow}>
-          <Ionicons name="calendar-outline" size={16} color={Colors.textMuted} />
-          <Text style={styles.woLabel}>Issue Date:</Text>
-          <Text style={styles.woValue}>{new Date(item.issue_date).toLocaleDateString()}</Text>
+        <View style={styles.woDetails}>
+          <View style={styles.woRow}>
+            <Ionicons name="calendar-outline" size={16} color={Colors.textMuted} />
+            <Text style={styles.woLabel}>Issue Date:</Text>
+            <Text style={styles.woValue}>{new Date(item.issue_date).toLocaleDateString()}</Text>
+          </View>
+          <View style={styles.woRow}>
+            <Ionicons name="cube-outline" size={16} color={Colors.textMuted} />
+            <Text style={styles.woLabel}>Qty × Rate:</Text>
+            <Text style={styles.woValue}>
+              {parseDecimal(item.quantity).toFixed(0)} × {formatCurrency(parseDecimal(item.rate))}
+            </Text>
+          </View>
+          <View style={styles.woRow}>
+            <Ionicons name="cash-outline" size={16} color={Colors.textMuted} />
+            <Text style={styles.woLabel}>Net Value:</Text>
+            <Text style={styles.woValueBold}>{formatCurrency(parseDecimal(item.net_wo_value))}</Text>
+          </View>
         </View>
-        <View style={styles.woRow}>
-          <Ionicons name="cube-outline" size={16} color={Colors.textMuted} />
-          <Text style={styles.woLabel}>Qty × Rate:</Text>
-          <Text style={styles.woValue}>
-            {parseDecimal(item.quantity).toFixed(0)} × {formatCurrency(parseDecimal(item.rate))}
-          </Text>
-        </View>
-        <View style={styles.woRow}>
-          <Ionicons name="cash-outline" size={16} color={Colors.textMuted} />
-          <Text style={styles.woLabel}>Net Value:</Text>
-          <Text style={styles.woValueBold}>{formatCurrency(parseDecimal(item.net_wo_value))}</Text>
-        </View>
-      </View>
-    </Pressable>
-  );
+
+        {/* UI-1: Dynamic transition actions */}
+        {isExpanded && (
+          <TransitionActions
+            entityType="work_order"
+            entityId={woId}
+            currentStatus={item.status}
+            allowedTransitions={item.allowed_transitions}
+            onTransitionComplete={(newStatus) => handleTransitionComplete(woId, newStatus)}
+          />
+        )}
+      </Pressable>
+    );
+  };
 
   if (loading) {
     return (
@@ -129,21 +148,6 @@ export default function WorkOrdersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* Filter Chips */}
-      <View style={styles.filterRow}>
-        {['all', 'active', 'draft', 'closed'].map((f) => (
-          <Pressable
-            key={f}
-            style={[styles.filterChip, filter === f && styles.filterChipActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
       {/* Summary Card */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryItem}>
@@ -160,7 +164,7 @@ export default function WorkOrdersScreen() {
 
       {/* Work Orders List */}
       <FlatList
-        data={filteredOrders}
+        data={workOrders}
         renderItem={renderWorkOrder}
         keyExtractor={(item) => item.work_order_id || item._id || item.document_number}
         contentContainerStyle={styles.listContent}
