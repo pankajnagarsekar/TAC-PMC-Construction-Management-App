@@ -719,6 +719,14 @@ class FinancialAggregateManager:
                 # 3. Handler failures don't cause data inconsistency
                 await domain_events.emit_pending()
                 
+                # =========================================================
+                # Phase 6B: PROJECTION UPDATE - OUTSIDE TRANSACTION
+                # =========================================================
+                # Trigger read model refresh for affected project after commit.
+                # This ensures projections reflect the latest committed state.
+                # Runs asynchronously - failures don't affect mutation result.
+                await self._trigger_projection_update(project_id, code_id, operation_type)
+                
                 return {
                     "status": "success",
                     "operation_id": operation_id,
