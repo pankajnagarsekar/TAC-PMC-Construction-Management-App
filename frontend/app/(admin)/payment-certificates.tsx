@@ -1,5 +1,6 @@
 // PAYMENT CERTIFICATES SCREEN
 // List and manage payment certificates with real data
+// UI-1: Dynamic transition buttons based on state machine
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { paymentCertificatesApi } from '../../services/apiClient';
+import { TransitionActions, StatusBadge } from '../../components/TransitionActions';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
 
 interface PaymentCertificate {
@@ -26,6 +28,7 @@ interface PaymentCertificate {
   current_bill_amount: number | { $numberDecimal: string };
   net_payable: number | { $numberDecimal: string };
   status: string;
+  allowed_transitions?: string[];
 }
 
 const parseDecimal = (val: any): number => {
@@ -40,7 +43,7 @@ export default function PaymentCertificatesScreen() {
   const [certificates, setCertificates] = useState<PaymentCertificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<string>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadCertificates = useCallback(async () => {
     try {
@@ -63,10 +66,14 @@ export default function PaymentCertificatesScreen() {
     loadCertificates();
   };
 
-  const filteredCerts = certificates.filter(pc => {
-    if (filter === 'all') return true;
-    return pc.status?.toLowerCase() === filter;
-  });
+  const handleTransitionComplete = (pcId: string, newStatus: string) => {
+    setCertificates(prev => prev.map(pc => 
+      (pc.payment_certificate_id || pc._id) === pcId 
+        ? { ...pc, status: newStatus }
+        : pc
+    ));
+    setExpandedId(null);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -76,47 +83,50 @@ export default function PaymentCertificatesScreen() {
     }).format(amount);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'approved': return Colors.success;
-      case 'pending': return Colors.warning;
-      case 'rejected': return Colors.error;
-      default: return Colors.textMuted;
-    }
-  };
+  const renderCertificate = ({ item }: { item: PaymentCertificate }) => {
+    const pcId = item.payment_certificate_id || item._id || '';
+    const isExpanded = expandedId === pcId;
 
-  const renderCertificate = ({ item }: { item: PaymentCertificate }) => (
-    <Pressable
-      style={({ pressed }) => [styles.pcCard, pressed && styles.pcCardPressed]}
-      onPress={() => console.log('View PC:', item.document_number)}
-    >
-      <View style={styles.pcHeader}>
-        <Text style={styles.pcNumber}>{item.document_number}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-            {item.status}
-          </Text>
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.pcCard, pressed && !isExpanded && styles.pcCardPressed]}
+        onPress={() => setExpandedId(isExpanded ? null : pcId)}
+      >
+        <View style={styles.pcHeader}>
+          <Text style={styles.pcNumber}>{item.document_number}</Text>
+          <StatusBadge status={item.status} />
         </View>
-      </View>
-      <View style={styles.pcDetails}>
-        <View style={styles.pcRow}>
-          <Ionicons name="calendar-outline" size={16} color={Colors.textMuted} />
-          <Text style={styles.pcLabel}>Bill Date:</Text>
-          <Text style={styles.pcValue}>{new Date(item.bill_date).toLocaleDateString()}</Text>
+        <View style={styles.pcDetails}>
+          <View style={styles.pcRow}>
+            <Ionicons name="calendar-outline" size={16} color={Colors.textMuted} />
+            <Text style={styles.pcLabel}>Bill Date:</Text>
+            <Text style={styles.pcValue}>{new Date(item.bill_date).toLocaleDateString()}</Text>
+          </View>
+          <View style={styles.pcRow}>
+            <Ionicons name="receipt-outline" size={16} color={Colors.textMuted} />
+            <Text style={styles.pcLabel}>Bill Amount:</Text>
+            <Text style={styles.pcValue}>{formatCurrency(parseDecimal(item.current_bill_amount))}</Text>
+          </View>
+          <View style={styles.pcRow}>
+            <Ionicons name="cash-outline" size={16} color={Colors.textMuted} />
+            <Text style={styles.pcLabel}>Net Payable:</Text>
+            <Text style={styles.pcValueBold}>{formatCurrency(parseDecimal(item.net_payable))}</Text>
+          </View>
         </View>
-        <View style={styles.pcRow}>
-          <Ionicons name="receipt-outline" size={16} color={Colors.textMuted} />
-          <Text style={styles.pcLabel}>Bill Amount:</Text>
-          <Text style={styles.pcValue}>{formatCurrency(parseDecimal(item.current_bill_amount))}</Text>
-        </View>
-        <View style={styles.pcRow}>
-          <Ionicons name="cash-outline" size={16} color={Colors.textMuted} />
-          <Text style={styles.pcLabel}>Net Payable:</Text>
-          <Text style={styles.pcValueBold}>{formatCurrency(parseDecimal(item.net_payable))}</Text>
-        </View>
-      </View>
-    </Pressable>
-  );
+
+        {/* UI-1: Dynamic transition actions */}
+        {isExpanded && (
+          <TransitionActions
+            entityType="payment_certificate"
+            entityId={pcId}
+            currentStatus={item.status}
+            allowedTransitions={item.allowed_transitions}
+            onTransitionComplete={(newStatus) => handleTransitionComplete(pcId, newStatus)}
+          />
+        )}
+      </Pressable>
+    );
+  };
 
   if (loading) {
     return (
@@ -131,21 +141,6 @@ export default function PaymentCertificatesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* Filter Chips */}
-      <View style={styles.filterRow}>
-        {['all', 'pending', 'approved', 'rejected'].map((f) => (
-          <Pressable
-            key={f}
-            style={[styles.filterChip, filter === f && styles.filterChipActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
       {/* Summary Card */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryItem}>
@@ -162,7 +157,7 @@ export default function PaymentCertificatesScreen() {
 
       {/* Certificates List */}
       <FlatList
-        data={filteredCerts}
+        data={certificates}
         renderItem={renderCertificate}
         keyExtractor={(item) => item.payment_certificate_id || item._id || item.document_number}
         contentContainerStyle={styles.listContent}
@@ -190,23 +185,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: Spacing.md, fontSize: FontSizes.md, color: Colors.textSecondary },
-  filterRow: { flexDirection: 'row', padding: Spacing.md, gap: Spacing.sm },
-  filterChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterText: { fontSize: FontSizes.sm, color: Colors.textSecondary },
-  filterTextActive: { color: Colors.white, fontWeight: '600' },
   summaryCard: {
     flexDirection: 'row',
     backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
+    marginVertical: Spacing.md,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
   },
@@ -223,8 +206,6 @@ const styles = StyleSheet.create({
   pcCardPressed: { opacity: 0.7 },
   pcHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   pcNumber: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.text },
-  statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.sm },
-  statusText: { fontSize: FontSizes.xs, fontWeight: '600' },
   pcDetails: { gap: Spacing.xs },
   pcRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   pcLabel: { fontSize: FontSizes.sm, color: Colors.textSecondary, width: 80 },
