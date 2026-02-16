@@ -7,6 +7,7 @@ Implements:
 3. Financial Invariant Enforcement (Section 3)
 4. Duplicate Invoice Protection (Section 4)
 5. Atomic Document Numbering (Section 5)
+6. Policy Enforcement via PolicyService (Phase 4D)
 
 ALL financial operations wrapped in MongoDB transactions.
 ALL calculations use Decimal for precision.
@@ -39,6 +40,7 @@ from core.duplicate_protection import (
 from core.atomic_numbering import (
     AtomicDocumentNumbering, SequenceCollisionError
 )
+from core.policy_service import PolicyService
 
 logger = logging.getLogger(__name__)
 
