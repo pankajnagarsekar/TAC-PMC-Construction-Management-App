@@ -668,6 +668,19 @@ class FinancialAggregateManager:
                     "reason": "idempotent_duplicate",
                     "operation_id": e.operation_id
                 }
+            except PeriodLockedError as e:
+                domain_events.clear_pending()
+                logger.error(f"[PERIOD_LOCK] Mutation blocked: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "error": "accounting_period_locked",
+                        "message": str(e),
+                        "mutation_date": e.mutation_date.isoformat(),
+                        "period_start": e.period_start.isoformat(),
+                        "period_end": e.period_end.isoformat()
+                    }
+                )
             except FinancialValidationError as e:
                 domain_events.clear_pending()
                 logger.error(f"[DETERMINISM] Validation failed: {e.message}")
