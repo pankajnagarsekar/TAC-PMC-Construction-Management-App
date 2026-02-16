@@ -380,12 +380,40 @@ const styles = StyleSheet.create({
   actionButtonPressed: {
     opacity: 0.7,
   },
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
   actionText: {
     fontSize: FontSizes.sm,
     fontWeight: '600',
   },
   actionTextCompact: {
     fontSize: FontSizes.xs,
+  },
+  periodLockedBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.error + '10',
+    borderWidth: 1,
+    borderColor: Colors.error + '30',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    width: '100%',
+  },
+  periodLockedTextContainer: {
+    flex: 1,
+  },
+  periodLockedTitle: {
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+    color: Colors.error,
+  },
+  periodLockedMessage: {
+    fontSize: FontSizes.xs,
+    color: Colors.error,
+    marginTop: 2,
   },
   statusBadge: {
     paddingHorizontal: Spacing.sm,
