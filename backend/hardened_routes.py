@@ -249,6 +249,9 @@ async def issue_work_order(
     
     DETERMINISM: Accepts operation_id for idempotency.
     If operation_id exists and was applied, returns skip response.
+    
+    SNAPSHOT: Creates immutable snapshot with embedded data and settings.
+    LOCKING: Sets locked_flag = true after issue.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
@@ -258,6 +261,13 @@ async def issue_work_order(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Work Order not found"
+        )
+    
+    # Check if document is already locked
+    if wo.get("locked_flag", False):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Work Order is locked and cannot be modified"
         )
     
     await permission_checker.check_project_access(user, wo["project_id"], require_write=True)
@@ -272,6 +282,31 @@ async def issue_work_order(
         user_id=user["user_id"],
         operation_id=operation_id
     )
+    
+    # If successful (not skipped), create snapshot and lock document
+    if result.get("status") == "success":
+        # Build complete embedded snapshot
+        snapshot_data = await build_work_order_snapshot(db, wo_id)
+        
+        # Create immutable snapshot (with settings embedded)
+        snapshot = await snapshot_service.create_snapshot(
+            entity_type=SnapshotEntityType.WORK_ORDER,
+            entity_id=wo_id,
+            data=snapshot_data,
+            organisation_id=user["organisation_id"],
+            user_id=user["user_id"]
+        )
+        
+        # Lock the document
+        await document_lock_service.lock_document(
+            collection="work_orders",
+            document_id=wo_id,
+            snapshot_version=snapshot.get("version", 1),
+            user_id=user["user_id"]
+        )
+        
+        result["snapshot_version"] = snapshot.get("version")
+        result["locked"] = True
     
     return result
 
