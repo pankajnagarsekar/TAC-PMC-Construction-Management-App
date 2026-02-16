@@ -1049,7 +1049,7 @@ async def health_check():
             async with session.start_transaction():
                 pass  # Just test that we can start a transaction
         transaction_support = True
-    except Exception as e:
+    except Exception:
         transaction_support = False
     
     return {
