@@ -486,6 +486,53 @@ class FinancialAggregateManager:
         return result
     
     # =========================================================================
+    # ACCOUNTING PERIOD ENFORCEMENT (Phase 4B)
+    # =========================================================================
+    
+    async def check_accounting_period_lock(
+        self,
+        mutation_date: datetime,
+        session=None
+    ):
+        """
+        Check if mutation_date falls inside a locked accounting period.
+        Raises PeriodLockedError if locked.
+        
+        Args:
+            mutation_date: The date of the financial mutation
+            session: MongoDB session for transaction
+        
+        Raises:
+            PeriodLockedError: If mutation_date is in a locked period
+        """
+        # Normalize to date only (remove time component)
+        if isinstance(mutation_date, datetime):
+            check_date = mutation_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            check_date = datetime.combine(mutation_date, datetime.min.time())
+        
+        # Find any locked period that contains this date
+        locked_period = await self.db.accounting_periods.find_one(
+            {
+                "start_date": {"$lte": check_date},
+                "end_date": {"$gte": check_date},
+                "locked_flag": True
+            },
+            session=session
+        )
+        
+        if locked_period:
+            logger.warning(
+                f"[PERIOD_LOCK] Mutation blocked: date={check_date.strftime('%Y-%m-%d')} "
+                f"falls in locked period {locked_period['start_date']} to {locked_period['end_date']}"
+            )
+            raise PeriodLockedError(
+                mutation_date=check_date,
+                period_start=locked_period["start_date"],
+                period_end=locked_period["end_date"]
+            )
+    
+    # =========================================================================
     # TRANSACTIONAL MUTATION WRAPPER
     # =========================================================================
     
