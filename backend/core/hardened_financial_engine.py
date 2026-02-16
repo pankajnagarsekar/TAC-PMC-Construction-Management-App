@@ -69,6 +69,7 @@ class HardenedFinancialEngine:
     - Invariant enforcement
     - Duplicate protection
     - Atomic document numbering
+    - State machine transitions (Phase 3B)
     """
     
     def __init__(self, client: AsyncIOMotorClient, db: AsyncIOMotorDatabase):
@@ -77,6 +78,23 @@ class HardenedFinancialEngine:
         self.invariant_validator = FinancialInvariantValidator(db)
         self.duplicate_protection = DuplicateInvoiceProtection(db)
         self.document_numbering = AtomicDocumentNumbering(db)
+        
+        # Phase 3B: Initialize state machines
+        self._state_machines = None
+    
+    @property
+    def state_machines(self):
+        """Lazy initialization of state machines."""
+        if self._state_machines is None:
+            from core.state_machine_wiring import EntityStateMachines
+            self._state_machines = EntityStateMachines(
+                client=self.client,
+                db=self.db,
+                invariant_validator=self.invariant_validator,
+                document_numbering=self.document_numbering,
+                recalculate_fn=self.recalculate_financials_with_precision
+            )
+        return self._state_machines
     
     # =========================================================================
     # SECTION 1: DECIMAL PRECISION RECALCULATION ENGINE
