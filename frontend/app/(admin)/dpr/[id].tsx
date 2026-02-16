@@ -301,6 +301,25 @@ export default function DPRDetailScreen() {
     }
   };
 
+  // UI-3: Handle version selection
+  const handleVersionSelect = (version: number, snapshotData: any | null) => {
+    if (snapshotData && snapshotData.data_json) {
+      // Load historical snapshot data
+      const historicalDpr = JSON.parse(snapshotData.data_json);
+      setDpr(historicalDpr);
+      setProgressNotes(historicalDpr.progress_notes || '');
+      setWeatherConditions(historicalDpr.weather_conditions || '');
+      setManpowerCount(historicalDpr.manpower_count?.toString() || '');
+      setIssuesEncountered(historicalDpr.issues_encountered || '');
+      setIsViewingHistorical(true);
+      setEditing(false); // Disable editing for historical versions
+    } else {
+      // Load latest from API
+      setIsViewingHistorical(false);
+      fetchDPR();
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'submitted': return Colors.success;
