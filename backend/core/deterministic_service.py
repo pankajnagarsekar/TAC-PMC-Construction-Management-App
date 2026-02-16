@@ -424,7 +424,7 @@ class DeterministicFinancialService:
         amount = to_decimal(release_amount)
         
         async def mutation_fn(aggregate, session):
-            result = await self.hardened_engine.create_retention_release(
+            await self.hardened_engine.create_retention_release(
                 project_id=project_id,
                 code_id=code_id,
                 vendor_id=vendor_id,
