@@ -35,9 +35,8 @@ def load_env_file(file_path: str) -> Dict[str, str]:
         print(f"Warning: {file_path} not found")
         return {}
 
-# Load frontend environment to get backend URL
-frontend_env = load_env_file('/app/frontend/.env')
-BACKEND_URL = frontend_env.get('EXPO_PUBLIC_BACKEND_URL', 'http://localhost:8001')
+# Use localhost for testing since external URL is not accessible
+BACKEND_URL = 'http://localhost:8001'
 
 print(f"Using backend URL: {BACKEND_URL}")
 
