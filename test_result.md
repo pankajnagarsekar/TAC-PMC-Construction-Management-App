@@ -549,6 +549,44 @@ phase2_wave2:
         agent: "testing"
         comment: "Version snapshots not being created. Issue: Collection name mismatch between hardened engine (work_order_versions) and lifecycle engine (workorder_versions)"
 
+# DPR BUG FIX TESTING RESULTS
+dpr_bug_fixes:
+  - task: "Edit Draft DPR (404 Fix)"
+    implemented: true
+    working: true
+    file: "wave3_routes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Status comparison fix working correctly - DPR updates use .lower() to handle 'Draft' vs 'draft' case sensitivity. No more 400 errors when updating draft DPRs."
+
+  - task: "AI Caption Generation"
+    implemented: true
+    working: true
+    file: "wave3_routes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "EMERGENT provider working correctly (not MOCK). Backend logs confirm LiteLLM with gpt-4o model via OpenAI provider. Real AI responses with proper confidence scores. Fixed UserMessage parameter issue."
+
+  - task: "DPR Full Workflow"
+    implemented: true
+    working: true
+    file: "wave3_routes.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Complete DPR workflow functioning correctly: Create DPR → Add multiple images → All operations successful. No crashes in photo adding functionality. All 4 required images can be added successfully."
+
 agent_communication:
   - agent: "testing"
     message: "Phase 2 Wave 1 Financial Core Hardening testing completed successfully. All 5 critical hardening features are working correctly: 1) Decimal Precision Lock - verified with rate=10.333*quantity=3 properly rounded to 31.00, 2) Transaction Atomicity - confirmed via backend logs showing transaction commits/rollbacks, 3) Financial Invariant Enforcement - tested over-certification protection (certified_value > approved_budget), 4) Duplicate Invoice Protection - verified blocking duplicate invoice numbers for same vendor/project, 5) Atomic Document Numbering - confirmed WO-000001, PC-000001 generation. Core lifecycle tests: Work Order (Draft->Issue), Payment Certificate (Draft->Certify), Payment Recording, Retention Release all working with proper validation. Backend logs confirm all hardened engine components are functioning correctly. Some test timeout issues encountered but actual functionality verified through direct API testing and backend logs analysis."
