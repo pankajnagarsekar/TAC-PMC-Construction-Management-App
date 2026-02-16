@@ -545,6 +545,7 @@ class FinancialAggregateManager:
         entity_id: str,
         operation_type: OperationType,
         mutation_fn: Callable[[Dict[str, Any], Any], Awaitable[Dict[str, Decimal]]],
+        mutation_date: Optional[datetime] = None,
         event_type: str = None,
         event_payload_fn: Callable[[Dict[str, Any]], Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -553,6 +554,7 @@ class FinancialAggregateManager:
         
         Steps:
         A) Check idempotency - skip if already applied
+        A.1) Check accounting period lock (Phase 4B)
         B) Start transaction
         C) Lock aggregate row
         D) Execute mutation function (returns delta)
@@ -570,6 +572,7 @@ class FinancialAggregateManager:
             entity_id: ID of entity being mutated
             operation_type: Type of operation
             mutation_fn: Async function that performs the mutation and returns delta
+            mutation_date: Date of the mutation for period lock check (defaults to now)
             event_type: Optional domain event type to emit after commit
             event_payload_fn: Optional function to build event payload from result
         
@@ -585,6 +588,10 @@ class FinancialAggregateManager:
                         "reason": "idempotent_duplicate",
                         "operation_id": operation_id
                     }
+                
+                # A.1) Phase 4B: Check accounting period lock
+                check_date = mutation_date or datetime.utcnow()
+                await self.check_accounting_period_lock(check_date, session)
                 
                 async with session.start_transaction():
                     # C) Lock aggregate row
