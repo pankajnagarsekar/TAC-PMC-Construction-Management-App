@@ -6,6 +6,7 @@ This service wraps the existing HardenedFinancialEngine to add:
 - Row-level locking on FinancialAggregate
 - Invariant validation inside lock
 - Domain event emission after commit
+- Policy enforcement via PolicyService (Phase 4D)
 
 NO changes to existing calculation formulas.
 NO changes to business logic.
@@ -31,6 +32,7 @@ from core.financial_determinism import (
 )
 from core.hardened_financial_engine import HardenedFinancialEngine
 from core.financial_precision import calculate_wo_values, calculate_pc_values, to_float, round_financial
+from core.policy_service import PolicyService
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,7 @@ class DeterministicFinancialService:
     - FinancialAggregate locking
     - Invariant validation inside transaction
     - Domain event emission after commit
+    - Policy enforcement via PolicyService (Phase 4D)
     """
     
     def __init__(self, client: AsyncIOMotorClient, db: AsyncIOMotorDatabase):
@@ -51,6 +54,7 @@ class DeterministicFinancialService:
         self.db = db
         self.aggregate_manager = FinancialAggregateManager(client, db)
         self.hardened_engine = HardenedFinancialEngine(client, db)
+        self.policy = PolicyService(db)  # Phase 4D: Policy Service
     
     async def initialize(self):
         """Initialize determinism layer (create indexes)"""
