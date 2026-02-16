@@ -1,5 +1,7 @@
 // ADMIN DASHBOARD
 // Financial overview for admin users with all required indicators
+// UI-4: Uses project_financial_summary and project_physical_summary from read models
+// NO client-side financial calculations - all values from backend
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -9,58 +11,130 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { projectsApi } from '../../services/apiClient';
+import apiClient, { projectsApi } from '../../services/apiClient';
 import { Card, LoadingScreen } from '../../components/ui';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
-import { Project, AdminDashboardData, Alert } from '../../types/api';
+import { Project } from '../../types/api';
 
-// Mock dashboard data - will be replaced with real API
-const mockDashboardData: AdminDashboardData = {
-  approved_budget: 50000000,
-  committed_value: 35000000,
-  certified_value: 28000000,
-  paid_value: 22000000,
-  retention_held: 2800000,
-  outstanding_liability: 13000000,
-  over_commit_indicator: false,
-  physical_progress_percentage: 65,
-  financial_progress_percentage: 56,
-  delay_indicator: true,
-  active_alerts: [],
-  total_projects: 6,
-  active_projects: 6,
-  pending_work_orders: 3,
-  pending_payment_certificates: 2,
-};
+// UI-4: Dashboard data structure from read models
+interface FinancialSummary {
+  project_id: string;
+  totals: {
+    approved_budget: number;
+    committed_value: number;
+    certified_value: number;
+    paid_value: number;
+    retention_held: number;
+    remaining_budget: number;
+    outstanding_payable: number;
+  };
+  percentages: {
+    budget_utilization: number;
+    certification_progress: number;
+    payment_progress: number;
+  };
+  work_orders: {
+    by_status: Record<string, { count: number; total_value: number }>;
+  };
+  payment_certificates: {
+    by_status: Record<string, { count: number; total_value: number }>;
+  };
+}
+
+interface PhysicalSummary {
+  project_id: string;
+  totals: {
+    ordered_quantity: number;
+    certified_quantity: number;
+    remaining_quantity: number;
+    overall_physical_progress_pct: number;
+  };
+  dpr_summary: {
+    by_status: Record<string, number>;
+    total_dprs: number;
+  };
+}
+
+interface DashboardData {
+  financial: FinancialSummary | null;
+  physical: PhysicalSummary | null;
+  loading: boolean;
+  error: string | null;
+}
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [dashboardData, setDashboardData] = useState<AdminDashboardData>(mockDashboardData);
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    financial: null,
+    physical: null,
+    loading: true,
+    error: null,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
+  // UI-4: Load data from read model endpoints - NO local calculations
   const loadData = async () => {
     try {
       setError('');
       const projectsData = await projectsApi.getAll();
       setProjects(projectsData);
-      // TODO: Replace with dashboardApi.getAdminDashboard() when backend provides it
-      // UI does NOT compute any financial values - all values come from backend
-      // Currently using mock data until dashboard API is available
-      setDashboardData(mockDashboardData);
+      
+      // Use first project for dashboard if available
+      if (projectsData.length > 0) {
+        const projectId = projectsData[0].project_id;
+        setSelectedProjectId(projectId);
+        await loadProjectSummaries(projectId);
+      } else {
+        setDashboardData({ financial: null, physical: null, loading: false, error: null });
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
+      setDashboardData({ financial: null, physical: null, loading: false, error: err.message });
     } finally {
       setIsLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  // UI-4: Fetch from read model API endpoints
+  const loadProjectSummaries = async (projectId: string) => {
+    setDashboardData(prev => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      // Fetch both summaries from read model endpoints
+      const [financialRes, physicalRes] = await Promise.allSettled([
+        apiClient.get(`/api/v2/read-models/projects/${projectId}/financial-summary`),
+        apiClient.get(`/api/v2/read-models/projects/${projectId}/physical-summary`),
+      ]);
+
+      const financial = financialRes.status === 'fulfilled' ? financialRes.value : null;
+      const physical = physicalRes.status === 'fulfilled' ? physicalRes.value : null;
+
+      setDashboardData({
+        financial,
+        physical,
+        loading: false,
+        error: null,
+      });
+    } catch (err: any) {
+      console.error('Failed to load summaries:', err);
+      setDashboardData({
+        financial: null,
+        physical: null,
+        loading: false,
+        error: err.message || 'Failed to load project summaries',
+      });
     }
   };
 
@@ -73,13 +147,33 @@ export default function AdminDashboard() {
     loadData();
   }, []);
 
-  const formatCurrency = (value: number) => {
+  // UI-4: No local calculations - format only
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined || value === null) return '₹0';
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(value);
   };
+
+  // UI-4: Get values from read models - NO local math
+  const fin = dashboardData.financial?.totals;
+  const pct = dashboardData.financial?.percentages;
+  const phys = dashboardData.physical?.totals;
+
+  // Derive indicators from read model data
+  const overCommitIndicator = fin && fin.committed_value > fin.approved_budget;
+  const delayIndicator = phys && phys.overall_physical_progress_pct < (pct?.payment_progress || 0);
+
+  // Count pending items from status breakdowns
+  const pendingWOs = Object.entries(dashboardData.financial?.work_orders?.by_status || {})
+    .filter(([status]) => status.toLowerCase() === 'draft')
+    .reduce((sum, [, data]) => sum + (data?.count || 0), 0);
+
+  const pendingPCs = Object.entries(dashboardData.financial?.payment_certificates?.by_status || {})
+    .filter(([status]) => status.toLowerCase() === 'draft')
+    .reduce((sum, [, data]) => sum + (data?.count || 0), 0);
 
   if (isLoading) {
     return <LoadingScreen message="Loading dashboard..." />;
@@ -106,15 +200,15 @@ export default function AdminDashboard() {
         </View>
 
         {/* Alert Banner */}
-        {(dashboardData.over_commit_indicator || dashboardData.delay_indicator) && (
+        {(overCommitIndicator || delayIndicator) && (
           <Card style={styles.alertBanner}>
             <View style={styles.alertContent}>
               <Ionicons name="warning" size={24} color={Colors.warning} />
               <View style={styles.alertTextContainer}>
                 <Text style={styles.alertTitle}>Attention Required</Text>
                 <Text style={styles.alertMessage}>
-                  {dashboardData.over_commit_indicator && 'Over-commit detected. '}
-                  {dashboardData.delay_indicator && 'Project delays detected.'}
+                  {overCommitIndicator && 'Over-commit detected. '}
+                  {delayIndicator && 'Project delays detected.'}
                 </Text>
               </View>
             </View>
@@ -135,50 +229,58 @@ export default function AdminDashboard() {
           </View>
         ) : null}
 
-        {/* Financial Summary Cards */}
+        {/* Loading State for Summaries */}
+        {dashboardData.loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.loadingText}>Loading financial data...</Text>
+          </View>
+        )}
+
+        {/* UI-4: Financial Summary Cards - All values from read models */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Financial Overview</Text>
           <View style={styles.financialGrid}>
             <FinancialCard
               title="Approved Budget"
-              value={formatCurrency(dashboardData.approved_budget)}
+              value={formatCurrency(fin?.approved_budget)}
               icon="wallet"
               color={Colors.primary}
             />
             <FinancialCard
               title="Committed Value"
-              value={formatCurrency(dashboardData.committed_value)}
+              value={formatCurrency(fin?.committed_value)}
               icon="document-text"
               color={Colors.info}
             />
             <FinancialCard
               title="Certified Value"
-              value={formatCurrency(dashboardData.certified_value)}
+              value={formatCurrency(fin?.certified_value)}
               icon="checkmark-circle"
               color={Colors.success}
             />
             <FinancialCard
               title="Paid Value"
-              value={formatCurrency(dashboardData.paid_value)}
+              value={formatCurrency(fin?.paid_value)}
               icon="cash"
               color={Colors.accent}
             />
             <FinancialCard
               title="Retention Held"
-              value={formatCurrency(dashboardData.retention_held)}
+              value={formatCurrency(fin?.retention_held)}
               icon="lock-closed"
               color={Colors.warning}
             />
             <FinancialCard
-              title="Outstanding Liability"
-              value={formatCurrency(dashboardData.outstanding_liability)}
+              title="Outstanding Payable"
+              value={formatCurrency(fin?.outstanding_payable)}
               icon="alert-circle"
               color={Colors.error}
             />
           </View>
         </View>
 
-        {/* Progress & Status Indicators */}
+        {/* UI-4: Progress & Status Indicators - From read models */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Progress Indicators</Text>
           <Card style={styles.progressCard}>
@@ -186,32 +288,32 @@ export default function AdminDashboard() {
               <View style={styles.progressItem}>
                 <Text style={styles.progressLabel}>Physical Progress</Text>
                 <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBar, { width: `${dashboardData.physical_progress_percentage}%`, backgroundColor: Colors.success }]} />
+                  <View style={[styles.progressBar, { width: `${phys?.overall_physical_progress_pct || 0}%`, backgroundColor: Colors.success }]} />
                 </View>
-                <Text style={styles.progressValue}>{dashboardData.physical_progress_percentage}%</Text>
+                <Text style={styles.progressValue}>{phys?.overall_physical_progress_pct?.toFixed(1) || 0}%</Text>
               </View>
             </View>
             <View style={styles.progressRow}>
               <View style={styles.progressItem}>
-                <Text style={styles.progressLabel}>Financial Progress</Text>
+                <Text style={styles.progressLabel}>Budget Utilization</Text>
                 <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBar, { width: `${dashboardData.financial_progress_percentage}%`, backgroundColor: Colors.info }]} />
+                  <View style={[styles.progressBar, { width: `${Math.min(pct?.budget_utilization || 0, 100)}%`, backgroundColor: Colors.info }]} />
                 </View>
-                <Text style={styles.progressValue}>{dashboardData.financial_progress_percentage}%</Text>
+                <Text style={styles.progressValue}>{pct?.budget_utilization?.toFixed(1) || 0}%</Text>
               </View>
             </View>
 
             {/* Status Indicators */}
             <View style={styles.indicatorRow}>
-              <View style={[styles.indicator, dashboardData.over_commit_indicator && styles.indicatorActive]}>
-                <Ionicons name={dashboardData.over_commit_indicator ? "alert" : "checkmark"} size={16} color={dashboardData.over_commit_indicator ? Colors.error : Colors.success} />
-                <Text style={[styles.indicatorText, dashboardData.over_commit_indicator && styles.indicatorTextActive]}>
+              <View style={[styles.indicator, overCommitIndicator && styles.indicatorActive]}>
+                <Ionicons name={overCommitIndicator ? "alert" : "checkmark"} size={16} color={overCommitIndicator ? Colors.error : Colors.success} />
+                <Text style={[styles.indicatorText, overCommitIndicator && styles.indicatorTextActive]}>
                   Over-Commit
                 </Text>
               </View>
-              <View style={[styles.indicator, dashboardData.delay_indicator && styles.indicatorActive]}>
-                <Ionicons name={dashboardData.delay_indicator ? "alert" : "checkmark"} size={16} color={dashboardData.delay_indicator ? Colors.warning : Colors.success} />
-                <Text style={[styles.indicatorText, dashboardData.delay_indicator && styles.indicatorTextActive]}>
+              <View style={[styles.indicator, delayIndicator && styles.indicatorActive]}>
+                <Ionicons name={delayIndicator ? "alert" : "checkmark"} size={16} color={delayIndicator ? Colors.warning : Colors.success} />
+                <Text style={[styles.indicatorText, delayIndicator && styles.indicatorTextActive]}>
                   Delay
                 </Text>
               </View>
@@ -219,24 +321,24 @@ export default function AdminDashboard() {
           </Card>
         </View>
 
-        {/* Project Stats */}
+        {/* UI-4: Project Stats - From read models and projects list */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Project Stats</Text>
           <View style={styles.statsGrid}>
             <Card style={styles.statCard}>
-              <Text style={styles.statValue}>{dashboardData.total_projects}</Text>
+              <Text style={styles.statValue}>{projects.length}</Text>
               <Text style={styles.statLabel}>Total Projects</Text>
             </Card>
             <Card style={styles.statCard}>
-              <Text style={styles.statValue}>{dashboardData.active_projects}</Text>
+              <Text style={styles.statValue}>{projects.filter(p => !p.end_date || new Date(p.end_date) > new Date()).length}</Text>
               <Text style={styles.statLabel}>Active</Text>
             </Card>
             <Card style={styles.statCard}>
-              <Text style={[styles.statValue, { color: Colors.warning }]}>{dashboardData.pending_work_orders}</Text>
+              <Text style={[styles.statValue, { color: Colors.warning }]}>{pendingWOs}</Text>
               <Text style={styles.statLabel}>Pending WOs</Text>
             </Card>
             <Card style={styles.statCard}>
-              <Text style={[styles.statValue, { color: Colors.accent }]}>{dashboardData.pending_payment_certificates}</Text>
+              <Text style={[styles.statValue, { color: Colors.accent }]}>{pendingPCs}</Text>
               <Text style={styles.statLabel}>Pending PCs</Text>
             </Card>
           </View>
