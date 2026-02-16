@@ -137,12 +137,12 @@ export default function CreateDPRScreen() {
 
         if (photo) {
           const newImage: CapturedImage = {
-            id: Date.now().toString(),
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             uri: photo.uri,
             base64: photo.base64 || '',
             caption: currentCaption,
           };
-          setImages([...images, newImage]);
+          setImages(prev => [...prev, newImage]);
           setCurrentCaption('');
           setShowCamera(false);
         }
@@ -164,12 +164,12 @@ export default function CreateDPRScreen() {
 
       if (!result.canceled && result.assets[0]) {
         const newImage: CapturedImage = {
-          id: Date.now().toString(),
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           uri: result.assets[0].uri,
           base64: result.assets[0].base64 || '',
           caption: currentCaption,
         };
-        setImages([...images, newImage]);
+        setImages(prev => [...prev, newImage]);
         setCurrentCaption('');
       }
     } catch (error) {

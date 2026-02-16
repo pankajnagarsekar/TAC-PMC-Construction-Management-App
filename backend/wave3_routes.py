@@ -1142,7 +1142,7 @@ async def update_dpr(
     if dpr.get("organisation_id") != user["organisation_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    if dpr.get("status") != "draft":
+    if dpr.get("status", "").lower() != "draft":
         raise HTTPException(status_code=400, detail="Cannot edit a submitted DPR")
     
     # Build update dict
