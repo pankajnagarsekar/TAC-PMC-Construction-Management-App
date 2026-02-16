@@ -506,6 +506,141 @@ async def get_work_order(
     return wo
 
 
+@hardened_router.get("/work-orders/{wo_id}/transitions")
+async def get_wo_transitions(
+    wo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get allowed transitions for a work order based on current status"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    wo = await db.work_orders.find_one({"_id": ObjectId(wo_id)})
+    if not wo:
+        raise HTTPException(status_code=404, detail="Work Order not found")
+    
+    await permission_checker.check_project_access(user, wo["project_id"], require_write=False)
+    
+    status = wo.get("status", "Draft")
+    
+    # State machine transitions
+    transitions_map = {
+        "Draft": ["Issued", "Cancelled"],
+        "Issued": ["Revised", "Cancelled"],
+        "Revised": ["Issued", "Cancelled"],
+        "Cancelled": [],
+    }
+    
+    return {
+        "work_order_id": wo_id,
+        "current_status": status,
+        "allowed_transitions": transitions_map.get(status, [])
+    }
+
+
+@hardened_router.post("/work-orders/{wo_id}/cancel")
+async def cancel_work_order(
+    wo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Cancel a work order"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    wo = await db.work_orders.find_one({"_id": ObjectId(wo_id)})
+    if not wo:
+        raise HTTPException(status_code=404, detail="Work Order not found")
+    
+    await permission_checker.check_project_access(user, wo["project_id"], require_write=True)
+    
+    current_status = wo.get("status", "Draft")
+    if current_status == "Cancelled":
+        raise HTTPException(status_code=400, detail="Work order is already cancelled")
+    
+    # Update status
+    await db.work_orders.update_one(
+        {"_id": ObjectId(wo_id)},
+        {"$set": {
+            "status": "Cancelled",
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Work order cancelled successfully", "status": "Cancelled"}
+
+
+@hardened_router.put("/work-orders/{wo_id}")
+async def update_work_order(
+    wo_id: str,
+    wo_data: WorkOrderCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a draft work order"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    wo = await db.work_orders.find_one({"_id": ObjectId(wo_id)})
+    if not wo:
+        raise HTTPException(status_code=404, detail="Work Order not found")
+    
+    await permission_checker.check_project_access(user, wo["project_id"], require_write=True)
+    
+    # Only drafts can be edited
+    if wo.get("status") != "Draft":
+        raise HTTPException(status_code=400, detail="Only draft work orders can be edited")
+    
+    # Calculate amounts
+    base_amount = wo_data.rate * wo_data.quantity
+    retention_pct = wo_data.retention_percentage or 0
+    retention_amount = base_amount * (retention_pct / 100)
+    net_value = base_amount - retention_amount
+    
+    update_dict = {
+        "project_id": wo_data.project_id,
+        "code_id": wo_data.code_id,
+        "vendor_id": wo_data.vendor_id,
+        "issue_date": wo_data.issue_date,
+        "rate": wo_data.rate,
+        "quantity": wo_data.quantity,
+        "retention_percentage": retention_pct,
+        "base_amount": base_amount,
+        "retention_amount": retention_amount,
+        "net_wo_value": net_value,
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.work_orders.update_one(
+        {"_id": ObjectId(wo_id)},
+        {"$set": update_dict}
+    )
+    
+    updated_wo = await db.work_orders.find_one({"_id": ObjectId(wo_id)})
+    updated_wo["wo_id"] = str(updated_wo.pop("_id"))
+    return updated_wo
+
+
+@hardened_router.delete("/work-orders/{wo_id}")
+async def delete_work_order(
+    wo_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a draft work order"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    wo = await db.work_orders.find_one({"_id": ObjectId(wo_id)})
+    if not wo:
+        raise HTTPException(status_code=404, detail="Work Order not found")
+    
+    await permission_checker.check_project_access(user, wo["project_id"], require_write=True)
+    
+    # Only drafts can be deleted
+    if wo.get("status") != "Draft":
+        raise HTTPException(status_code=400, detail="Only draft work orders can be deleted")
+    
+    await db.work_orders.delete_one({"_id": ObjectId(wo_id)})
+    return {"message": "Work order deleted successfully"}
+
+
 # ============================================
 # PAYMENT CERTIFICATE ENDPOINTS
 # ============================================
