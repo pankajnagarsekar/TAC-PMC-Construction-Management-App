@@ -4,10 +4,50 @@
 // UI-2: Handles locked_flag state
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../constants/theme';
-import apiClient from '../services/apiClient';
+
+// Simple fetch wrapper for transitions
+const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+  const token = typeof window !== 'undefined' 
+    ? (Platform.OS === 'web' ? localStorage.getItem('access_token') : null)
+    : null;
+  
+  // Try to get token from SecureStore for native
+  let authToken = token;
+  if (!authToken && Platform.OS !== 'web') {
+    try {
+      const SecureStore = require('expo-secure-store');
+      authToken = await SecureStore.getItemAsync('access_token');
+    } catch (e) {}
+  }
+  
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+      ...options.headers,
+    },
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+    throw new Error(error.detail?.message || error.detail || error.message || 'Request failed');
+  }
+  
+  return response.json();
+};
+
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
 
 // Transition metadata for UI display
 const TRANSITION_META: Record<string, { label: string; icon: string; color: string; confirmMessage?: string }> = {
