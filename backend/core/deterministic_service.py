@@ -106,7 +106,7 @@ class DeterministicFinancialService:
         # Define mutation function
         async def mutation_fn(aggregate, session):
             # Call existing hardened engine issue
-            result = await self.hardened_engine.issue_work_order(
+            await self.hardened_engine.issue_work_order(
                 wo_id=wo_id,
                 organisation_id=organisation_id,
                 user_id=user_id
