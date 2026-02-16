@@ -373,7 +373,7 @@ class DeterministicFinancialService:
         amount = to_decimal(payment_amount)
         
         async def mutation_fn(aggregate, session):
-            result = await self.hardened_engine.create_payment(
+            await self.hardened_engine.create_payment(
                 pc_id=pc_id,
                 payment_amount=payment_amount,
                 payment_date=payment_date,
