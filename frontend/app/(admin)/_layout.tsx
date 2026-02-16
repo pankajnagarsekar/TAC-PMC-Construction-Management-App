@@ -94,6 +94,7 @@ export default function AdminTabLayout() {
       <Tabs.Screen name="budget" options={{ href: null, headerTitle: 'Budget Management' }} />
       <Tabs.Screen name="timeline" options={{ href: null, headerTitle: 'Timeline' }} />
       <Tabs.Screen name="petty-cash" options={{ href: null, headerTitle: 'Petty Cash' }} />
+      <Tabs.Screen name="vendors" options={{ href: null, headerTitle: 'Vendor Management' }} />
       <Tabs.Screen name="work-orders" options={{ href: null, headerTitle: 'Work Orders' }} />
       <Tabs.Screen name="payment-certificates" options={{ href: null, headerTitle: 'Payment Certificates' }} />
       {/* Nested route folders - hidden from tab bar */}
