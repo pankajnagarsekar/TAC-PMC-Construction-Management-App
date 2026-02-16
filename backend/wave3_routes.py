@@ -717,7 +717,7 @@ Keep captions professional and under 20 words.
 Focus on factual observations from the image content."""
         ).with_model("openai", "gpt-4o")
         
-        # Create message with image
+        # Create message with image - try different parameter name
         user_message = UserMessage(
             text="""Analyze this construction site photo and provide:
 1. MAIN CAPTION: A single professional caption describing what you see (max 20 words)
@@ -729,9 +729,11 @@ Format your response exactly like this:
 MAIN: [your main caption]
 ALT1: [alternative 1]
 ALT2: [alternative 2]  
-ALT3: [alternative 3]""",
-            images=[image_content]
+ALT3: [alternative 3]"""
         )
+        
+        # Add image separately if needed
+        user_message.image_content = image_content
         
         # Send message and get response
         ai_response = await chat.send_message(user_message)
