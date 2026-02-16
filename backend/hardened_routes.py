@@ -163,6 +163,107 @@ async def get_vendors(
     return vendors
 
 
+@hardened_router.get("/vendors/{vendor_id}")
+async def get_vendor(
+    vendor_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific vendor"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    vendor = await db.vendors.find_one({
+        "_id": ObjectId(vendor_id),
+        "organisation_id": user["organisation_id"]
+    })
+    
+    if not vendor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vendor not found"
+        )
+    
+    vendor["vendor_id"] = str(vendor.pop("_id"))
+    return vendor
+
+
+@hardened_router.put("/vendors/{vendor_id}")
+async def update_vendor(
+    vendor_id: str,
+    vendor_data: VendorCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a vendor"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    # Check vendor exists
+    existing = await db.vendors.find_one({
+        "_id": ObjectId(vendor_id),
+        "organisation_id": user["organisation_id"]
+    })
+    
+    if not existing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vendor not found"
+        )
+    
+    # Check for duplicate vendor_code (excluding current vendor)
+    if vendor_data.vendor_code:
+        duplicate = await db.vendors.find_one({
+            "vendor_code": vendor_data.vendor_code,
+            "organisation_id": user["organisation_id"],
+            "_id": {"$ne": ObjectId(vendor_id)}
+        })
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Vendor code already exists"
+            )
+    
+    update_dict = {k: v for k, v in vendor_data.dict().items() if v is not None}
+    update_dict["updated_at"] = datetime.utcnow()
+    
+    await db.vendors.update_one(
+        {"_id": ObjectId(vendor_id)},
+        {"$set": update_dict}
+    )
+    
+    updated = await db.vendors.find_one({"_id": ObjectId(vendor_id)})
+    updated["vendor_id"] = str(updated.pop("_id"))
+    return updated
+
+
+@hardened_router.delete("/vendors/{vendor_id}")
+async def delete_vendor(
+    vendor_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a vendor (soft delete by setting active_status to false)"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    # Check vendor exists
+    existing = await db.vendors.find_one({
+        "_id": ObjectId(vendor_id),
+        "organisation_id": user["organisation_id"]
+    })
+    
+    if not existing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vendor not found"
+        )
+    
+    # Soft delete - set active_status to false
+    await db.vendors.update_one(
+        {"_id": ObjectId(vendor_id)},
+        {"$set": {"active_status": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Vendor deleted successfully"}
+
+
 # ============================================
 # WORK ORDER ENDPOINTS
 # ============================================
