@@ -225,6 +225,7 @@ async def create_work_order(
 @hardened_router.post("/work-orders/{wo_id}/issue")
 async def issue_work_order(
     wo_id: str,
+    issue_data: WorkOrderIssue = WorkOrderIssue(),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -233,6 +234,9 @@ async def issue_work_order(
     SECTION 2: Uses transaction with automatic rollback.
     SECTION 3: Validates invariants before commit.
     SECTION 5: Assigns atomic document number.
+    
+    DETERMINISM: Accepts operation_id for idempotency.
+    If operation_id exists and was applied, returns skip response.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
@@ -246,11 +250,15 @@ async def issue_work_order(
     
     await permission_checker.check_project_access(user, wo["project_id"], require_write=True)
     
-    # Use hardened engine for transactional issue
-    result = await hardened_engine.issue_work_order(
+    # Generate operation_id if not provided
+    operation_id = issue_data.operation_id or str(uuid.uuid4())
+    
+    # Use deterministic service for transactional issue with idempotency
+    result = await deterministic_service.issue_work_order(
         wo_id=wo_id,
         organisation_id=user["organisation_id"],
-        user_id=user["user_id"]
+        user_id=user["user_id"],
+        operation_id=operation_id
     )
     
     return result
@@ -268,6 +276,8 @@ async def revise_work_order(
     SECTION 2: Uses transaction with automatic rollback.
     SECTION 1: Uses Decimal precision for calculations.
     SECTION 3: Validates invariants before commit.
+    
+    DETERMINISM: Accepts operation_id for idempotency.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
@@ -281,13 +291,18 @@ async def revise_work_order(
     
     await permission_checker.check_project_access(user, wo["project_id"], require_write=True)
     
-    result = await hardened_engine.revise_work_order(
+    # Generate operation_id if not provided
+    operation_id = revise_data.operation_id or str(uuid.uuid4())
+    
+    # Use deterministic service for transactional revision
+    result = await deterministic_service.revise_work_order(
         wo_id=wo_id,
         organisation_id=user["organisation_id"],
         user_id=user["user_id"],
         rate=revise_data.rate,
         quantity=revise_data.quantity,
-        retention_percentage=revise_data.retention_percentage
+        retention_percentage=revise_data.retention_percentage,
+        operation_id=operation_id
     )
     
     return result
