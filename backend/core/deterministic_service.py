@@ -178,7 +178,7 @@ class DeterministicFinancialService:
         delta_committed = new_base_amount - old_base_amount
         
         async def mutation_fn(aggregate, session):
-            result = await self.hardened_engine.revise_work_order(
+            await self.hardened_engine.revise_work_order(
                 wo_id=wo_id,
                 organisation_id=organisation_id,
                 user_id=user_id,
