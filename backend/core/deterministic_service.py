@@ -37,6 +37,21 @@ from core.policy_service import PolicyService
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# EXCEPTIONS
+# =============================================================================
+
+class BudgetReductionError(Exception):
+    """Budget cannot be reduced below certified value"""
+    def __init__(self, new_budget: Decimal, certified_value: Decimal):
+        self.new_budget = new_budget
+        self.certified_value = certified_value
+        super().__init__(
+            f"Cannot reduce budget to {new_budget}. "
+            f"Certified value ({certified_value}) would exceed new budget."
+        )
+
+
 class DeterministicFinancialService:
     """
     Deterministic wrapper around HardenedFinancialEngine.
