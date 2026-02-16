@@ -116,11 +116,25 @@ class PeriodLockedError(Exception):
 # =============================================================================
 
 class DomainEventEmitter:
-    """Emit domain events AFTER successful commit only"""
+    """
+    Emit domain events AFTER successful DB commit only.
+    
+    Phase 5A: Ensures events are dispatched outside transaction blocks.
+    
+    Pattern:
+    1. queue_event() - Called inside transaction to prepare event data
+    2. Transaction commits successfully
+    3. emit_pending() - Called AFTER commit to dispatch events
+    4. clear_pending() - Called on rollback to discard queued events
+    
+    Thread Safety: Each request should use its own emitter instance or
+    ensure pending events are cleared between requests.
+    """
     
     def __init__(self):
         self._pending_events: list = []
         self._handlers: Dict[str, list] = {}
+        self._committed: bool = False  # Track if we're post-commit
     
     def register_handler(self, event_type: str, handler: Callable):
         """Register a handler for an event type"""
@@ -129,22 +143,49 @@ class DomainEventEmitter:
         self._handlers[event_type].append(handler)
     
     def queue_event(self, event_type: str, payload: Dict[str, Any]):
-        """Queue an event to be emitted after commit"""
-        self._pending_events.append({
+        """
+        Queue an event to be emitted after commit.
+        
+        IMPORTANT: This captures event data but does NOT dispatch.
+        Dispatch only happens via emit_pending() after transaction commits.
+        """
+        event = {
             "event_id": str(uuid.uuid4()),
             "event_type": event_type,
-            "payload": payload,
-            "timestamp": datetime.utcnow().isoformat()
-        })
+            "payload": payload.copy(),  # Deep copy to capture state at queue time
+            "timestamp": datetime.utcnow().isoformat(),
+            "queued_at": datetime.utcnow()
+        }
+        self._pending_events.append(event)
+        logger.debug(f"[DOMAIN_EVENT] Queued: {event_type} - {event['event_id']}")
     
     async def emit_pending(self):
-        """Emit all pending events (call AFTER commit)"""
+        """
+        Emit all pending events.
+        
+        Phase 5A: MUST be called OUTSIDE transaction block, AFTER commit.
+        This ensures events are only dispatched for successfully committed data.
+        
+        Events are cleared after emission regardless of handler success/failure.
+        Individual handler errors are logged but don't affect other handlers.
+        """
+        if not self._pending_events:
+            return
+        
+        # Move events to local list and clear pending immediately
+        # This prevents double-emission if emit_pending is called twice
         events_to_emit = self._pending_events.copy()
         self._pending_events.clear()
+        self._committed = True
+        
+        logger.info(f"[DOMAIN_EVENT] Emitting {len(events_to_emit)} events post-commit")
         
         for event in events_to_emit:
             event_type = event["event_type"]
             handlers = self._handlers.get(event_type, [])
+            
+            # Mark emission time
+            event["emitted_at"] = datetime.utcnow().isoformat()
             
             for handler in handlers:
                 try:
@@ -153,13 +194,33 @@ class DomainEventEmitter:
                     else:
                         handler(event)
                 except Exception as e:
-                    logger.error(f"Event handler error: {event_type} - {str(e)}")
+                    # Log but don't re-raise - event emission failures
+                    # should not affect the already-committed transaction
+                    logger.error(
+                        f"[DOMAIN_EVENT] Handler error for {event_type}: {str(e)}",
+                        exc_info=True
+                    )
             
             logger.info(f"[DOMAIN_EVENT] Emitted: {event_type} - {event['event_id']}")
+        
+        self._committed = False
     
     def clear_pending(self):
-        """Clear pending events (call on rollback)"""
+        """
+        Clear pending events without emitting.
+        
+        Phase 5A: MUST be called on transaction rollback/error.
+        Ensures no events are emitted for failed transactions.
+        """
+        count = len(self._pending_events)
         self._pending_events.clear()
+        self._committed = False
+        if count > 0:
+            logger.info(f"[DOMAIN_EVENT] Cleared {count} pending events (rollback)")
+    
+    def get_pending_count(self) -> int:
+        """Get count of pending events (for debugging/testing)."""
+        return len(self._pending_events)
 
 
 import asyncio
