@@ -455,6 +455,8 @@ const styles = StyleSheet.create({
   errorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.errorLight, padding: Spacing.md, borderRadius: BorderRadius.md, marginBottom: Spacing.md, gap: Spacing.sm },
   errorText: { flex: 1, fontSize: FontSizes.sm, color: Colors.error },
   retryText: { fontSize: FontSizes.sm, color: Colors.error, fontWeight: '600' },
+  loadingOverlay: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.md, gap: Spacing.sm },
+  loadingText: { fontSize: FontSizes.sm, color: Colors.textSecondary },
   section: { marginBottom: Spacing.lg },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
   sectionTitle: { fontSize: FontSizes.lg, fontWeight: '600', color: Colors.text, marginBottom: Spacing.md },
