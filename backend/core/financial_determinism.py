@@ -99,6 +99,18 @@ class LockAcquisitionError(Exception):
         super().__init__(f"Failed to lock aggregate for project:{project_id}, code:{code_id}")
 
 
+class PeriodLockedError(Exception):
+    """Mutation blocked due to locked accounting period"""
+    def __init__(self, mutation_date: datetime, period_start: datetime, period_end: datetime):
+        self.mutation_date = mutation_date
+        self.period_start = period_start
+        self.period_end = period_end
+        super().__init__(
+            f"Mutation date {mutation_date.strftime('%Y-%m-%d')} falls within locked accounting period "
+            f"({period_start.strftime('%Y-%m-%d')} to {period_end.strftime('%Y-%m-%d')})"
+        )
+
+
 # =============================================================================
 # DOMAIN EVENTS
 # =============================================================================
