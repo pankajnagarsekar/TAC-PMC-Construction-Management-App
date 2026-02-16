@@ -1,12 +1,13 @@
 // TRANSITION ACTIONS COMPONENT
 // Dynamic action buttons based on allowed transitions from state machine
 // UI-1: Replaces hardcoded status checks
+// UI-2: Handles locked_flag state
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
-import apiClient from '../../services/apiClient';
+import { Colors, Spacing, FontSizes, BorderRadius } from '../constants/theme';
+import apiClient from '../services/apiClient';
 
 // Transition metadata for UI display
 const TRANSITION_META: Record<string, { label: string; icon: string; color: string; confirmMessage?: string }> = {
