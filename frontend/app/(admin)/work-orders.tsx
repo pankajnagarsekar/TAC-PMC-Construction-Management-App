@@ -70,6 +70,13 @@ export default function WorkOrdersScreen() {
     loadWorkOrders();
   }, [loadWorkOrders]);
 
+  // Reload when screen comes into focus (after creating/editing)
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkOrders();
+    }, [loadWorkOrders])
+  );
+
   const onRefresh = () => {
     setRefreshing(true);
     loadWorkOrders();
