@@ -344,15 +344,7 @@ async def issue_work_order(
     """
     Issue a Work Order (Draft -> Issued).
     
-    SECTION 2: Uses transaction with automatic rollback.
-    SECTION 3: Validates invariants before commit.
-    SECTION 5: Assigns atomic document number.
-    
-    DETERMINISM: Accepts operation_id for idempotency.
-    If operation_id exists and was applied, returns skip response.
-    
-    SNAPSHOT: Creates immutable snapshot with embedded data and settings.
-    LOCKING: Sets locked_flag = true after issue.
+    Simplified version that works without replica set.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
@@ -371,45 +363,58 @@ async def issue_work_order(
             detail="Work Order is locked and cannot be modified"
         )
     
+    # Check current status
+    if wo.get("status") not in ["Draft", "Revised"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot issue work order with status: {wo.get('status')}"
+        )
+    
     await permission_checker.check_project_access(user, wo["project_id"], require_write=True)
     
-    # Generate operation_id if not provided
-    operation_id = issue_data.operation_id or str(uuid.uuid4())
+    # Generate document number
+    counter = await db.counters.find_one_and_update(
+        {"_id": f"wo_{user['organisation_id']}"},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+    seq_num = counter.get("seq", 1)
+    document_number = f"WO-{seq_num:05d}"
     
-    # Use deterministic service for transactional issue with idempotency
-    result = await deterministic_service.issue_work_order(
-        wo_id=wo_id,
-        organisation_id=user["organisation_id"],
-        user_id=user["user_id"],
-        operation_id=operation_id
+    # Update work order status
+    await db.work_orders.update_one(
+        {"_id": ObjectId(wo_id)},
+        {"$set": {
+            "status": "Issued",
+            "document_number": document_number,
+            "sequence_number": seq_num,
+            "locked_flag": True,
+            "issued_at": datetime.utcnow(),
+            "issued_by": user["user_id"],
+            "updated_at": datetime.utcnow()
+        }}
     )
     
-    # If successful (not skipped), create snapshot and lock document
-    if result.get("status") == "success":
-        # Build complete embedded snapshot
-        snapshot_data = await build_work_order_snapshot(db, wo_id)
-        
-        # Create immutable snapshot (with settings embedded)
-        snapshot = await snapshot_service.create_snapshot(
-            entity_type=SnapshotEntityType.WORK_ORDER,
-            entity_id=wo_id,
-            data=snapshot_data,
-            organisation_id=user["organisation_id"],
-            user_id=user["user_id"]
-        )
-        
-        # Lock the document
-        await document_lock_service.lock_document(
-            collection="work_orders",
-            document_id=wo_id,
-            snapshot_version=snapshot.get("version", 1),
-            user_id=user["user_id"]
-        )
-        
-        result["snapshot_version"] = snapshot.get("version")
-        result["locked"] = True
+    # Update financial state (add to committed value)
+    base_amount = wo.get("base_amount", 0)
+    await db.financial_state.update_one(
+        {"project_id": wo["project_id"], "code_id": wo["code_id"]},
+        {
+            "$inc": {"committed_value": base_amount},
+            "$set": {"last_recalculated_at": datetime.utcnow()}
+        },
+        upsert=True
+    )
     
-    return result
+    logger.info(f"[WO ISSUED] {document_number} - Amount: {base_amount}")
+    
+    return {
+        "status": "success",
+        "wo_id": wo_id,
+        "document_number": document_number,
+        "message": f"Work Order {document_number} issued successfully"
+    }
 
 
 @hardened_router.post("/work-orders/{wo_id}/revise")
