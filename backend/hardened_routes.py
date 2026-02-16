@@ -806,7 +806,7 @@ async def get_retention_releases(
 @hardened_router.put("/budgets/{budget_id}/modify")
 async def modify_budget(
     budget_id: str,
-    new_amount: float,
+    budget_data: BudgetUpdate,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -815,6 +815,10 @@ async def modify_budget(
     SECTION 2: Uses transaction with automatic rollback.
     SECTION 1: Uses Decimal precision.
     SECTION 3: Validates certified_value <= new_budget.
+    
+    PHASE 5C: Requires operation_id for idempotency.
+    - Auto-generates if not provided.
+    - Returns previous response if duplicate.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
@@ -828,14 +832,17 @@ async def modify_budget(
     
     await permission_checker.check_project_access(user, budget["project_id"], require_write=True)
     
-    # Note: modify_budget now uses deterministic service with idempotency
-    # Budget modifications use the deterministic wrapper
+    # Phase 5C: Generate operation_id if not provided
+    operation_id = budget_data.operation_id or str(uuid.uuid4())
+    
+    # Use deterministic service with idempotency
     result = await deterministic_service.update_budget(
         project_id=budget["project_id"],
         code_id=budget.get("code_id", "DEFAULT"),
-        approved_budget_amount=new_amount,
+        approved_budget_amount=budget_data.approved_budget_amount,
         organisation_id=user["organisation_id"],
-        user_id=user["user_id"]
+        user_id=user["user_id"],
+        operation_id=operation_id
     )
     
     return result
