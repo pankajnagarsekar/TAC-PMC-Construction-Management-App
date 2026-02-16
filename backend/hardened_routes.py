@@ -14,6 +14,12 @@ PHASE 1 EXTENSION: Financial Determinism Foundation
 - Invariant validation inside lock
 - Domain event emission after commit
 
+PHASE 2 EXTENSION: Snapshot + Document Integrity
+- Immutable snapshots on document finalization
+- Global settings binding
+- SHA-256 checksum for integrity
+- Document locking
+
 IMPORTANT: These routes do NOT modify API response shapes.
 They EXTEND existing functionality with hardening.
 """
@@ -39,6 +45,10 @@ from phase2_models import (
 )
 from core.hardened_financial_engine import HardenedFinancialEngine
 from core.deterministic_service import DeterministicFinancialService
+from core.snapshot_service import (
+    SnapshotService, DocumentLockService, SnapshotEntityType,
+    build_work_order_snapshot, build_payment_certificate_snapshot
+)
 from core.financial_precision import (
     calculate_wo_values, calculate_pc_values,
     to_float, round_financial, NegativeValueError
