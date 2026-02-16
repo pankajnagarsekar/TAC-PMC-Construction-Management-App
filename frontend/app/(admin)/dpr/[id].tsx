@@ -390,7 +390,8 @@ export default function DPRDetailScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Details</Text>
-            {dpr.status === 'draft' && (
+            {/* UI-3: Hide edit button when viewing historical versions */}
+            {dpr.status === 'draft' && !isViewingHistorical && (
               <Pressable onPress={() => setEditing(!editing)}>
                 <Ionicons 
                   name={editing ? "checkmark-circle" : "create"} 
@@ -401,7 +402,7 @@ export default function DPRDetailScreen() {
             )}
           </View>
 
-          {editing ? (
+          {editing && !isViewingHistorical ? (
             <>
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Progress Notes</Text>
