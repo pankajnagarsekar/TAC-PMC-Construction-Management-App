@@ -130,9 +130,8 @@ export default function CreateWorkOrderScreen() {
       console.log('Submitting payload:', payload);
       await workOrdersApi.create(payload);
       console.log('Work order created successfully');
-      showAlert('Success', 'Work Order created successfully', () => {
-        router.replace('/(admin)/work-orders');
-      });
+      showAlert('Success', 'Work Order created successfully');
+      router.back();  // Go back to work orders list
     } catch (error: any) {
       console.error('Error creating work order:', error);
       showAlert('Error', error.message || 'Failed to create work order');
