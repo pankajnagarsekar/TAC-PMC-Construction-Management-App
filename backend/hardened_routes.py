@@ -87,6 +87,7 @@ db = client[db_name]
 # Initialize services
 permission_checker = PermissionChecker(db)
 hardened_engine = HardenedFinancialEngine(client, db)
+deterministic_service = DeterministicFinancialService(client, db)
 
 
 # ============================================
