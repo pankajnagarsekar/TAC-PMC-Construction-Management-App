@@ -44,6 +44,15 @@ interface TransitionActionsProps {
   compact?: boolean;
 }
 
+// UI-5: Period locked error state
+interface PeriodLockedState {
+  isLocked: boolean;
+  mutationDate?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  message?: string;
+}
+
 export function TransitionActions({
   entityType,
   entityId,
@@ -56,6 +65,7 @@ export function TransitionActions({
   const [loading, setLoading] = useState<string | null>(null);
   const [transitions, setTransitions] = useState<string[]>(allowedTransitions || []);
   const [fetched, setFetched] = useState(!!allowedTransitions);
+  const [periodLocked, setPeriodLocked] = useState<PeriodLockedState>({ isLocked: false });
 
   // Fetch allowed transitions if not provided
   React.useEffect(() => {
@@ -63,6 +73,11 @@ export function TransitionActions({
       fetchTransitions();
     }
   }, [entityType, entityId, currentStatus]);
+
+  // UI-5: Reset period locked state when entity changes
+  React.useEffect(() => {
+    setPeriodLocked({ isLocked: false });
+  }, [entityId]);
 
   const fetchTransitions = async () => {
     try {
@@ -79,6 +94,16 @@ export function TransitionActions({
   };
 
   const handleTransition = async (targetStatus: string) => {
+    // UI-5: Block if period is locked
+    if (periodLocked.isLocked) {
+      Alert.alert(
+        'Period Locked',
+        periodLocked.message || 'This accounting period is locked. Financial actions are disabled.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     const meta = TRANSITION_META[targetStatus];
     
     if (meta?.confirmMessage) {
@@ -95,6 +120,17 @@ export function TransitionActions({
     }
   };
 
+  // UI-5: Handle PeriodLockedError from backend
+  const handlePeriodLockedError = (errorDetail: any) => {
+    setPeriodLocked({
+      isLocked: true,
+      mutationDate: errorDetail.mutation_date,
+      periodStart: errorDetail.period_start,
+      periodEnd: errorDetail.period_end,
+      message: errorDetail.message || `Accounting period is locked (${errorDetail.period_start} to ${errorDetail.period_end})`,
+    });
+  };
+
   const executeTransition = async (targetStatus: string) => {
     setLoading(targetStatus);
     try {
@@ -103,8 +139,20 @@ export function TransitionActions({
       onTransitionComplete?.(targetStatus);
     } catch (error: any) {
       console.error('Transition failed:', error);
-      onError?.(error);
-      Alert.alert('Error', error.message || 'Failed to update status');
+      
+      // UI-5: Check for PeriodLockedError
+      const errorDetail = error.response?.data?.detail || error.detail;
+      if (errorDetail?.error === 'accounting_period_locked') {
+        handlePeriodLockedError(errorDetail);
+        Alert.alert(
+          'Period Locked',
+          errorDetail.message || 'This accounting period is locked.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        onError?.(error);
+        Alert.alert('Error', error.message || 'Failed to update status');
+      }
     } finally {
       setLoading(null);
     }
