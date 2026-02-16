@@ -122,7 +122,7 @@ export function TransitionActions({
   const fetchTransitions = async () => {
     try {
       const endpoint = getTransitionsEndpoint(entityType, entityId);
-      const response = await apiClient.get(endpoint);
+      const response = await apiRequest(endpoint);
       setTransitions(response.allowed_transitions || []);
       setFetched(true);
     } catch (error) {
@@ -136,25 +136,27 @@ export function TransitionActions({
   const handleTransition = async (targetStatus: string) => {
     // UI-5: Block if period is locked
     if (periodLocked.isLocked) {
-      Alert.alert(
-        'Period Locked',
-        periodLocked.message || 'This accounting period is locked. Financial actions are disabled.',
-        [{ text: 'OK' }]
-      );
+      showAlert('Period Locked', periodLocked.message || 'This accounting period is locked.');
       return;
     }
 
     const meta = TRANSITION_META[targetStatus];
     
     if (meta?.confirmMessage) {
-      Alert.alert(
-        'Confirm Action',
-        meta.confirmMessage,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Confirm', onPress: () => executeTransition(targetStatus) },
-        ]
-      );
+      if (Platform.OS === 'web') {
+        if (window.confirm(meta.confirmMessage)) {
+          executeTransition(targetStatus);
+        }
+      } else {
+        Alert.alert(
+          'Confirm Action',
+          meta.confirmMessage,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Confirm', onPress: () => executeTransition(targetStatus) },
+          ]
+        );
+      }
     } else {
       executeTransition(targetStatus);
     }
@@ -175,24 +177,13 @@ export function TransitionActions({
     setLoading(targetStatus);
     try {
       const endpoint = getTransitionEndpoint(entityType, entityId, targetStatus);
-      await apiClient.post(endpoint, { target_status: targetStatus });
+      await apiRequest(endpoint, { method: 'POST', body: JSON.stringify({ target_status: targetStatus }) });
+      showAlert('Success', `Status changed to ${targetStatus}`);
       onTransitionComplete?.(targetStatus);
     } catch (error: any) {
       console.error('Transition failed:', error);
-      
-      // UI-5: Check for PeriodLockedError
-      const errorDetail = error.response?.data?.detail || error.detail;
-      if (errorDetail?.error === 'accounting_period_locked') {
-        handlePeriodLockedError(errorDetail);
-        Alert.alert(
-          'Period Locked',
-          errorDetail.message || 'This accounting period is locked.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        onError?.(error);
-        Alert.alert('Error', error.message || 'Failed to update status');
-      }
+      showAlert('Error', error.message || 'Failed to update status');
+      onError?.(error);
     } finally {
       setLoading(null);
     }
