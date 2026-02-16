@@ -72,6 +72,7 @@ class HardenedFinancialEngine:
     - Duplicate protection
     - Atomic document numbering
     - State machine transitions (Phase 3B)
+    - Policy enforcement via PolicyService (Phase 4D)
     """
     
     def __init__(self, client: AsyncIOMotorClient, db: AsyncIOMotorDatabase):
@@ -80,6 +81,7 @@ class HardenedFinancialEngine:
         self.invariant_validator = FinancialInvariantValidator(db)
         self.duplicate_protection = DuplicateInvoiceProtection(db)
         self.document_numbering = AtomicDocumentNumbering(db)
+        self.policy = PolicyService(db)  # Phase 4D: Policy Service
         
         # Phase 3B: Initialize state machines
         self._state_machines = None
