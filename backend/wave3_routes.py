@@ -81,6 +81,10 @@ job_engine = BackgroundJobEngine(client, db)
 ai_service = AIService(client, db, ai_api_key)
 security = SecurityHardening(client, db)
 
+# Phase 2 - Snapshot + Document Integrity services
+dpr_snapshot_service = SnapshotService(db)
+dpr_lock_service = DocumentLockService(db)
+
 
 # =============================================================================
 # MODELS
