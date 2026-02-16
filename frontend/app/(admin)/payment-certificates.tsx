@@ -87,15 +87,24 @@ export default function PaymentCertificatesScreen() {
   const renderCertificate = ({ item }: { item: PaymentCertificate }) => {
     const pcId = item.payment_certificate_id || item._id || '';
     const isExpanded = expandedId === pcId;
+    const isLocked = item.locked_flag === true;
 
     return (
       <Pressable
-        style={({ pressed }) => [styles.pcCard, pressed && !isExpanded && styles.pcCardPressed]}
-        onPress={() => setExpandedId(isExpanded ? null : pcId)}
+        style={({ pressed }) => [
+          styles.pcCard, 
+          pressed && !isExpanded && styles.pcCardPressed,
+          isLocked && styles.pcCardLocked
+        ]}
+        onPress={() => !isLocked && setExpandedId(isExpanded ? null : pcId)}
+        disabled={isLocked}
       >
         <View style={styles.pcHeader}>
           <Text style={styles.pcNumber}>{item.document_number}</Text>
-          <StatusBadge status={item.status} />
+          <View style={styles.badgeRow}>
+            {isLocked && <LockedBadge />}
+            <StatusBadge status={item.status} />
+          </View>
         </View>
         <View style={styles.pcDetails}>
           <View style={styles.pcRow}>
@@ -115,8 +124,8 @@ export default function PaymentCertificatesScreen() {
           </View>
         </View>
 
-        {/* UI-1: Dynamic transition actions */}
-        {isExpanded && (
+        {/* UI-1: Dynamic transition actions - UI-2: Hidden when locked */}
+        {isExpanded && !isLocked && (
           <TransitionActions
             entityType="payment_certificate"
             entityId={pcId}
