@@ -304,8 +304,12 @@ export const workOrdersApi = {
   },
   getById: (id: string): Promise<WorkOrder> => request(`/api/v2/work-orders/${id}`),
   create: (data: CreateWorkOrderRequest): Promise<WorkOrder> => request('/api/v2/work-orders', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: CreateWorkOrderRequest): Promise<WorkOrder> => request(`/api/v2/work-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string): Promise<void> => request(`/api/v2/work-orders/${id}`, { method: 'DELETE' }),
   issue: (id: string): Promise<WorkOrder> => request(`/api/v2/work-orders/${id}/issue`, { method: 'POST' }),
+  cancel: (id: string): Promise<void> => request(`/api/v2/work-orders/${id}/cancel`, { method: 'POST' }),
   revise: (id: string, data: ReviseWorkOrderRequest): Promise<WorkOrder> => request(`/api/v2/work-orders/${id}/revise`, { method: 'POST', body: JSON.stringify(data) }),
+  getTransitions: (id: string): Promise<{ allowed_transitions: string[] }> => request(`/api/v2/work-orders/${id}/transitions`),
 };
 
 // ============================================
