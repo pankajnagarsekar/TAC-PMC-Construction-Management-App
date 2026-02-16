@@ -1203,3 +1203,88 @@ async def wave3_health():
         },
         "ai_provider": "EMERGENT" if ai_api_key else "MOCK"
     }
+
+
+# =============================================================================
+# SNAPSHOT QUERY ENDPOINTS (Phase 2)
+# =============================================================================
+
+@wave3_router.get("/snapshots/{entity_type}/{entity_id}")
+async def get_entity_snapshot(
+    entity_type: str,
+    entity_id: str,
+    version: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get snapshot for an entity.
+    
+    Args:
+        entity_type: WORK_ORDER, PAYMENT_CERTIFICATE, or DPR
+        entity_id: The entity ID
+        version: Optional specific version (defaults to latest)
+    
+    Returns immutable snapshot with embedded data and settings.
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    snapshot = await dpr_snapshot_service.get_snapshot(entity_type, entity_id, version)
+    
+    if not snapshot:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    
+    # Convert for response
+    snapshot["snapshot_id"] = str(snapshot.get("_id", ""))
+    if "_id" in snapshot:
+        del snapshot["_id"]
+    
+    return serialize_mongo_doc(snapshot)
+
+
+@wave3_router.get("/snapshots/{entity_type}/{entity_id}/versions")
+async def get_all_snapshot_versions(
+    entity_type: str,
+    entity_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get all snapshot versions for an entity.
+    
+    Returns list of versions with metadata (no full data).
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    snapshots = await dpr_snapshot_service.get_all_versions(entity_type, entity_id)
+    
+    # Return metadata only
+    result = []
+    for s in snapshots:
+        result.append({
+            "version": s.get("version"),
+            "generated_at": s.get("generated_at"),
+            "generated_by": s.get("generated_by"),
+            "is_latest": s.get("is_latest", False),
+            "data_checksum": s.get("data_checksum"),
+            "pdf_checksum": s.get("pdf_checksum")
+        })
+    
+    return result
+
+
+@wave3_router.post("/snapshots/{entity_type}/{entity_id}/verify")
+async def verify_snapshot_integrity(
+    entity_type: str,
+    entity_id: str,
+    version: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Verify integrity of a snapshot.
+    
+    Returns checksum verification results.
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    result = await dpr_snapshot_service.verify_checksum(entity_type, entity_id, version)
+    
+    return result
