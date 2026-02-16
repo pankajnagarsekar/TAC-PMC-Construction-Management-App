@@ -92,15 +92,24 @@ export default function WorkOrdersScreen() {
   const renderWorkOrder = ({ item }: { item: WorkOrder }) => {
     const woId = item.work_order_id || item._id || '';
     const isExpanded = expandedId === woId;
+    const isLocked = item.locked_flag === true;
 
     return (
       <Pressable
-        style={({ pressed }) => [styles.woCard, pressed && !isExpanded && styles.woCardPressed]}
-        onPress={() => setExpandedId(isExpanded ? null : woId)}
+        style={({ pressed }) => [
+          styles.woCard, 
+          pressed && !isExpanded && styles.woCardPressed,
+          isLocked && styles.woCardLocked
+        ]}
+        onPress={() => !isLocked && setExpandedId(isExpanded ? null : woId)}
+        disabled={isLocked}
       >
         <View style={styles.woHeader}>
           <Text style={styles.woNumber}>{item.document_number}</Text>
-          <StatusBadge status={item.status} />
+          <View style={styles.badgeRow}>
+            {isLocked && <LockedBadge />}
+            <StatusBadge status={item.status} />
+          </View>
         </View>
         <View style={styles.woDetails}>
           <View style={styles.woRow}>
@@ -122,8 +131,8 @@ export default function WorkOrdersScreen() {
           </View>
         </View>
 
-        {/* UI-1: Dynamic transition actions */}
-        {isExpanded && (
+        {/* UI-1: Dynamic transition actions - UI-2: Hidden when locked */}
+        {isExpanded && !isLocked && (
           <TransitionActions
             entityType="work_order"
             entityId={woId}
