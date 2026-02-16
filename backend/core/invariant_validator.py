@@ -158,6 +158,8 @@ class FinancialInvariantValidator:
         """
         Validate financial invariants across ALL codes in a project.
         
+        Phase 6C: Reads from FinancialAggregate (canonical source).
+        
         Returns dict with 'valid' and 'violations' lists.
         Does NOT raise - collects all violations for reporting.
         """
@@ -168,14 +170,14 @@ class FinancialInvariantValidator:
             "validated_at": datetime.utcnow()
         }
         
-        # Get all budgets for project
-        budgets = await self.db.project_budgets.find(
+        # Phase 6C: Get all aggregates for project (canonical source)
+        aggregates = await self.db.financial_aggregates.find(
             {"project_id": project_id},
             session=session
         ).to_list(length=None)
         
-        for budget in budgets:
-            code_id = budget["code_id"]
+        for aggregate in aggregates:
+            code_id = aggregate["code_id"]
             try:
                 await self.validate_project_code_invariants(project_id, code_id, session)
                 result["valid"].append({"code_id": code_id, "status": "VALID"})
