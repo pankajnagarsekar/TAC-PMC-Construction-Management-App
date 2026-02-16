@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { paymentCertificatesApi } from '../../services/apiClient';
-import { TransitionActions, StatusBadge } from '../../components/TransitionActions';
+import { TransitionActions, StatusBadge, LockedBadge } from '../../components/TransitionActions';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
 
 interface PaymentCertificate {
