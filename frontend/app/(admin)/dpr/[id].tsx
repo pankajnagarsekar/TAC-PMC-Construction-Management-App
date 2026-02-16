@@ -1,5 +1,6 @@
 // DPR DETAIL/EDIT SCREEN
 // View and edit existing Daily Progress Reports
+// UI-3: Version selector for viewing historical snapshots
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -23,6 +24,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { apiClient } from '../../../services/apiClient';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../../constants/theme';
+import { VersionSelector } from '../../../components/VersionSelector';
 
 interface DPRImage {
   image_id: string;
