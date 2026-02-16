@@ -34,6 +34,7 @@ interface WorkOrder {
   net_wo_value: number | { $numberDecimal: string };
   status: string;
   allowed_transitions?: string[];
+  locked_flag?: boolean;
 }
 
 const parseDecimal = (val: any): number => {
