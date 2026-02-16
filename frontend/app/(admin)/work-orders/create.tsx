@@ -149,6 +149,7 @@ export default function CreateWorkOrderScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <ScreenHeader title="Create Work Order" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Project Picker */}
         <View style={styles.fieldGroup}>
