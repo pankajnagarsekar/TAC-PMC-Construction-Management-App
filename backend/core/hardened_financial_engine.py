@@ -364,12 +364,15 @@ class HardenedFinancialEngine:
         retention_percentage: Optional[float] = None
     ) -> Dict[str, Any]:
         """
-        Revise a Work Order.
+        Revise a Work Order (transition from Issued to Revised).
         
+        PHASE 3B: Uses state machine for transition.
         TRANSACTION: Atomic with rollback.
         SECTION 1: Uses Decimal precision for calculations.
         SECTION 3: Validates invariants before commit.
         """
+        from core.state_machine import InvalidTransitionError, GuardConditionError, TransitionHandlerError
+        
         async with await self.client.start_session() as session:
             async with session.start_transaction():
                 try:
@@ -384,12 +387,6 @@ class HardenedFinancialEngine:
                             detail="Work Order not found"
                         )
                     
-                    if wo["status"] not in ["Issued", "Revised"]:
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Cannot revise WO in status: {wo['status']}"
-                        )
-                    
                     # LOCK ENFORCEMENT at service layer
                     if wo.get("locked_flag", False):
                         raise HTTPException(
@@ -397,60 +394,25 @@ class HardenedFinancialEngine:
                             detail=f"Work Order {wo_id} is locked. Unlock before modification."
                         )
                     
-                    # Apply updates
-                    new_rate = rate if rate is not None else wo["rate"]
-                    new_quantity = quantity if quantity is not None else wo["quantity"]
-                    new_retention = retention_percentage if retention_percentage is not None else wo["retention_percentage"]
-                    
-                    # SECTION 1: Calculate with Decimal precision
-                    try:
-                        wo_values = calculate_wo_values(new_rate, new_quantity, new_retention)
-                    except NegativeValueError as e:
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=str(e)
-                        )
-                    
-                    new_version = wo["version_number"] + 1
-                    
-                    update_data = {
-                        "rate": new_rate,
-                        "quantity": new_quantity,
-                        "retention_percentage": new_retention,
-                        "base_amount": wo_values["base_amount"],
-                        "retention_amount": wo_values["retention_amount"],
-                        "net_wo_value": wo_values["net_wo_value"],
-                        "status": "Revised",
-                        "version_number": new_version,
-                        "updated_at": datetime.utcnow(),
-                        "revised_by": user_id,
-                        "revised_at": datetime.utcnow()
+                    # PHASE 3B: Use state machine for transition
+                    context = {
+                        "organisation_id": organisation_id,
+                        "user_id": user_id,
+                        "rate": rate,
+                        "quantity": quantity,
+                        "retention_percentage": retention_percentage
                     }
                     
-                    await self.db.work_orders.update_one(
-                        {"_id": ObjectId(wo_id)},
-                        {"$set": update_data},
-                        session=session
+                    result = await self.state_machines.work_order.transition(
+                        wo, "Revised", session=session, context=context
                     )
                     
                     # Create version snapshot
+                    new_version = wo["version_number"] + 1
                     await self._create_wo_version_snapshot(wo_id, new_version, session)
                     
-                    # Recalculate financials with precision
-                    await self.recalculate_financials_with_precision(
-                        wo["project_id"],
-                        wo["code_id"],
-                        session=session
-                    )
-                    
-                    # Validate invariants
-                    await self.invariant_validator.validate_project_code_invariants(
-                        wo["project_id"],
-                        wo["code_id"],
-                        session=session
-                    )
-                    
                     # Log audit
+                    handler_result = result.get("handler_result", {})
                     await self._log_audit(
                         organisation_id=organisation_id,
                         project_id=wo["project_id"],
@@ -459,19 +421,40 @@ class HardenedFinancialEngine:
                         entity_id=wo_id,
                         action="REVISE",
                         user_id=user_id,
-                        old_value={"rate": wo["rate"], "quantity": wo["quantity"]},
-                        new_value=update_data,
+                        old_value={"rate": wo.get("rate"), "quantity": wo.get("quantity")},
+                        new_value={"status": "Revised", **handler_result},
                         session=session
                     )
                     
-                    logger.info(f"[TRANSACTION] WO Revised: {wo_id} v{new_version}")
+                    logger.info(f"[TRANSACTION] WO Revised via state machine: {wo_id}")
                     
                     return {
                         "wo_id": wo_id,
                         "version": new_version,
                         "status": "Revised",
-                        **wo_values
+                        **handler_result
                     }
+                
+                except InvalidTransitionError as e:
+                    logger.error(f"[STATE_MACHINE] Invalid transition: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(e)
+                    )
+                
+                except GuardConditionError as e:
+                    logger.error(f"[STATE_MACHINE] Guard rejected: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=e.reason
+                    )
+                
+                except TransitionHandlerError as e:
+                    logger.error(f"[STATE_MACHINE] Handler failed: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=str(e.original_error)
+                    )
                     
                 except InvariantViolationError as e:
                     logger.error(f"[INVARIANT VIOLATION] WO Revision failed: {e.message}")
@@ -500,13 +483,16 @@ class HardenedFinancialEngine:
         invoice_number: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Certify a Payment Certificate.
+        Certify a Payment Certificate (transition from Draft to Certified).
         
+        PHASE 3B: Uses state machine for transition.
         TRANSACTION: Atomic with rollback.
         SECTION 4: Checks for duplicate invoice before certification.
         SECTION 5: Assigns atomic document number on certification.
         SECTION 3: Validates invariants before commit.
         """
+        from core.state_machine import InvalidTransitionError, GuardConditionError, TransitionHandlerError
+        
         async with await self.client.start_session() as session:
             async with session.start_transaction():
                 try:
@@ -521,13 +507,7 @@ class HardenedFinancialEngine:
                             detail="Payment Certificate not found"
                         )
                     
-                    if pc["status"] != "Draft":
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Cannot certify PC in status: {pc['status']}"
-                        )
-                    
-                    # SECTION 4: Check for duplicate invoice
+                    # SECTION 4: Check for duplicate invoice (before state machine)
                     if invoice_number:
                         try:
                             await self.duplicate_protection.check_duplicate_invoice(
@@ -544,49 +524,30 @@ class HardenedFinancialEngine:
                                 detail=f"Duplicate invoice detected: {invoice_number}"
                             )
                     
-                    # SECTION 5: Generate atomic document number
-                    doc_number, sequence = await self.document_numbering.generate_document_number(
-                        organisation_id=organisation_id,
-                        prefix=pc.get("prefix", "PC"),
-                        session=session
-                    )
-                    
-                    # Update PC to Certified status
-                    update_data = {
-                        "status": "Certified",
-                        "document_number": doc_number,
-                        "sequence_number": sequence,
-                        "invoice_number": invoice_number,
-                        "locked_flag": True,
-                        "updated_at": datetime.utcnow(),
-                        "certified_by": user_id,
-                        "certified_at": datetime.utcnow()
+                    # PHASE 3B: Use state machine for transition
+                    context = {
+                        "organisation_id": organisation_id,
+                        "user_id": user_id,
+                        "invoice_number": invoice_number
                     }
                     
-                    await self.db.payment_certificates.update_one(
-                        {"_id": ObjectId(pc_id)},
-                        {"$set": update_data},
-                        session=session
+                    result = await self.state_machines.payment_certificate.transition(
+                        pc, "Certified", session=session, context=context
                     )
                     
                     # Create version snapshot
                     await self._create_pc_version_snapshot(pc_id, 1, session)
                     
-                    # Recalculate financials with precision
-                    await self.recalculate_financials_with_precision(
-                        pc["project_id"],
-                        pc["code_id"],
-                        session=session
-                    )
-                    
-                    # SECTION 3: Validate invariants BEFORE commit
-                    await self.invariant_validator.validate_project_code_invariants(
-                        pc["project_id"],
-                        pc["code_id"],
-                        session=session
-                    )
+                    # Update invoice number if provided (state machine handles rest)
+                    if invoice_number:
+                        await self.db.payment_certificates.update_one(
+                            {"_id": ObjectId(pc_id)},
+                            {"$set": {"invoice_number": invoice_number}},
+                            session=session
+                        )
                     
                     # Log audit
+                    handler_result = result.get("handler_result", {})
                     await self._log_audit(
                         organisation_id=organisation_id,
                         project_id=pc["project_id"],
@@ -595,18 +556,43 @@ class HardenedFinancialEngine:
                         entity_id=pc_id,
                         action="CERTIFY",
                         user_id=user_id,
-                        new_value={"document_number": doc_number, "status": "Certified", "invoice_number": invoice_number},
+                        new_value={
+                            "document_number": handler_result.get("document_number"),
+                            "status": "Certified",
+                            "invoice_number": invoice_number
+                        },
                         session=session
                     )
                     
-                    logger.info(f"[TRANSACTION] PC Certified: {pc_id} -> {doc_number}")
+                    logger.info(f"[TRANSACTION] PC Certified via state machine: {pc_id}")
                     
                     return {
                         "pc_id": pc_id,
-                        "document_number": doc_number,
+                        "document_number": handler_result.get("document_number"),
                         "invoice_number": invoice_number,
                         "status": "Certified"
                     }
+                
+                except InvalidTransitionError as e:
+                    logger.error(f"[STATE_MACHINE] Invalid transition: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(e)
+                    )
+                
+                except GuardConditionError as e:
+                    logger.error(f"[STATE_MACHINE] Guard rejected: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=e.reason
+                    )
+                
+                except TransitionHandlerError as e:
+                    logger.error(f"[STATE_MACHINE] Handler failed: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=str(e.original_error)
+                    )
                     
                 except InvariantViolationError as e:
                     logger.error(f"[INVARIANT VIOLATION] PC Certification failed: {e.message}")
