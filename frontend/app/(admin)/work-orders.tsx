@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { workOrdersApi } from '../../services/apiClient';
 import { Card } from '../../components/ui';
-import { TransitionActions, StatusBadge } from '../../components/TransitionActions';
+import { TransitionActions, StatusBadge, LockedBadge } from '../../components/TransitionActions';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
 
 interface WorkOrder {
