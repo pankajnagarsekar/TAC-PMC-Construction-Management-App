@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { workOrdersApi } from '../../services/apiClient';
 import { Card } from '../../components/ui';
 import { TransitionActions, StatusBadge, LockedBadge } from '../../components/TransitionActions';
