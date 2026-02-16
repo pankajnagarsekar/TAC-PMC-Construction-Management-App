@@ -46,6 +46,8 @@ interface DPRDetail {
   images: DPRImage[];
   created_at: string;
   updated_at?: string;
+  version?: number;
+  locked_flag?: boolean;
 }
 
 export default function DPRDetailScreen() {
@@ -58,6 +60,7 @@ export default function DPRDetailScreen() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [isViewingHistorical, setIsViewingHistorical] = useState(false);
   
   // Editable fields
   const [progressNotes, setProgressNotes] = useState('');
