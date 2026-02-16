@@ -500,7 +500,8 @@ export default function DPRDetailScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Photos ({dpr.images.length})</Text>
-            {dpr.status === 'draft' && (
+            {/* UI-3: Hide add photo when viewing historical */}
+            {dpr.status === 'draft' && !isViewingHistorical && (
               <Pressable style={styles.addPhotoBtn} onPress={addPhoto}>
                 <Ionicons name="camera" size={18} color={Colors.primary} />
                 <Text style={styles.addPhotoBtnText}>Add</Text>
@@ -512,7 +513,7 @@ export default function DPRDetailScreen() {
             <View style={styles.emptyPhotos}>
               <Ionicons name="images-outline" size={48} color={Colors.textMuted} />
               <Text style={styles.emptyText}>No photos yet</Text>
-              {dpr.status === 'draft' && (
+              {dpr.status === 'draft' && !isViewingHistorical && (
                 <Pressable style={styles.addFirstPhotoBtn} onPress={addPhoto}>
                   <Text style={styles.addFirstPhotoBtnText}>Add First Photo</Text>
                 </Pressable>
