@@ -543,9 +543,9 @@ export default function DPRDetailScreen() {
           )}
         </View>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - UI-3: Hide submit when viewing historical */}
         <View style={styles.actions}>
-          {dpr.status === 'draft' && dpr.images.length >= 4 && (
+          {dpr.status === 'draft' && dpr.images.length >= 4 && !isViewingHistorical && (
             <Pressable
               style={[styles.submitButton, saving && styles.buttonDisabled]}
               onPress={handleSubmit}
