@@ -483,7 +483,11 @@ class DeterministicFinancialService:
         user_id: str,
         operation_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Update Budget with deterministic guarantees."""
+        """
+        Update Budget with deterministic guarantees.
+        
+        Phase 4E: If new budget < certified_value → block with BudgetReductionError.
+        """
         op_id = operation_id or str(uuid.uuid4())
         
         if await self.aggregate_manager.check_idempotency(op_id):
@@ -502,6 +506,32 @@ class DeterministicFinancialService:
         old_amount = to_decimal(budget.get("approved_budget_amount", 0)) if budget else Decimal('0')
         new_amount = to_decimal(approved_budget_amount)
         delta = new_amount - old_amount
+        
+        # Phase 4E: Check if budget reduction would violate certified_value constraint
+        if new_amount < old_amount:
+            # Get current aggregate to check certified_value
+            aggregate = await self.db.financial_aggregates.find_one({
+                "project_id": project_id,
+                "code_id": code_id
+            })
+            
+            if aggregate:
+                certified_value = to_decimal(aggregate.get("certified_value", 0))
+                
+                if new_amount < certified_value:
+                    logger.warning(
+                        f"[BUDGET] Reduction blocked: new_budget={new_amount} < certified_value={certified_value}"
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "error": "budget_reduction_blocked",
+                            "message": f"Cannot reduce budget to {float(new_amount)}. "
+                                       f"Certified value ({float(certified_value)}) would exceed new budget.",
+                            "new_budget": float(new_amount),
+                            "certified_value": float(certified_value)
+                        }
+                    )
         
         async def mutation_fn(aggregate, session):
             # Update budget in database
