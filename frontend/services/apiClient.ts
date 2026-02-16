@@ -288,6 +288,8 @@ export const vendorsApi = {
   getAll: (activeOnly = true): Promise<Vendor[]> => request(`/api/v2/vendors?active_only=${activeOnly}`),
   getById: (id: string): Promise<Vendor> => request(`/api/v2/vendors/${id}`),
   create: (data: CreateVendorRequest): Promise<Vendor> => request('/api/v2/vendors', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateVendorRequest>): Promise<Vendor> => request(`/api/v2/vendors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string): Promise<void> => request(`/api/v2/vendors/${id}`, { method: 'DELETE' }),
 };
 
 // ============================================
