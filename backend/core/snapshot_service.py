@@ -8,6 +8,7 @@ Implements:
 4. SHA-256 checksum for PDF integrity
 5. Document locking
 6. Version preservation (old snapshots never overwritten)
+7. Policy enforcement via PolicyService (Phase 4D)
 
 This module provides snapshot functionality WITHOUT modifying financial logic.
 """
@@ -21,6 +22,8 @@ from typing import Dict, Any, Optional
 import hashlib
 import json
 import logging
+
+from core.policy_service import PolicyService
 
 logger = logging.getLogger(__name__)
 
