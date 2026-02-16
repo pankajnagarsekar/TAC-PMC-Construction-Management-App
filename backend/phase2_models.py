@@ -48,9 +48,10 @@ class WorkOrderCreate(BaseModel):
     retention_percentage: Optional[float] = None  # If None, use project default
 
 class WorkOrderIssue(BaseModel):
-    pass  # No additional fields needed - just status change
+    operation_id: Optional[str] = None  # UUID for idempotency - auto-generated if not provided
 
 class WorkOrderRevise(BaseModel):
+    operation_id: Optional[str] = None  # UUID for idempotency - auto-generated if not provided
     rate: Optional[float] = None
     quantity: Optional[float] = None
     retention_percentage: Optional[float] = None
