@@ -29,6 +29,7 @@ interface PaymentCertificate {
   net_payable: number | { $numberDecimal: string };
   status: string;
   allowed_transitions?: string[];
+  locked_flag?: boolean;
 }
 
 const parseDecimal = (val: any): number => {
