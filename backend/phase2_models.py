@@ -114,9 +114,10 @@ class PaymentCertificateCreate(BaseModel):
     retention_percentage: Optional[float] = None  # If None, use project default
 
 class PaymentCertificateCertify(BaseModel):
-    pass  # No additional fields - just status change
+    operation_id: Optional[str] = None  # UUID for idempotency - auto-generated if not provided
 
 class PaymentCertificateRevise(BaseModel):
+    operation_id: Optional[str] = None  # UUID for idempotency - auto-generated if not provided
     current_bill_amount: Optional[float] = None
     retention_percentage: Optional[float] = None
 
