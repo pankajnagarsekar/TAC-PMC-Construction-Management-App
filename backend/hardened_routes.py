@@ -598,6 +598,8 @@ async def create_payment(
     SECTION 2: Uses transaction with automatic rollback.
     SECTION 1: Uses Decimal precision for validation.
     SECTION 3: Validates paid_value <= certified_value.
+    
+    DETERMINISM: Accepts operation_id for idempotency.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
@@ -610,13 +612,18 @@ async def create_payment(
     
     await permission_checker.check_project_access(user, pc["project_id"], require_write=True)
     
-    result = await hardened_engine.record_payment(
+    # Generate operation_id if not provided
+    operation_id = payment_data.operation_id or str(uuid.uuid4())
+    
+    # Use deterministic service for transactional payment
+    result = await deterministic_service.create_payment(
         pc_id=payment_data.pc_id,
-        organisation_id=user["organisation_id"],
-        user_id=user["user_id"],
         payment_amount=payment_data.payment_amount,
         payment_date=payment_data.payment_date,
-        payment_reference=payment_data.payment_reference
+        payment_reference=payment_data.payment_reference,
+        organisation_id=user["organisation_id"],
+        user_id=user["user_id"],
+        operation_id=operation_id
     )
     
     return result
@@ -663,19 +670,26 @@ async def create_retention_release(
     SECTION 2: Uses transaction with automatic rollback.
     SECTION 1: Uses Decimal precision for validation.
     SECTION 3: Validates retention_held >= 0.
+    
+    DETERMINISM: Accepts operation_id for idempotency.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
     await permission_checker.check_project_access(user, release_data.project_id, require_write=True)
     
-    result = await hardened_engine.release_retention(
-        organisation_id=user["organisation_id"],
+    # Generate operation_id if not provided
+    operation_id = release_data.operation_id or str(uuid.uuid4())
+    
+    # Use deterministic service for transactional retention release
+    result = await deterministic_service.create_retention_release(
         project_id=release_data.project_id,
         code_id=release_data.code_id,
         vendor_id=release_data.vendor_id,
-        user_id=user["user_id"],
         release_amount=release_data.release_amount,
-        release_date=release_data.release_date
+        release_date=release_data.release_date,
+        organisation_id=user["organisation_id"],
+        user_id=user["user_id"],
+        operation_id=operation_id
     )
     
     return result
