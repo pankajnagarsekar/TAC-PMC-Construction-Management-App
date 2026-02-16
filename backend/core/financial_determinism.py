@@ -685,7 +685,9 @@ class FinancialAggregateManager:
                         operation_id, entity_type, entity_id, operation_type, session
                     )
                     
-                    # Queue domain event (will emit after commit)
+                    # Queue domain event (payload captured now, dispatch AFTER commit)
+                    # Phase 5A: Event is queued with copied payload inside transaction,
+                    # but emit_pending() is called OUTSIDE transaction block below
                     if event_type:
                         payload = {
                             "operation_id": operation_id,
@@ -705,9 +707,16 @@ class FinancialAggregateManager:
                         f"project={project_id}, code={code_id}, version={updated_aggregate.get('version')}"
                     )
                     
-                    # Transaction commits here
+                    # Transaction commits here (end of 'async with session.start_transaction()')
                 
-                # I) Emit domain events AFTER commit
+                # =========================================================
+                # Phase 5A: DOMAIN EVENT DISPATCH - OUTSIDE TRANSACTION
+                # =========================================================
+                # Events are emitted here AFTER the transaction has committed.
+                # This ensures:
+                # 1. Events only fire for successfully committed data
+                # 2. Event handlers can't affect transaction outcome
+                # 3. Handler failures don't cause data inconsistency
                 await domain_events.emit_pending()
                 
                 return {
