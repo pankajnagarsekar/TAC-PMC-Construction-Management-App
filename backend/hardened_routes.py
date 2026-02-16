@@ -450,6 +450,7 @@ async def create_payment_certificate(
 @hardened_router.post("/payment-certificates/{pc_id}/certify")
 async def certify_payment_certificate(
     pc_id: str,
+    certify_data: PaymentCertificateCertify = PaymentCertificateCertify(),
     invoice_number: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
@@ -460,6 +461,8 @@ async def certify_payment_certificate(
     SECTION 3: Validates invariants before commit.
     SECTION 4: Checks for duplicate invoice.
     SECTION 5: Assigns atomic document number.
+    
+    DETERMINISM: Accepts operation_id for idempotency.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
@@ -473,11 +476,15 @@ async def certify_payment_certificate(
     
     await permission_checker.check_project_access(user, pc["project_id"], require_write=True)
     
-    result = await hardened_engine.certify_payment_certificate(
+    # Generate operation_id if not provided
+    operation_id = certify_data.operation_id or str(uuid.uuid4())
+    
+    # Use deterministic service for transactional certification
+    result = await deterministic_service.certify_payment_certificate(
         pc_id=pc_id,
         organisation_id=user["organisation_id"],
         user_id=user["user_id"],
-        invoice_number=invoice_number
+        operation_id=operation_id
     )
     
     return result
@@ -495,6 +502,8 @@ async def revise_payment_certificate(
     SECTION 2: Uses transaction with automatic rollback.
     SECTION 1: Uses Decimal precision for calculations.
     SECTION 3: Validates invariants before commit.
+    
+    DETERMINISM: Accepts operation_id for idempotency.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
@@ -508,12 +517,17 @@ async def revise_payment_certificate(
     
     await permission_checker.check_project_access(user, pc["project_id"], require_write=True)
     
-    result = await hardened_engine.revise_payment_certificate(
+    # Generate operation_id if not provided
+    operation_id = revise_data.operation_id or str(uuid.uuid4())
+    
+    # Use deterministic service for transactional revision
+    result = await deterministic_service.revise_payment_certificate(
         pc_id=pc_id,
         organisation_id=user["organisation_id"],
         user_id=user["user_id"],
         current_bill_amount=revise_data.current_bill_amount,
-        retention_percentage=revise_data.retention_percentage
+        retention_percentage=revise_data.retention_percentage,
+        operation_id=operation_id
     )
     
     return result
