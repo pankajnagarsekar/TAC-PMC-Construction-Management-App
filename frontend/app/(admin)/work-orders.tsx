@@ -53,7 +53,9 @@ export default function WorkOrdersScreen() {
 
   const loadWorkOrders = useCallback(async () => {
     try {
+      console.log('Loading work orders...');
       const data = await workOrdersApi.getAll();
+      console.log('Work orders loaded:', data?.length, data);
       setWorkOrders(data || []);
     } catch (error) {
       console.error('Error loading work orders:', error);
