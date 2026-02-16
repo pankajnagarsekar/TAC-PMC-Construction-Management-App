@@ -730,7 +730,7 @@ MAIN: [your main caption]
 ALT1: [alternative 1]
 ALT2: [alternative 2]  
 ALT3: [alternative 3]""",
-            image_contents=[image_content]
+            images=[image_content]
         )
         
         # Send message and get response
