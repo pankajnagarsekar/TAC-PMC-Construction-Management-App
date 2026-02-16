@@ -746,12 +746,72 @@ async def modify_budget(
     
     await permission_checker.check_project_access(user, budget["project_id"], require_write=True)
     
-    result = await hardened_engine.modify_budget(
-        budget_id=budget_id,
+    # Note: modify_budget now uses deterministic service with idempotency
+    # Budget modifications use the deterministic wrapper
+    result = await deterministic_service.update_budget(
+        project_id=budget["project_id"],
+        code_id=budget.get("code_id", "DEFAULT"),
+        approved_budget_amount=new_amount,
         organisation_id=user["organisation_id"],
-        user_id=user["user_id"],
-        new_amount=new_amount
+        user_id=user["user_id"]
     )
+    
+    return result
+
+
+# ============================================
+# FINANCIAL AGGREGATE ENDPOINTS (NEW)
+# ============================================
+
+@hardened_router.get("/financial-aggregates/{project_id}/{code_id}")
+async def get_financial_aggregate(
+    project_id: str,
+    code_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get the deterministic financial aggregate for a project/code.
+    
+    Returns canonical values for:
+    - approved_budget
+    - committed_value
+    - certified_value
+    - paid_value
+    - retention_cumulative
+    - retention_held
+    - version
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_project_access(user, project_id, require_write=False)
+    
+    aggregate = await deterministic_service.get_financial_aggregate(project_id, code_id)
+    
+    if not aggregate:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Financial aggregate not found"
+        )
+    
+    return aggregate
+
+
+@hardened_router.get("/financial-aggregates/{project_id}")
+async def get_project_financial_aggregates(
+    project_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get all financial aggregates for a project.
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_project_access(user, project_id, require_write=False)
+    
+    aggregates = await db.financial_aggregates.find({"project_id": project_id}).to_list(length=None)
+    
+    result = []
+    for agg in aggregates:
+        agg["aggregate_id"] = str(agg.pop("_id"))
+        result.append(serialize_doc(agg))
     
     return result
 
