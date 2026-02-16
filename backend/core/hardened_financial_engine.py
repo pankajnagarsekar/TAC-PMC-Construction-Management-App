@@ -247,10 +247,13 @@ class HardenedFinancialEngine:
         """
         Issue a Work Order (transition from Draft to Issued).
         
+        PHASE 3B: Uses state machine for transition.
         TRANSACTION: Atomic operation with full rollback on failure.
         SECTION 5: Assigns atomic document number on Issue only.
         SECTION 3: Validates financial invariants before commit.
         """
+        from core.state_machine import InvalidTransitionError, GuardConditionError, TransitionHandlerError
+        
         async with await self.client.start_session() as session:
             async with session.start_transaction():
                 try:
@@ -266,54 +269,21 @@ class HardenedFinancialEngine:
                             detail="Work Order not found"
                         )
                     
-                    if wo["status"] != "Draft":
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Cannot issue WO in status: {wo['status']}"
-                        )
-                    
-                    # SECTION 5: Generate atomic document number
-                    doc_number, sequence = await self.document_numbering.generate_document_number(
-                        organisation_id=organisation_id,
-                        prefix=wo.get("prefix", "WO"),
-                        session=session
-                    )
-                    
-                    # Update WO to Issued status
-                    update_data = {
-                        "status": "Issued",
-                        "document_number": doc_number,
-                        "sequence_number": sequence,
-                        "locked_flag": True,
-                        "updated_at": datetime.utcnow(),
-                        "issued_by": user_id,
-                        "issued_at": datetime.utcnow()
+                    # PHASE 3B: Use state machine for transition
+                    context = {
+                        "organisation_id": organisation_id,
+                        "user_id": user_id
                     }
                     
-                    await self.db.work_orders.update_one(
-                        {"_id": ObjectId(wo_id)},
-                        {"$set": update_data},
-                        session=session
+                    result = await self.state_machines.work_order.transition(
+                        wo, "Issued", session=session, context=context
                     )
                     
                     # Create version snapshot
                     await self._create_wo_version_snapshot(wo_id, 1, session)
                     
-                    # Recalculate financials with precision
-                    await self.recalculate_financials_with_precision(
-                        wo["project_id"],
-                        wo["code_id"],
-                        session=session
-                    )
-                    
-                    # SECTION 3: Validate invariants BEFORE commit
-                    await self.invariant_validator.validate_project_code_invariants(
-                        wo["project_id"],
-                        wo["code_id"],
-                        session=session
-                    )
-                    
                     # Log audit
+                    handler_result = result.get("handler_result", {})
                     await self._log_audit(
                         organisation_id=organisation_id,
                         project_id=wo["project_id"],
@@ -322,18 +292,41 @@ class HardenedFinancialEngine:
                         entity_id=wo_id,
                         action="ISSUE",
                         user_id=user_id,
-                        new_value={"document_number": doc_number, "status": "Issued"},
+                        new_value={
+                            "document_number": handler_result.get("document_number"),
+                            "status": "Issued"
+                        },
                         session=session
                     )
                     
-                    logger.info(f"[TRANSACTION] WO Issued: {wo_id} -> {doc_number}")
+                    logger.info(f"[TRANSACTION] WO Issued via state machine: {wo_id}")
                     
-                    # Transaction commits automatically on context exit
                     return {
                         "wo_id": wo_id,
-                        "document_number": doc_number,
+                        "document_number": handler_result.get("document_number"),
                         "status": "Issued"
                     }
+                
+                except InvalidTransitionError as e:
+                    logger.error(f"[STATE_MACHINE] Invalid transition: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(e)
+                    )
+                
+                except GuardConditionError as e:
+                    logger.error(f"[STATE_MACHINE] Guard rejected: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=e.reason
+                    )
+                
+                except TransitionHandlerError as e:
+                    logger.error(f"[STATE_MACHINE] Handler failed: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=str(e.original_error)
+                    )
                     
                 except InvariantViolationError as e:
                     logger.error(f"[INVARIANT VIOLATION] WO Issue failed: {e.message}")
