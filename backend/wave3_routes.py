@@ -8,6 +8,10 @@ Routes for:
 - PILLAR D: Security Hardening
 
 All routes require authentication.
+
+PHASE 2 EXTENSION: Snapshot + Document Integrity
+- DPR submit creates immutable snapshot
+- Document locking after submission
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Query, Request
@@ -34,6 +38,10 @@ from core.security_hardening import (
     OrganisationAccessError, 
     SignedURLExpiredError, 
     SignedURLInvalidError
+)
+from core.snapshot_service import (
+    SnapshotService, DocumentLockService, SnapshotEntityType,
+    build_dpr_snapshot
 )
 
 logger = logging.getLogger(__name__)
