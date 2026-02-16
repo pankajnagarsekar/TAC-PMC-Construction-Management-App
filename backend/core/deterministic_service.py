@@ -235,7 +235,7 @@ class DeterministicFinancialService:
         retention_current = to_decimal(pc.get("retention_current", 0))
         
         async def mutation_fn(aggregate, session):
-            result = await self.hardened_engine.certify_payment_certificate(
+            await self.hardened_engine.certify_payment_certificate(
                 pc_id=pc_id,
                 organisation_id=organisation_id,
                 user_id=user_id
