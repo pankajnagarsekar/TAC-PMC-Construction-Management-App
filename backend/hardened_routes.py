@@ -98,6 +98,8 @@ db = client[db_name]
 permission_checker = PermissionChecker(db)
 hardened_engine = HardenedFinancialEngine(client, db)
 deterministic_service = DeterministicFinancialService(client, db)
+snapshot_service = SnapshotService(db)
+document_lock_service = DocumentLockService(db)
 
 
 # ============================================
