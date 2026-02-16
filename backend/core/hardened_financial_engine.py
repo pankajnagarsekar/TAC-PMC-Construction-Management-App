@@ -767,10 +767,13 @@ class HardenedFinancialEngine:
         """
         Record a payment against a Payment Certificate.
         
+        PHASE 3B: Uses state machine for PC status transitions.
         TRANSACTION: Atomic with rollback.
         SECTION 1: Uses Decimal precision.
         SECTION 3: Validates paid_value <= certified_value.
         """
+        from core.state_machine import InvalidTransitionError, GuardConditionError, TransitionHandlerError
+        
         async with await self.client.start_session() as session:
             async with session.start_transaction():
                 try:
@@ -812,7 +815,11 @@ class HardenedFinancialEngine:
                                    f"New payment: {payment_amount}, Net payable: {to_float(net_payable)}"
                         )
                     
-                    # Create payment record
+                    # Determine target state
+                    is_full_payment = new_total_paid >= net_payable
+                    target_state = "Fully Paid" if is_full_payment else "Partially Paid"
+                    
+                    # Create payment record first
                     payment_doc = {
                         "pc_id": pc_id,
                         "project_id": pc["project_id"],
@@ -828,27 +835,36 @@ class HardenedFinancialEngine:
                     result = await self.db.payments.insert_one(payment_doc, session=session)
                     payment_id = str(result.inserted_id)
                     
-                    # Update PC status and total_paid_cumulative
-                    new_status = "Fully Paid" if new_total_paid >= net_payable else "Partially Paid"
+                    # PHASE 3B: Use state machine for PC status transition
+                    context = {
+                        "organisation_id": organisation_id,
+                        "user_id": user_id,
+                        "payment_amount": payment_amount
+                    }
                     
-                    await self.db.payment_certificates.update_one(
-                        {"_id": ObjectId(pc_id)},
-                        {
-                            "$set": {
-                                "total_paid_cumulative": to_float(round_financial(new_total_paid)),
-                                "status": new_status,
-                                "updated_at": datetime.utcnow()
-                            }
-                        },
-                        session=session
-                    )
-                    
-                    # Recalculate financials
-                    await self.recalculate_financials_with_precision(
-                        pc["project_id"],
-                        pc["code_id"],
-                        session=session
-                    )
+                    try:
+                        await self.state_machines.payment_certificate.transition(
+                            pc, target_state, session=session, context=context
+                        )
+                    except InvalidTransitionError:
+                        # Direct update if state machine doesn't support this specific transition
+                        await self.db.payment_certificates.update_one(
+                            {"_id": ObjectId(pc_id)},
+                            {
+                                "$set": {
+                                    "total_paid_cumulative": to_float(round_financial(new_total_paid)),
+                                    "status": target_state,
+                                    "updated_at": datetime.utcnow()
+                                }
+                            },
+                            session=session
+                        )
+                        # Recalculate financials
+                        await self.recalculate_financials_with_precision(
+                            pc["project_id"],
+                            pc["code_id"],
+                            session=session
+                        )
                     
                     # Validate invariants (paid_value <= certified_value)
                     await self.invariant_validator.validate_project_code_invariants(
@@ -870,15 +886,29 @@ class HardenedFinancialEngine:
                         session=session
                     )
                     
-                    logger.info(f"[TRANSACTION] Payment recorded: {payment_id} for PC {pc_id}")
+                    logger.info(f"[TRANSACTION] Payment recorded via state machine: {payment_id}")
                     
                     return {
                         "payment_id": payment_id,
                         "pc_id": pc_id,
                         "payment_amount": to_float(round_financial(payment_amount)),
                         "total_paid_cumulative": to_float(round_financial(new_total_paid)),
-                        "pc_status": new_status
+                        "pc_status": target_state
                     }
+                
+                except GuardConditionError as e:
+                    logger.error(f"[STATE_MACHINE] Guard rejected: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=e.reason
+                    )
+                
+                except TransitionHandlerError as e:
+                    logger.error(f"[STATE_MACHINE] Handler failed: {e}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=str(e.original_error)
+                    )
                     
                 except InvariantViolationError as e:
                     raise HTTPException(
