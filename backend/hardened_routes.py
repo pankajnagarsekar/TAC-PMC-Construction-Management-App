@@ -510,6 +510,9 @@ async def certify_payment_certificate(
     SECTION 5: Assigns atomic document number.
     
     DETERMINISM: Accepts operation_id for idempotency.
+    
+    SNAPSHOT: Creates immutable snapshot with embedded data and settings.
+    LOCKING: Sets locked_flag = true after certification.
     """
     user = await permission_checker.get_authenticated_user(current_user)
     await permission_checker.check_admin_role(user)
@@ -519,6 +522,13 @@ async def certify_payment_certificate(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Payment Certificate not found"
+        )
+    
+    # Check if document is already locked
+    if pc.get("locked_flag", False):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Payment Certificate is locked and cannot be modified"
         )
     
     await permission_checker.check_project_access(user, pc["project_id"], require_write=True)
@@ -533,6 +543,31 @@ async def certify_payment_certificate(
         user_id=user["user_id"],
         operation_id=operation_id
     )
+    
+    # If successful, create snapshot and lock document
+    if result.get("status") == "success":
+        # Build complete embedded snapshot
+        snapshot_data = await build_payment_certificate_snapshot(db, pc_id)
+        
+        # Create immutable snapshot (with settings embedded)
+        snapshot = await snapshot_service.create_snapshot(
+            entity_type=SnapshotEntityType.PAYMENT_CERTIFICATE,
+            entity_id=pc_id,
+            data=snapshot_data,
+            organisation_id=user["organisation_id"],
+            user_id=user["user_id"]
+        )
+        
+        # Lock the document
+        await document_lock_service.lock_document(
+            collection="payment_certificates",
+            document_id=pc_id,
+            snapshot_version=snapshot.get("version", 1),
+            user_id=user["user_id"]
+        )
+        
+        result["snapshot_version"] = snapshot.get("version")
+        result["locked"] = True
     
     return result
 
