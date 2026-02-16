@@ -266,6 +266,16 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// UI-2: Locked badge component
+export function LockedBadge() {
+  return (
+    <View style={styles.lockedBadge}>
+      <Ionicons name="lock-closed" size={12} color={Colors.error} />
+      <Text style={styles.lockedText}>Locked</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
