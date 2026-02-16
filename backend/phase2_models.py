@@ -174,6 +174,7 @@ class RetentionRelease(BaseModel):
         json_encoders = {ObjectId: str}
 
 class RetentionReleaseCreate(BaseModel):
+    operation_id: Optional[str] = None  # UUID for idempotency - auto-generated if not provided
     project_id: str
     code_id: str
     vendor_id: str
