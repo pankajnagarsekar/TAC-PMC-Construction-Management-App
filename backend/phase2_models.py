@@ -151,6 +151,7 @@ class Payment(BaseModel):
         json_encoders = {ObjectId: str}
 
 class PaymentCreate(BaseModel):
+    operation_id: Optional[str] = None  # UUID for idempotency - auto-generated if not provided
     pc_id: str
     payment_amount: float
     payment_date: datetime
