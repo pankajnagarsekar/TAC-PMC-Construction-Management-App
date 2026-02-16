@@ -594,6 +594,81 @@ class FinancialAggregateManager:
             )
     
     # =========================================================================
+    # PROJECTION UPDATE TRIGGER (Phase 6B)
+    # =========================================================================
+    
+    async def _trigger_projection_update(
+        self,
+        project_id: str,
+        code_id: str,
+        operation_type: OperationType
+    ):
+        """
+        Trigger read model projection update after mutation commit.
+        
+        Phase 6B: Called OUTSIDE transaction after successful commit.
+        Updates cached projections for the affected project.
+        
+        Failures are logged but don't affect mutation result.
+        """
+        try:
+            # Store projection update record for async processing
+            await self.db.projection_updates.insert_one({
+                "project_id": project_id,
+                "code_id": code_id,
+                "operation_type": operation_type.value,
+                "triggered_at": datetime.utcnow(),
+                "status": "pending"
+            })
+            
+            logger.info(
+                f"[PROJECTION] Update triggered: project={project_id}, "
+                f"code={code_id}, operation={operation_type.value}"
+            )
+            
+            # Optionally: Inline projection refresh for critical paths
+            # This keeps projections fresh without requiring background job
+            from core.read_models import ReadModelService
+            read_service = ReadModelService(self.db)
+            
+            # Refresh financial summary (lightweight)
+            summary = await read_service.project_financial_summary(project_id)
+            
+            # Cache the projection
+            await self.db.projection_cache.update_one(
+                {"project_id": project_id, "type": "financial_summary"},
+                {
+                    "$set": {
+                        "project_id": project_id,
+                        "type": "financial_summary",
+                        "data": summary,
+                        "updated_at": datetime.utcnow(),
+                        "triggered_by": operation_type.value
+                    }
+                },
+                upsert=True
+            )
+            
+            # Mark update as completed
+            await self.db.projection_updates.update_one(
+                {
+                    "project_id": project_id,
+                    "code_id": code_id,
+                    "status": "pending"
+                },
+                {"$set": {"status": "completed", "completed_at": datetime.utcnow()}},
+            )
+            
+            logger.debug(f"[PROJECTION] Cache refreshed for project: {project_id}")
+            
+        except Exception as e:
+            # Log but don't fail - projection update is best-effort
+            logger.warning(
+                f"[PROJECTION] Update failed (non-critical): project={project_id}, "
+                f"error={str(e)}"
+            )
+    
+    # =========================================================================
     # TRANSACTIONAL MUTATION WRAPPER
     # =========================================================================
     
