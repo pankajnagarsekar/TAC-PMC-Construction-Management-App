@@ -1122,7 +1122,7 @@ index 746bbfc..e69de29 100644
 -+from typing import Dict, Any, Optional
 -+
 -+# Configuration
--+BASE_URL = "https://build-report-1.preview.emergentagent.com/api"
+-+BASE_URL = "https://findev-refactor.preview.emergentagent.com/api"
 -+ADMIN_EMAIL = "admin@example.com"
 -+ADMIN_PASSWORD = "admin123"
 -+

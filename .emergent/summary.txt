@@ -1,328 +1,241 @@
 <analysis>
 <original_problem_statement>
-The user initially reported a series of critical frontend bugs after a major backend hardening effort. These included empty screens, non-functional buttons, and infinite loaders. After several rounds of fixes, the user is now requesting the implementation of a full-featured Daily Progress Report (DPR) module and has pointed out that many screens are still not displaying the seeded data correctly.
+The user has initiated a major, multi-phase backend refactoring to improve the financial integrity and robustness of the application. This follows the initial development of a Daily Progress Report (DPR) feature which has several outstanding bugs.
 
-**Latest User Requests:**
-1.  **DPR Feature:** Implement a DPR creation screen for admins with the following requirements:
-    *   Allow taking photos using the device camera.
-    *   Enforce portrait (9:16) aspect ratio for pictures.
-    *   Provide AI-generated captions for images using a provided OpenAI key, with a manual override option.
-    *   Require a minimum of 4 pictures to create a DPR.
-    *   On submission, compile images and data into a PDF.
-    *   Save the PDF to Google Drive (scaffolded, not fully implemented yet).
-    *   Name the file in MMMM, DD, YYYY format.
-    *   Compress images to keep the total file size under 3MB without significant quality loss.
-2.  **Fix Blank Screens:** The user reported that despite comprehensive data seeding, several key screens are still blank or not working:
-    *   Work Orders, Payment Certificates, and Budget Management lists are empty.
-    *   Clicking a project on the projects list leads to a Project not found error on the detail page.
-    *   Report generation does not produce any visible output.
-    *   Settings sub-screens (User Management, Organisation, etc.) were also reported as blank but were subsequently fixed.
-3.  **Cursor Jumping on Login:** The user reported an issue where the cursor would jump out of the input fields on the login screen, which has since been fixed.
+**Product Requirements (Backend Refactoring):**
+
+*   **Phase 1: Financial Determinism:** Implement a deterministic financial backbone using locking and idempotency for all financial write actions (Work Order issue/revision, PC certification/revision, Payment, Budget updates). This involves creating  and  tables/collections and wrapping mutations in transactions that lock the aggregate row.
+*   **Phase 2: Snapshot &amp; Document Integrity:** Implement an immutable snapshot system for key documents (Work Orders, Payment Certificates, DPRs) upon finalization. Snapshots must be full embedded JSON, include a checksum of any generated PDF, and lock the original document from further changes.
+*   **Phase 3: State Machine Implementation:**
+    *   **3A:** Create a generic, reusable  utility to manage entity state transitions.
+    *   **3B:** Wire the  into the core services to replace direct status mutations for entities like WorkOrder, PaymentCertificate, Issue, and PettyCash.
+
+**Product Requirements (DPR Feature &amp; Bugs):**
+
+*   Implement a full-featured DPR creation screen.
+*   **User Reported Bugs (High Priority):**
+    1.  AI-generated captions for images are not working.
+    2.  The application crashes when adding a second photo to a DPR.
+    3.  Attempting to edit a draft DPR results in a 404 Not Found error.
 
 </original_problem_statement>
 **User's preferred language**: English
 
 **what currently exists?**
-- A full-stack Expo/FastAPI application with a hardened backend (transactions, , versioning).
-- The database has been comprehensively seeded with data across all modules (Projects, Work Orders, Payment Certificates, Budgets, DPRs, etc.).
-- Critical frontend bugs related to login, navigation, and initial data display have been fixed.
-- Functional create forms for Projects, Work Orders, Payment Certificates, and Budgets have been implemented, replacing previous placeholders. The submit button functionality was fixed by switching from  to .
-- Data-driven list screens for Settings (Users, Codes, Organisation) and the main Dashboard are now functional.
-- A critical backend  serialization bug was identified and fixed, which was preventing transactional data from being sent to the frontend. However, frontend verification of this fix is still pending.
-- A DPR (Daily Progress Report) feature is partially implemented. The backend has new endpoints in  for DPR creation and AI caption generation (using a user-provided OpenAI key). The frontend has a new screen at  and has installed  and .
+- A full-stack Expo/FastAPI application.
+- The backend has been significantly refactored to include:
+    - **Phase 1 (Complete):** A financial determinism layer using MongoDB transactions to ensure idempotency and perform validations. New collections  and  have been created and integrated.
+    - **Phase 2 (Complete):** An immutable snapshot system that creates versioned JSON snapshots of finalized documents (WOs, PCs, DPRs). A new  collection exists.
+    - **Phase 3A (Complete):** A generic  utility has been created.
+- The frontend has a nearly complete DPR creation module () with camera/gallery access, client-side PDF generation, and AI captioning functionality that uses the Emergent LLM Key.
+- A known and severe environmental instability with the MongoDB replica set, requiring frequent manual resets.
 
 **Last working item**:
-- Last item agent was working: The agent was in the middle of implementing the Daily Progress Report (DPR) feature based on detailed user requirements. The last action was updating the backend DPR endpoint in  to add logic for image compression, PDF generation (stubbed), and AI caption generation via an OpenAI API call.
+- Last item agent was working: The agent was implementing **Phase 3B** of the backend refactor: wiring the new  utility into the application's services. It had created  to define the state transitions and had successfully refactored the  method in . It was in the process of analyzing the  method to apply the same pattern.
 - Status: IN PROGRESS
 - Agent Testing Done: N
-- Which testing method agent to use? both
+- Which testing method agent to use? backend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- Issue 1: Finish DPR Feature Implementation (P0)
-- Issue 2: Work Orders, Payment Certificates, and Budget Screens are Blank (P1)
-- Issue 3: Project Detail Page Shows Project not found (P1)
-- Issue 4: Report Generation Produces No Visible Output (P1)
+- Issue 1: Finish StateMachine Wiring (Phase 3B) (P0)
+- Issue 2: AI Image Captions Not Working (P1)
+- Issue 3: App Crashes When Adding Second DPR Photo (P1)
+- Issue 4: Editing a Draft DPR results in a 404 Error (P1)
 
 Issues Detail:
-- Issue 1: **Finish DPR Feature Implementation**
-    - Attempted fixes: The backend endpoint has been created and updated with logic for AI captions and PDF stubs. The frontend screen is a placeholder, and required libraries () have been installed.
+- Issue 1: **Finish StateMachine Wiring (Phase 3B)**
+    - Attempted fixes: The agent has created the state machine definitions and refactored one method ().
     - Next debug checklist:
-        1. Fully implement the UI on  to include the Camera view, image gallery picker, and a list of selected images.
-        2. Implement the min 4 pictures client-side validation.
-        3. Wire up the Get AI Caption button to call the backend endpoint for a selected image.
-        4. Implement the form submission logic to send the image data and text to the backend DPR creation endpoint.
-        5. Test the entire flow from photo capture to DPR submission.
-    - Why fix this issue and what will be achieved with the fix?: This is a direct and high-priority feature request from the user. Completing it will deliver a key piece of functionality for the application.
+        1.  Continue refactoring methods in .
+        2.  Specifically, update , , , and  to use  instead of direct status updates.
+        3.  Refactor other services (,  if they exist) to use the state machine for their respective entities.
+        4.  Ensure existing business logic is correctly moved into the state machine handlers.
+    - Why fix this issue and what will be achieved with the fix?: This is the user's current high-priority request to make the system's state transitions more robust, predictable, and maintainable.
     - Status: IN PROGRESS
+    - Is recurring issue?: N
+    - Should Test frontend/backend/both after fix?: backend
+    - Blocked on other issue: None
+
+- Issue 2: **AI Image Captions Not Working**
+    - Attempted fixes: The agent switched from a hardcoded OpenAI key (which hit quota limits) to using the  library with the Emergent LLM key. It updated the  endpoint accordingly. However, the user reported the issue persists.
+    - Next debug checklist:
+        1.  Trigger the Get AI Caption flow from the frontend.
+        2.  Inspect the backend logs for the request to  and its response.
+        3.  Verify the base URL and payload structure being sent to the  client in .
+        4.  Confirm the  is correctly loaded from the  file.
+    - Why fix this issue and what will be achieved with the fix?: This is a key part of the DPR feature requested by the user.
+    - Status: NOT STARTED
+    - Is recurring issue?: Y
+    - Should Test frontend/backend/both after fix?: both
+    - Blocked on other issue: None
+
+- Issue 3: **App Crashes When Adding Second DPR Photo**
+    - Attempted fixes: The agent reviewed the code in  but did not find an obvious cause.
+    - Next debug checklist:
+        1.  Examine the  and  functions in .
+        2.  Pay close attention to the state update logic: .
+        3.  Check for potential issues with object keys in the rendered list or memory issues from handling multiple large base64 image strings.
+        4.  Run the frontend in debug mode and observe the console and device logs when the second image is added.
+    - Why fix this issue and what will be achieved with the fix?: This bug makes the DPR feature unusable as it requires a minimum of 4 photos.
+    - Status: NOT STARTED
+    - Is recurring issue?: N
+    - Should Test frontend/backend/both after fix?: frontend
+    - Blocked on other issue: None
+
+- Issue 4: **Editing a Draft DPR results in a 404 Error**
+    - Attempted fixes: The agent correctly identified that the  file was missing and created it. It also added a  endpoint in  to handle updates.
+    - Next debug checklist:
+        1.  Verify the navigation link in the DPR list screen () correctly routes to .
+        2.  Check the implementation within . Ensure it correctly fetches data for the given DPR ID from the backend.
+        3.  Test the  backend endpoint directly to ensure it returns the correct data for a draft DPR.
+    - Why fix this issue and what will be achieved with the fix?: This prevents users from editing and finalizing their draft reports.
+    - Status: NOT STARTED
     - Is recurring issue?: N
     - Should Test frontend/backend/both after fix?: both
     - Blocked on other issue: None
 
-- Issue 2: **Work Orders, Payment Certificates, and Budget Screens are Blank**
-    - Attempted fixes: The agent identified and fixed a critical  serialization bug in the backend (, ) that was causing 500 errors on these API endpoints.
-    - Next debug checklist:
-        1. Restart the frontend and backend services.
-        2. Log in as an admin and navigate to the Finance tab, then check the Work Orders, Payment Certificates, and Budget sub-screens.
-        3. Verify if the lists are now populated with the seeded data.
-        4. If still blank, check the browser console for frontend errors and the backend logs for any new API errors.
-    - Why fix this issue and what will be achieved with the fix?: These are core transactional screens. Fixing them will allow users to view and manage the primary financial data of the system. This was the last major bug reported by the user before the DPR request.
-    - Status: USER VERIFICATION PENDING
-    - Is recurring issue?: Y (The symptom persists, though the root cause may have been fixed).
-    - Should Test frontend/backend/both after fix?: frontend
-    - Blocked on other issue: None
-
-- Issue 3: **Project Detail Page Shows Project not found**
-    - Attempted fixes: The same  backend fix may have resolved this, as fetching a single project likely involves serialized decimal fields.
-    - Next debug checklist:
-        1. Navigate to the Projects screen.
-        2. Click on any of the listed projects.
-        3. Verify that the app navigates to  and displays the project detail view with its own tabs (Overview, WO, PC, etc.) instead of the Project not found message.
-    - Why fix this issue and what will be achieved with the fix?: This is a critical part of the user flow, preventing users from drilling down into a specific project's details.
-    - Status: USER VERIFICATION PENDING
-    - Is recurring issue?: Y
-    - Should Test frontend/backend/both after fix?: frontend
-    - Blocked on other issue: None
-
-- Issue 4: **Report Generation Produces No Visible Output**
-    - Attempted fixes: The backend  fix likely unblocked the data-fetching part of report generation.
-    - Next debug checklist:
-        1. Navigate to the Reports screen.
-        2. Select a project and a report type.
-        3. Click Generate Report.
-        4. Verify that a formatted report or data visualization appears on the screen below the button.
-    - Why fix this issue and what will be achieved with the fix?: The reporting module is a key feature, and this fix will enable users to view generated reports.
-    - Status: USER VERIFICATION PENDING
-    - Is recurring issue?: Y
-    - Should Test frontend/backend/both after fix?: frontend
-    - Blocked on other issue: None
-
 **In progress Task List**:
-- Task 1: **DPR Feature Implementation**
-    - Where to resume: The backend endpoint in  has been updated. The next step is to build out the frontend UI in , integrating the camera, image selection, and API calls.
-    - What will be achieved with this?: A functional DPR creation module as per the user's detailed specifications.
+- Task 1: **Wire StateMachine into services (Phase 3B)**
+    - Where to resume: In , start by modifying the  method to use the state machine, following the pattern established in .
+    - What will be achieved with this?: Completion of the user's requested backend refactoring for robust state management.
     - Status: IN PROGRESS
-    - Should Test frontend/backend/both after fix?: both
+    - Should Test frontend/backend/both after fix?: backend
     - Blocked on something: None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **P1: Verify Data-Driven Screens**: Confirm that the WOs, PCs, Budget, and Project Detail pages are now working after the backend serialization fix.
-    - **P2: Create Vendor Form**: Implement a form to allow admins to add new vendors to the system.
-    - **P2: Flesh out Report Display**: Currently, the report generation is a stub. This task involves displaying the fetched data in a formatted, user-friendly way on the reports screen.
-- **Future Tasks:**
-    - **Implement Edit Functionality**: Add the ability to edit existing projects, work orders, etc.
-    - **Full Implementation of Background Job Engine**: Integrate a task runner like Celery.
-    - **Full Implementation of AI Integration Layer**: Connect the  to actual providers.
-    - **Full Implementation of Snapshot Report Engine**: Wire up the frontend to generate and view immutable reports.
+  - **P0: Fix User-Reported DPR Bugs**: Once the backend refactor is complete, the three critical DPR bugs (AI caption, photo crash, 404 on edit) must be addressed.
+  - **P1: Full E2E Verification**: After all fixes, a full end-to-end test of the primary user flows should be conducted, especially verifying that the original blank screens issue for WOs, PCs, and Budgets is still resolved on the frontend.
 
 **Completed work in this session**
-- **Backend  Serialization Fix**: Corrected a critical bug in  and  by applying a  helper to endpoints, unblocking data fetching for WOs, PCs, and Budgets.
-- **Major Frontend Overhaul**: Replaced placeholder screens with functional, data-driven list views for Work Orders, Payment Certificates, Budget, and all Settings sub-pages (Users, Activity Codes, Organisation).
-- **Project Detail Page Creation**: Created a new dynamic route and screen at  to display project-specific details.
-- **Comprehensive Data Seeding**: Created and executed a script () to populate the database with extensive data for all modules, enabling testing of reports and list views.
-- **Form Submission Fix**: Replaced  with  on all create forms to resolve a web-specific bug where submit buttons were not working.
-- **Vendor Data Seeding**: Manually inserted vendor data into the correct database and fixed the vendor API to ensure dropdowns in WO/PC forms are populated.
-- **Login Input Fix**: Resolved a cursor jumping bug on the login screen by removing a  wrapper and simplifying the  components in .
+- **Backend Refactor - Phase 1 (Financial Determinism)**: Fully implemented. Created , ,  and wrapped all financial write operations in .
+- **Backend Refactor - Phase 2 (Snapshot + Document Integrity)**: Fully implemented. Created ,  and integrated snapshot generation into WO, PC, and DPR finalization flows.
+- **Backend Refactor - Phase 3A (Generic StateMachine Utility)**: Fully implemented. Created the reusable utility in .
+- **DPR Feature Implementation**: Enhanced the DPR creation screen with real AI captions (via Emergent LLM Key) and client-side PDF generation.
+- **Critical Frontend Fixes**: Resolved a blocking issue on the login screen by replacing  with  in .
+- **API Client Fix**: Corrected a missing named export in .
+- **Environment Stabilization**: Repeatedly diagnosed and recovered from MongoDB replica set failures.
 
 **Earlier issues found/mentioned but not fixed**
-All known issues are captured in the All Pending/In progress Issue list. The main oversight was not verifying the fix for the blank screens before starting the next feature.
+The three user-reported DPR bugs are the primary issues that were identified but not fully resolved:
+- AI Image Captions Not Working
+- App Crashes When Adding Second DPR Photo
+- Editing a Draft DPR results in a 404 Error
 
 **Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork**: MongoDB Replica Set Instability. The MongoDB service has crashed multiple times, often with corrupted WiredTiger files or an inability to find a PRIMARY.
-- **Recurrence count**: 5+
-- **Status**: RESOLVED (for now). The agent has a consistent recovery procedure: kill rogue {"t":{"$date":"2026-02-15T13:40:57.782+00:00"},"s":"I",  "c":"NETWORK",  "id":4915701, "ctx":"main","msg":"Initialized wire specification","attr":{"spec":{"incomingExternalClient":{"minWireVersion":0,"maxWireVersion":21},"incomingInternalClient":{"minWireVersion":0,"maxWireVersion":21},"outgoing":{"minWireVersion":6,"maxWireVersion":21},"isInternalClient":true}}}
-{"t":{"$date":"2026-02-15T13:40:57.785+00:00"},"s":"I",  "c":"CONTROL",  "id":23285,   "ctx":"main","msg":"Automatically disabling TLS 1.0, to force-enable TLS 1.0 specify --sslDisabledProtocols 'none'"}
-{"t":{"$date":"2026-02-15T13:40:57.785+00:00"},"s":"I",  "c":"NETWORK",  "id":4648601, "ctx":"main","msg":"Implicit TCP FastOpen unavailable. If TCP FastOpen is required, set tcpFastOpenServer, tcpFastOpenClient, and tcpFastOpenQueueSize."}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationDonorService","namespace":"config.tenantMigrationDonors"}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationRecipientService","namespace":"config.tenantMigrationRecipients"}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"main","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"CONTROL",  "id":5945603, "ctx":"main","msg":"Multi threading initialized"}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"TENANT_M", "id":7091600, "ctx":"main","msg":"Starting TenantMigrationAccessBlockerRegistry"}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"CONTROL",  "id":4615611, "ctx":"initandlisten","msg":"MongoDB starting","attr":{"pid":251,"port":27017,"dbPath":"/data/db","architecture":"64-bit","host":"agent-env-3540743f-6294-4d89-8f3c-19c30fa40e59"}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"W",  "c":"CONTROL",  "id":20720,   "ctx":"initandlisten","msg":"Memory available to mongo process is less than total system memory","attr":{"availableMemSizeMB":8192,"systemMemSizeMB":15975}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"CONTROL",  "id":23403,   "ctx":"initandlisten","msg":"Build Info","attr":{"buildInfo":{"version":"7.0.29","gitVersion":"415cc13e900a82a2e00e4f4417dc7159a883e975","openSSLVersion":"OpenSSL 3.0.18 30 Sep 2025","modules":[],"allocator":"tcmalloc","environment":{"distmod":"ubuntu2204","distarch":"aarch64","target_arch":"aarch64"}}}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"CONTROL",  "id":51765,   "ctx":"initandlisten","msg":"Operating System","attr":{"os":{"name":"PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"","version":"Kernel 6.6.113+"}}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"I",  "c":"CONTROL",  "id":21951,   "ctx":"initandlisten","msg":"Options set by command line","attr":{"options":{}}}
-{"t":{"$date":"2026-02-15T13:40:57.787+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"initandlisten","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"E",  "c":"CONTROL",  "id":20568,   "ctx":"initandlisten","msg":"Error setting up listener","attr":{"error":{"code":9001,"codeName":"SocketException","errmsg":"setup bind :: caused by :: Address already in use"}}}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"REPL",     "id":4784900, "ctx":"initandlisten","msg":"Stepping down the ReplicationCoordinator for shutdown","attr":{"waitTimeMillis":15000}}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"REPL",     "id":4794602, "ctx":"initandlisten","msg":"Attempting to enter quiesce mode"}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"-",        "id":6371601, "ctx":"initandlisten","msg":"Shutting down the FLE Crud thread pool"}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"COMMAND",  "id":4784901, "ctx":"initandlisten","msg":"Shutting down the MirrorMaestro"}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"SHARDING", "id":4784902, "ctx":"initandlisten","msg":"Shutting down the WaitForMajorityService"}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"NETWORK",  "id":4784905, "ctx":"initandlisten","msg":"Shutting down the global connection pool"}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"NETWORK",  "id":4784918, "ctx":"initandlisten","msg":"Shutting down the ReplicaSetMonitor"}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"SHARDING", "id":4784921, "ctx":"initandlisten","msg":"Shutting down the MigrationUtilExecutor"}
-{"t":{"$date":"2026-02-15T13:40:57.789+00:00"},"s":"I",  "c":"ASIO",     "id":22582,   "ctx":"MigrationUtil-TaskExecutor","msg":"Killing all outstanding egress activity."}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"COMMAND",  "id":4784923, "ctx":"initandlisten","msg":"Shutting down the ServiceEntryPoint"}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"CONTROL",  "id":4784928, "ctx":"initandlisten","msg":"Shutting down the TTL monitor"}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"CONTROL",  "id":6278511, "ctx":"initandlisten","msg":"Shutting down the Change Stream Expired Pre-images Remover"}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"CONTROL",  "id":4784929, "ctx":"initandlisten","msg":"Acquiring the global lock for shutdown"}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"-",        "id":4784931, "ctx":"initandlisten","msg":"Dropping the scope cache for shutdown"}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"CONTROL",  "id":20565,   "ctx":"initandlisten","msg":"Now exiting"}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"CONTROL",  "id":8423404, "ctx":"initandlisten","msg":"mongod shutdown complete","attr":{"Summary of time elapsed":{"Statistics":{"Enter terminal shutdown":"0 ms","Step down the replication coordinator for shutdown":"0 ms","Time spent in quiesce mode":"0 ms","Shut down FLE Crud subsystem":"0 ms","Shut down MirrorMaestro":"0 ms","Shut down WaitForMajorityService":"0 ms","Shut down the global connection pool":"0 ms","Shut down the replica set monitor":"0 ms","Shut down the migration util executor":"0 ms","Shut down the TTL monitor":"0 ms","Shut down expired pre-images and documents removers":"0 ms","Wait for the oplog cap maintainer thread to stop":"0 ms","Shut down full-time data capture":"0 ms","shutdownTask total elapsed time":"1 ms"}}}}
-{"t":{"$date":"2026-02-15T13:40:57.790+00:00"},"s":"I",  "c":"CONTROL",  "id":23138,   "ctx":"initandlisten","msg":"Shutting down","attr":{"exitCode":48}} processes, remove the  directory if corrupted, re-run , re-initiate the replica set with Current Mongosh Log ID:	6991cceb0b9df163d6284d0b
-Connecting to:		mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.6.0
-Using MongoDB:		7.0.29
-Using Mongosh:		2.6.0
-
-For mongosh info see: https://www.mongodb.com/docs/mongodb-shell/
-
-
-To help improve our products, anonymous usage data is collected and sent to MongoDB periodically (https://www.mongodb.com/legal/privacy-policy).
-You can opt-out by running the disableTelemetry() command.
-
-------
-   The server generated these startup warnings when booting
-   2026-02-15T13:40:52.495+00:00: Using the XFS filesystem is strongly recommended with the WiredTiger storage engine. See http://dochub.mongodb.org/core/prodnotes-filesystem
-   2026-02-15T13:40:54.205+00:00: Access control is not enabled for the database. Read and write access to data and configuration is unrestricted
-   2026-02-15T13:40:54.205+00:00: You are running this process as the root user, which is not recommended
-   2026-02-15T13:40:54.205+00:00: Soft rlimits for open file descriptors too low
-   2026-02-15T13:40:54.367+00:00: Document(s) exist in 'system.replset', but started without --replSet. Database contents may appear inconsistent with the writes that were visible when this node was running as part of a replica set. Restart with --replSet unless you are doing maintenance and no other clients are connected. The TTL collection monitor will not start because of this. For more info see http://dochub.mongodb.org/core/ttlcollections
-   2026-02-15T13:40:54.367+00:00: Replica set member is in standalone mode. Performing any writes will result in them being untimestamped. If a write is to an existing document, the document's history will be overwritten with the new value since the beginning of time. This can break snapshot isolation within the storage engine.
-------
-
-test> , and re-run the seed script. This is a critical environmental fragility.
+- **Issue recurrence in previous fork**: MongoDB Replica Set Instability.
+- **Recurrence count**: 5+ times in this session alone.
+- **Status**: RESOLVED (temporarily). The environment is highly fragile. If the backend is unresponsive or throwing , the next agent must be prepared to kill rogue {"t":{"$date":"2026-02-16T20:17:29.320+00:00"},"s":"I",  "c":"NETWORK",  "id":4915701, "ctx":"main","msg":"Initialized wire specification","attr":{"spec":{"incomingExternalClient":{"minWireVersion":0,"maxWireVersion":21},"incomingInternalClient":{"minWireVersion":0,"maxWireVersion":21},"outgoing":{"minWireVersion":6,"maxWireVersion":21},"isInternalClient":true}}}
+{"t":{"$date":"2026-02-16T20:17:29.321+00:00"},"s":"I",  "c":"CONTROL",  "id":23285,   "ctx":"main","msg":"Automatically disabling TLS 1.0, to force-enable TLS 1.0 specify --sslDisabledProtocols 'none'"}
+{"t":{"$date":"2026-02-16T20:17:29.321+00:00"},"s":"I",  "c":"NETWORK",  "id":4648601, "ctx":"main","msg":"Implicit TCP FastOpen unavailable. If TCP FastOpen is required, set tcpFastOpenServer, tcpFastOpenClient, and tcpFastOpenQueueSize."}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationDonorService","namespace":"config.tenantMigrationDonors"}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationRecipientService","namespace":"config.tenantMigrationRecipients"}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"main","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"CONTROL",  "id":5945603, "ctx":"main","msg":"Multi threading initialized"}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"TENANT_M", "id":7091600, "ctx":"main","msg":"Starting TenantMigrationAccessBlockerRegistry"}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"CONTROL",  "id":4615611, "ctx":"initandlisten","msg":"MongoDB starting","attr":{"pid":259,"port":27017,"dbPath":"/data/db","architecture":"64-bit","host":"agent-env-91f7284e-0c81-4665-b2cb-bb5284be7aee"}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"W",  "c":"CONTROL",  "id":20720,   "ctx":"initandlisten","msg":"Memory available to mongo process is less than total system memory","attr":{"availableMemSizeMB":8192,"systemMemSizeMB":15975}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"CONTROL",  "id":23403,   "ctx":"initandlisten","msg":"Build Info","attr":{"buildInfo":{"version":"7.0.29","gitVersion":"415cc13e900a82a2e00e4f4417dc7159a883e975","openSSLVersion":"OpenSSL 3.0.18 30 Sep 2025","modules":[],"allocator":"tcmalloc","environment":{"distmod":"ubuntu2204","distarch":"aarch64","target_arch":"aarch64"}}}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"CONTROL",  "id":51765,   "ctx":"initandlisten","msg":"Operating System","attr":{"os":{"name":"PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"","version":"Kernel 6.6.113+"}}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"I",  "c":"CONTROL",  "id":21951,   "ctx":"initandlisten","msg":"Options set by command line","attr":{"options":{}}}
+{"t":{"$date":"2026-02-16T20:17:29.322+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"initandlisten","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"E",  "c":"CONTROL",  "id":20568,   "ctx":"initandlisten","msg":"Error setting up listener","attr":{"error":{"code":9001,"codeName":"SocketException","errmsg":"setup bind :: caused by :: Address already in use"}}}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"REPL",     "id":4784900, "ctx":"initandlisten","msg":"Stepping down the ReplicationCoordinator for shutdown","attr":{"waitTimeMillis":15000}}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"REPL",     "id":4794602, "ctx":"initandlisten","msg":"Attempting to enter quiesce mode"}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"-",        "id":6371601, "ctx":"initandlisten","msg":"Shutting down the FLE Crud thread pool"}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"COMMAND",  "id":4784901, "ctx":"initandlisten","msg":"Shutting down the MirrorMaestro"}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"SHARDING", "id":4784902, "ctx":"initandlisten","msg":"Shutting down the WaitForMajorityService"}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"NETWORK",  "id":4784905, "ctx":"initandlisten","msg":"Shutting down the global connection pool"}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"NETWORK",  "id":4784918, "ctx":"initandlisten","msg":"Shutting down the ReplicaSetMonitor"}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"SHARDING", "id":4784921, "ctx":"initandlisten","msg":"Shutting down the MigrationUtilExecutor"}
+{"t":{"$date":"2026-02-16T20:17:29.336+00:00"},"s":"I",  "c":"ASIO",     "id":22582,   "ctx":"MigrationUtil-TaskExecutor","msg":"Killing all outstanding egress activity."}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"COMMAND",  "id":4784923, "ctx":"initandlisten","msg":"Shutting down the ServiceEntryPoint"}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"CONTROL",  "id":4784928, "ctx":"initandlisten","msg":"Shutting down the TTL monitor"}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"CONTROL",  "id":6278511, "ctx":"initandlisten","msg":"Shutting down the Change Stream Expired Pre-images Remover"}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"CONTROL",  "id":4784929, "ctx":"initandlisten","msg":"Acquiring the global lock for shutdown"}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"-",        "id":4784931, "ctx":"initandlisten","msg":"Dropping the scope cache for shutdown"}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"CONTROL",  "id":20565,   "ctx":"initandlisten","msg":"Now exiting"}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"CONTROL",  "id":8423404, "ctx":"initandlisten","msg":"mongod shutdown complete","attr":{"Summary of time elapsed":{"Statistics":{"Enter terminal shutdown":"0 ms","Step down the replication coordinator for shutdown":"0 ms","Time spent in quiesce mode":"0 ms","Shut down FLE Crud subsystem":"0 ms","Shut down MirrorMaestro":"0 ms","Shut down WaitForMajorityService":"0 ms","Shut down the global connection pool":"0 ms","Shut down the replica set monitor":"0 ms","Shut down the migration util executor":"0 ms","Shut down the TTL monitor":"0 ms","Shut down expired pre-images and documents removers":"0 ms","Wait for the oplog cap maintainer thread to stop":"0 ms","Shut down full-time data capture":"0 ms","shutdownTask total elapsed time":"2 ms"}}}}
+{"t":{"$date":"2026-02-16T20:17:29.338+00:00"},"s":"I",  "c":"CONTROL",  "id":23138,   "ctx":"initandlisten","msg":"Shutting down","attr":{"exitCode":48}} processes, reset the replica set, and re-seed the database. This is a critical, time-consuming environmental problem.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend**: FastAPI, Motor, Pydantic, JWT, MongoDB Transactions, .
-- **Frontend**: React Native, Expo, Expo Router, TypeScript, React Context.
-- **Database**: MongoDB as a single-node Replica Set ().
-- **AI Integration**: OpenAI API for image-to-text captions.
+- **Backend**: FastAPI, Motor, Pydantic, **Idempotency**, **MongoDB Transactions (Pessimistic Locking pattern)**, **State Machines**, **Immutable Snapshots**.
+- **Frontend**: React Native, Expo, Expo Router, TypeScript.
+- **Database**: MongoDB Replica Set ().
+- **AI Integration**:  library with Emergent LLM Key for OpenAI Vision.
 
 **key DB schema**
-- **dprs**: New collection created to store Daily Progress Reports, including fields for , Sun Feb 15 13:40:59 UTC 2026,  (array of objects with URL and caption), and .
-- **vendors**: Populated with sample data.
-- **work_orders, payment_certificates, project_budgets, attendance, dpr_records, issues, petty_cash**: All populated with comprehensive data via .
+- **financial_aggregates**: 
+- **mutation_operation_logs**: 
+- **snapshots**: 
 
 **changes in tech stack**
--  and  were installed in the frontend.
-- usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit library is being used in the backend.
+-  and  were added to the frontend for client-side PDF generation.
+- The backend now heavily relies on the  library for AI tasks.
 
 **All files of reference**
-- **/app/backend/wave3_routes.py**: Recently modified to add DPR creation and AI captioning logic.
-- **/app/frontend/app/(admin)/dpr.tsx**: New placeholder screen for DPR creation.
-- **/app/backend/hardened_routes.py**: Modified to fix  serialization on GET endpoints for Work Orders and Payment Certificates.
-- **/app/backend/server.py**: Modified to add a  helper and fix  serialization on the GET endpoint for Budgets.
-- **/app/frontend/app/(admin)/work-orders.tsx**: Overhauled to fetch and display a list of work orders. Needs verification.
-- **/app/frontend/app/(admin)/payment-certificates.tsx**: Overhauled to fetch and display a list of payment certificates. Needs verification.
-- **/app/frontend/app/(admin)/budget.tsx**: Overhauled to fetch and display budget data. Needs verification.
-- **/app/frontend/app/(admin)/projects/[id].tsx**: New screen to show project details. Needs verification.
-- **/app/backend/temp_seed.py**: Script containing the logic for the comprehensive data seeding.
+- **/app/backend/core/state_machine_wiring.py**: Defines the state transitions to be implemented.
+- **/app/backend/core/hardened_financial_engine.py**: The file currently being refactored.
+- **/app/backend/wave3_routes.py**: Contains the AI captioning logic that needs to be debugged.
+- **/app/frontend/app/(admin)/dpr/create.tsx**: Contains the frontend logic for the DPR feature, including the image handling that crashes.
+- **/app/frontend/app/(admin)/dpr/[id].tsx**: The newly created page for editing DPRs that needs to be verified.
 
 **Critical Info for New Agent**
-- **Verify Backend Fixes**: Your first priority after understanding the context should be to verify if the  serialization fix actually resolved the user's reported issues of blank screens (WOs, PCs, Budgets) and the broken Project Detail page. Do not assume they are fixed.
-- **Finish DPR Feature**: The main active task is to complete the DPR feature according to the user's very specific requirements (camera, AI captions, PDF, etc.). The OpenAI key is in .
-- **MongoDB is Fragile**: The MongoDB replica set is unstable and may crash. If you see backend errors or connection timeouts, check backend                          STOPPED   Feb 15 01:40 PM
-code-server                      STOPPED   Not started
-expo                             STOPPED   Feb 15 01:40 PM
-mongodb                          RUNNING   pid 100, uptime 0:00:09
-nginx-code-proxy                 RUNNING   pid 97, uptime 0:00:09, and be prepared to kill rogue {"t":{"$date":"2026-02-15T13:41:01.141+00:00"},"s":"I",  "c":"CONTROL",  "id":23285,   "ctx":"main","msg":"Automatically disabling TLS 1.0, to force-enable TLS 1.0 specify --sslDisabledProtocols 'none'"}
-{"t":{"$date":"2026-02-15T13:41:01.141+00:00"},"s":"I",  "c":"NETWORK",  "id":4915701, "ctx":"main","msg":"Initialized wire specification","attr":{"spec":{"incomingExternalClient":{"minWireVersion":0,"maxWireVersion":21},"incomingInternalClient":{"minWireVersion":0,"maxWireVersion":21},"outgoing":{"minWireVersion":6,"maxWireVersion":21},"isInternalClient":true}}}
-{"t":{"$date":"2026-02-15T13:41:01.141+00:00"},"s":"I",  "c":"NETWORK",  "id":4648601, "ctx":"main","msg":"Implicit TCP FastOpen unavailable. If TCP FastOpen is required, set tcpFastOpenServer, tcpFastOpenClient, and tcpFastOpenQueueSize."}
-{"t":{"$date":"2026-02-15T13:41:01.142+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationDonorService","namespace":"config.tenantMigrationDonors"}}
-{"t":{"$date":"2026-02-15T13:41:01.142+00:00"},"s":"I",  "c":"REPL",     "id":5123008, "ctx":"main","msg":"Successfully registered PrimaryOnlyService","attr":{"service":"TenantMigrationRecipientService","namespace":"config.tenantMigrationRecipients"}}
-{"t":{"$date":"2026-02-15T13:41:01.142+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"main","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
-{"t":{"$date":"2026-02-15T13:41:01.142+00:00"},"s":"I",  "c":"CONTROL",  "id":5945603, "ctx":"main","msg":"Multi threading initialized"}
-{"t":{"$date":"2026-02-15T13:41:01.142+00:00"},"s":"I",  "c":"TENANT_M", "id":7091600, "ctx":"main","msg":"Starting TenantMigrationAccessBlockerRegistry"}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"I",  "c":"CONTROL",  "id":4615611, "ctx":"initandlisten","msg":"MongoDB starting","attr":{"pid":321,"port":27017,"dbPath":"/data/db","architecture":"64-bit","host":"agent-env-3540743f-6294-4d89-8f3c-19c30fa40e59"}}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"W",  "c":"CONTROL",  "id":20720,   "ctx":"initandlisten","msg":"Memory available to mongo process is less than total system memory","attr":{"availableMemSizeMB":8192,"systemMemSizeMB":15975}}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"I",  "c":"CONTROL",  "id":23403,   "ctx":"initandlisten","msg":"Build Info","attr":{"buildInfo":{"version":"7.0.29","gitVersion":"415cc13e900a82a2e00e4f4417dc7159a883e975","openSSLVersion":"OpenSSL 3.0.18 30 Sep 2025","modules":[],"allocator":"tcmalloc","environment":{"distmod":"ubuntu2204","distarch":"aarch64","target_arch":"aarch64"}}}}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"I",  "c":"CONTROL",  "id":51765,   "ctx":"initandlisten","msg":"Operating System","attr":{"os":{"name":"PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"","version":"Kernel 6.6.113+"}}}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"I",  "c":"CONTROL",  "id":21951,   "ctx":"initandlisten","msg":"Options set by command line","attr":{"options":{}}}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"W",  "c":"NETWORK",  "id":11621101,"ctx":"initandlisten","msg":"Overriding max connections to honor `capMemoryConsumptionForPreAuthBuffers` settings","attr":{"limit":104857}}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"E",  "c":"CONTROL",  "id":20568,   "ctx":"initandlisten","msg":"Error setting up listener","attr":{"error":{"code":9001,"codeName":"SocketException","errmsg":"setup bind :: caused by :: Address already in use"}}}
-{"t":{"$date":"2026-02-15T13:41:01.143+00:00"},"s":"I",  "c":"REPL",     "id":4784900, "ctx":"initandlisten","msg":"Stepping down the ReplicationCoordinator for shutdown","attr":{"waitTimeMillis":15000}}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"REPL",     "id":4794602, "ctx":"initandlisten","msg":"Attempting to enter quiesce mode"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"-",        "id":6371601, "ctx":"initandlisten","msg":"Shutting down the FLE Crud thread pool"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"COMMAND",  "id":4784901, "ctx":"initandlisten","msg":"Shutting down the MirrorMaestro"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"SHARDING", "id":4784902, "ctx":"initandlisten","msg":"Shutting down the WaitForMajorityService"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"NETWORK",  "id":4784905, "ctx":"initandlisten","msg":"Shutting down the global connection pool"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"NETWORK",  "id":4784918, "ctx":"initandlisten","msg":"Shutting down the ReplicaSetMonitor"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"SHARDING", "id":4784921, "ctx":"initandlisten","msg":"Shutting down the MigrationUtilExecutor"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"ASIO",     "id":22582,   "ctx":"MigrationUtil-TaskExecutor","msg":"Killing all outstanding egress activity."}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"COMMAND",  "id":4784923, "ctx":"initandlisten","msg":"Shutting down the ServiceEntryPoint"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"CONTROL",  "id":4784928, "ctx":"initandlisten","msg":"Shutting down the TTL monitor"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"CONTROL",  "id":6278511, "ctx":"initandlisten","msg":"Shutting down the Change Stream Expired Pre-images Remover"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"CONTROL",  "id":4784929, "ctx":"initandlisten","msg":"Acquiring the global lock for shutdown"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"-",        "id":4784931, "ctx":"initandlisten","msg":"Dropping the scope cache for shutdown"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"CONTROL",  "id":20565,   "ctx":"initandlisten","msg":"Now exiting"}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"CONTROL",  "id":8423404, "ctx":"initandlisten","msg":"mongod shutdown complete","attr":{"Summary of time elapsed":{"Statistics":{"Enter terminal shutdown":"0 ms","Step down the replication coordinator for shutdown":"1 ms","Time spent in quiesce mode":"0 ms","Shut down FLE Crud subsystem":"0 ms","Shut down MirrorMaestro":"0 ms","Shut down WaitForMajorityService":"0 ms","Shut down the global connection pool":"0 ms","Shut down the replica set monitor":"0 ms","Shut down the migration util executor":"0 ms","Shut down the TTL monitor":"0 ms","Shut down expired pre-images and documents removers":"0 ms","Wait for the oplog cap maintainer thread to stop":"0 ms","Shut down full-time data capture":"0 ms","shutdownTask total elapsed time":"1 ms"}}}}
-{"t":{"$date":"2026-02-15T13:41:01.144+00:00"},"s":"I",  "c":"CONTROL",  "id":23138,   "ctx":"initandlisten","msg":"Shutting down","attr":{"exitCode":48}} processes, reset the data directory (), and re-initialize the replica set and seed data.
-- **Use  for Web**: For buttons, prefer using  over  as it has better compatibility and reliability in the web environment, which was the root cause of the non-functional submit buttons.
+- **PRIORITY 1: Finish Backend Refactor.** Your immediate task is to complete the Phase 3B state machine wiring in  and other relevant services.
+- **PRIORITY 2: Fix DPR Bugs.** After the refactor, pivot to fixing the three critical, user-reported bugs related to the DPR feature. Do not assume the previous agent's fixes worked.
+- **MONGODB IS UNSTABLE.** The MongoDB replica set is extremely fragile and has failed multiple times. If you encounter backend connection errors (), you will likely need to manually reset the replica set and re-seed the data. This is a known, recurring environmental issue.
+- **Follow User's Lead:** The user is providing very specific, phased technical instructions. Adhere to them strictly and do not introduce unrelated changes.
 
 **documents created in this job**
-- /app/backend/temp_seed.py
+- /app/backend/core/financial_determinism.py
+- /app/backend/core/deterministic_service.py
+- /app/backend/migrations/001_financial_determinism.py
+- /app/backend/core/snapshot_service.py
+- /app/backend/migrations/002_snapshot_integrity.py
+- /app/backend/core/state_machine.py
+- /app/backend/core/state_machine_wiring.py
+- /app/frontend/app/(admin)/dpr/[id].tsx
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Msg 385 & 382 (PENDING)**: User provided an OpenAI API key and detailed requirements for the DPR feature. This is the current, in-progress task.
-2.  **Msg 357**: User initiated the request to Allow admin to click photographs and create a DPR.
-3.  **Msg 313**: User provided detailed E2E testing feedback, reporting that WO, PC, Budget, Project Detail, and Report Generation screens are all broken (not showing data). This is the bug report that led to the  fix.
-4.  **Msg 293**: User reported that almost everything was blank or unclickable after the agent's first major frontend overhaul. This prompted a deeper investigation.
-5.  **Msg 268**: User requested comprehensive data seeding to test all modules and reports.
-6.  **Msg 220**: User reported that the newly created forms were visually correct but the submit buttons did not work and vendor dropdowns were empty.
-7.  **Msg 207**: User reported the cursor jumping bug on the login screen.
-8.  **Msg 178**: User requested that the placeholder create screens be turned into functional forms.
-9.  **Msg 102**: User requested that the static list screens and FABs be made interactive with proper navigation.
-10. **Msg 260/393 (from previous summary)**: The initial request to fix the 6 original frontend bugs.
+1.  **Msg 373 (PENDING)**: User requested wiring the  into services (Phase 3B). This is the current in-progress task.
+2.  **Msg 366 (DONE)**: User requested the creation of a generic  utility (Phase 3A).
+3.  **Msg 309 (DONE)**: User requested the implementation of immutable snapshots and document integrity (Phase 2).
+4.  **Msg 192 (DONE)**: User initiated the multi-phase backend refactor, starting with the financial determinism foundation (Phase 1).
+5.  **Msg 173 (RESOLVED)**: User reported being unable to log in, which was caused by a MongoDB connection issue.
+6.  **Msg 165 (RESOLVED)**: User asked to wake up the servers for testing.
+7.  **Msg 162 (RESOLVED)**: User reported the database server was down.
+8.  **Msg 119 (PENDING)**: User reported three critical bugs: AI captions not working, app crashes on 2nd photo, and 404 error on draft DPR edit.
+9.  **Msg 106 (ATTEMPTED)**: User requested PDF layout changes (one photo per page) and better AI captions.
+10. **Msg 5 (ADDRESSED)**: User gave initial approval for testing and provided feedback on DPR feature.
 
 **Project Health Check:**
-- **Broken**: Yes. While many UI components and pages have been built, the last user test reported that several core data-viewing screens are non-functional. The agent has applied a backend fix, but this has not been verified on the frontend. The main requested feature (DPR) is incomplete.
+- **Broken**: Yes. The backend is in the middle of a significant refactoring. There are three known, critical, user-facing bugs in the primary new feature (DPR). The database environment is highly unstable.
 
 **3rd Party Integrations**
-- **OpenAI GPT-4**: Used for generating AI captions for DPR images. Uses a User-provided API Key stored in .
+- **OpenAI GPT-4 Vision**: Accessed via the  library. Uses the Emergent LLM Key.
 
 **Testing status**
-- Testing agent used after significant changes: NO
+- Testing agent used after significant changes: NO (Not since the start of the backend refactoring).
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: []
-- Known regressions: The core transactional screens (WO, PC, Budget) and Project Detail page were reported as non-functional by the user in the last testing cycle.
+- Known regressions:
+    - AI caption generation is not working.
+    - DPR creation crashes with more than one photo.
+    - Editing draft DPRs is broken.
 
 **Credentials to test flow:**
 - **Admin**:  / 
-- (Database may need to be re-seeded with  if MongoDB is reset).
+- **Note**: Database may need to be re-seeded with 🌱 Starting database seeding...
+📊 Creating organisation...
+
+❌ Error during seeding: No replica set members available for replica set name "rs0", Timeout: 30s, Topology Description: <TopologyDescription id: 69937b59396da7d681f2e150, topology_type: ReplicaSetNoPrimary, servers: []> if the MongoDB instance is reset.
 
 **What agent forgot to execute**
-The agent's most significant oversight was failing to perform a verification step on the frontend after applying the backend  serialization fix. It fixed the root cause of the 500 errors but immediately moved to the next user feature request (DPR) without confirming that the user-facing problem (blank screens) was actually resolved. This verification is now a top-priority pending task for the next agent.
+- The agent failed to verify its fixes for the user-reported DPR bugs (Msg 119) before handing back to the user. It implemented code changes but did not test if they actually solved the problems (AI captions, photo crash, 404 error).
+- The agent never performed a final frontend verification to confirm that the original blank screens issue was resolved after its backend  fix. While backend tests passed, the user-facing validation was missed.
+
 </analysis>
