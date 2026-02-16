@@ -839,7 +839,7 @@ async def get_budgets(
     project_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get budgets"""
+    """Get budgets with enriched financial state data"""
     user = await permission_checker.get_authenticated_user(current_user)
     
     query = {}
@@ -852,6 +852,25 @@ async def get_budgets(
     result = []
     for b in budgets:
         b["budget_id"] = str(b.pop("_id"))
+        
+        # Enrich with financial state data for UI-6 validation
+        financial_state = await db.financial_state.find_one({
+            "project_id": b["project_id"],
+            "code_id": b["code_id"]
+        })
+        
+        if financial_state:
+            b["committed_value"] = financial_state.get("committed_value", 0)
+            b["certified_value"] = financial_state.get("certified_value", 0)
+            b["balance_remaining"] = financial_state.get("balance_budget_remaining", 0)
+            b["over_commit_flag"] = financial_state.get("over_commit_flag", False)
+        else:
+            # Default values when no financial activity yet
+            b["committed_value"] = 0
+            b["certified_value"] = 0
+            b["balance_remaining"] = b.get("approved_budget_amount", 0)
+            b["over_commit_flag"] = False
+        
         result.append(serialize_doc(b))
     
     return result
