@@ -91,12 +91,14 @@ class SnapshotService:
     - Global settings are embedded at snapshot time
     - Full document data is embedded (no FK references)
     - PDF checksum ensures integrity
+    - Policy enforcement via PolicyService (Phase 4D)
     """
     
     COLLECTION = "snapshots"
     
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
+        self.policy = PolicyService(db)  # Phase 4D: Policy Service
     
     async def create_indexes(self):
         """Create required indexes for snapshots collection."""
