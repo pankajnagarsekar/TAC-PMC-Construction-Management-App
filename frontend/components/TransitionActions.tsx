@@ -322,6 +322,22 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     fontWeight: '600',
   },
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.error + '15',
+    borderWidth: 1,
+    borderColor: Colors.error + '30',
+  },
+  lockedText: {
+    fontSize: FontSizes.xs,
+    fontWeight: '600',
+    color: Colors.error,
+  },
 });
 
 export default TransitionActions;
