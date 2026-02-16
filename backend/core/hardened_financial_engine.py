@@ -1058,10 +1058,121 @@ class HardenedFinancialEngine:
         """
         Modify budget amount.
         
-        TRANSACTION: Atomic with rollback.
         SECTION 1: Uses Decimal precision.
         SECTION 3: Validates certified_value <= new_budget.
+        
+        Note: Works with or without MongoDB replica set.
+        Attempts transactional update, falls back to non-transactional if replica set unavailable.
         """
+        try:
+            return await self._modify_budget_transactional(
+                budget_id, organisation_id, user_id, new_amount
+            )
+        except Exception as e:
+            # If transaction fails due to no replica set, use non-transactional fallback
+            error_msg = str(e)
+            if "replica set" in error_msg.lower() or "transaction" in error_msg.lower():
+                logger.warning(f"[TRANSACTION FALLBACK] Using non-transactional budget modification")
+                return await self._modify_budget_simple(
+                    budget_id, organisation_id, user_id, new_amount
+                )
+            raise
+
+    async def _modify_budget_simple(
+        self,
+        budget_id: str,
+        organisation_id: str,
+        user_id: str,
+        new_amount: float
+    ) -> Dict[str, Any]:
+        """
+        Non-transactional budget modification for single-instance MongoDB.
+        Still enforces all validation rules.
+        """
+        try:
+            budget = await self.db.project_budgets.find_one(
+                {"_id": ObjectId(budget_id)}
+            )
+            
+            if not budget:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Budget not found"
+                )
+            
+            # Validate non-negative
+            try:
+                validate_non_negative(new_amount, 'approved_budget_amount')
+            except NegativeValueError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e)
+                )
+            
+            # Get current certified value to check constraint (UI-6 validation)
+            state = await self.db.financial_state.find_one(
+                {"project_id": budget["project_id"], "code_id": budget["code_id"]}
+            )
+            
+            certified_value = Decimal(0)
+            if state:
+                certified_value = to_decimal(state.get("certified_value", 0))
+                if certified_value > to_decimal(new_amount):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "error": "budget_reduction_blocked",
+                            "message": f"Cannot reduce budget below certified value (₹{to_float(certified_value):,.2f})",
+                            "certified_value": to_float(certified_value),
+                            "requested_amount": new_amount
+                        }
+                    )
+            
+            old_amount = budget["approved_budget_amount"]
+            
+            # Update budget
+            await self.db.project_budgets.update_one(
+                {"_id": ObjectId(budget_id)},
+                {
+                    "$set": {
+                        "approved_budget_amount": to_float(round_financial(new_amount)),
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+            
+            # Recalculate financials (non-session version)
+            await self.recalculate_financials_with_precision(
+                budget["project_id"],
+                budget["code_id"],
+                session=None
+            )
+            
+            logger.info(f"[BUDGET] Modified (non-tx): {budget_id}, old={old_amount}, new={new_amount}")
+            
+            return {
+                "budget_id": budget_id,
+                "old_amount": old_amount,
+                "new_amount": to_float(round_financial(new_amount))
+            }
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"[BUDGET ERROR] Modification failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Budget modification failed: {str(e)}"
+            )
+
+    async def _modify_budget_transactional(
+        self,
+        budget_id: str,
+        organisation_id: str,
+        user_id: str,
+        new_amount: float
+    ) -> Dict[str, Any]:
+        """Transactional version for replica set environments."""
         async with await self.client.start_session() as session:
             async with session.start_transaction():
                 try:
@@ -1096,7 +1207,12 @@ class HardenedFinancialEngine:
                         if certified_value > to_decimal(new_amount):
                             raise HTTPException(
                                 status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"New budget ({new_amount}) cannot be less than certified_value ({to_float(certified_value)})"
+                                detail={
+                                    "error": "budget_reduction_blocked",
+                                    "message": f"Cannot reduce budget below certified value (₹{to_float(certified_value):,.2f})",
+                                    "certified_value": to_float(certified_value),
+                                    "requested_amount": new_amount
+                                }
                             )
                     
                     old_amount = budget["approved_budget_amount"]
