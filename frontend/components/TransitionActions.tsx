@@ -166,12 +166,25 @@ export function TransitionActions({
     );
   }
 
-  if (transitions.length === 0) {
+  if (transitions.length === 0 && !periodLocked.isLocked) {
     return null; // No actions available
   }
 
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
+      {/* UI-5: Period Locked Banner */}
+      {periodLocked.isLocked && (
+        <View style={styles.periodLockedBanner}>
+          <Ionicons name="lock-closed" size={16} color={Colors.error} />
+          <View style={styles.periodLockedTextContainer}>
+            <Text style={styles.periodLockedTitle}>Period Locked</Text>
+            <Text style={styles.periodLockedMessage}>
+              {periodLocked.message || 'Accounting period is locked. Financial actions are disabled.'}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {transitions.map((targetStatus) => {
         const meta = TRANSITION_META[targetStatus] || {
           label: targetStatus,
