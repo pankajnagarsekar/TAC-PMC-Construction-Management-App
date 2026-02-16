@@ -8,6 +8,12 @@ All routes use the HardenedFinancialEngine for:
 - Duplicate protection
 - Atomic document numbering
 
+PHASE 1 EXTENSION: Financial Determinism Foundation
+- Idempotency via operation_id
+- FinancialAggregate locking
+- Invariant validation inside lock
+- Domain event emission after commit
+
 IMPORTANT: These routes do NOT modify API response shapes.
 They EXTEND existing functionality with hardening.
 """
@@ -19,6 +25,7 @@ from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 import logging
 import os
+import uuid
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -28,9 +35,10 @@ from permissions import PermissionChecker
 from phase2_models import (
     WorkOrderCreate, WorkOrderIssue, WorkOrderRevise,
     PaymentCertificateCreate, PaymentCertificateCertify, PaymentCertificateRevise,
-    PaymentCreate, RetentionReleaseCreate, VendorCreate
+    PaymentCreate, RetentionReleaseCreate, VendorCreate, BudgetUpdate
 )
 from core.hardened_financial_engine import HardenedFinancialEngine
+from core.deterministic_service import DeterministicFinancialService
 from core.financial_precision import (
     calculate_wo_values, calculate_pc_values,
     to_float, round_financial, NegativeValueError
