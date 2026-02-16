@@ -359,6 +359,14 @@ export default function DPRDetailScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* UI-3: Version Selector */}
+        <VersionSelector
+          entityType="dpr"
+          entityId={id || ''}
+          currentVersion={dpr.version || 1}
+          onVersionSelect={handleVersionSelect}
+        />
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
