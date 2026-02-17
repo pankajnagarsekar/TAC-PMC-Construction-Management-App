@@ -109,6 +109,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const checkCanLogout = useCallback(async (): Promise<LogoutCheckResult> => {
+    try {
+      const response = await authApi.checkCanLogout();
+      return response;
+    } catch (error) {
+      console.error('Failed to check logout status:', error);
+      // On error, allow logout (fail-safe)
+      return { can_logout: true };
+    }
+  }, []);
+
   const refreshUser = useCallback(async () => {
     const user = await authApi.getCurrentUser();
     setState(prev => ({ ...prev, user }));
