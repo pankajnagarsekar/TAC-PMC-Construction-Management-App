@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { paymentCertificatesApi, projectsApi, codesApi, vendorsApi } from '../../../services/apiClient';
 import { Project, Code, Vendor } from '../../../types/api';
+import ScreenHeader from '../../../components/ScreenHeader';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../../constants/theme';
 
 // Cross-platform alert helper
