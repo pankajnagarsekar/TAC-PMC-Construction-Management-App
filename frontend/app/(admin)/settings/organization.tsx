@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../../constants/theme';
 import ScreenHeader from '../../../components/ScreenHeader';
 
@@ -48,6 +50,7 @@ interface OrgSettings {
   address: string;
   email: string;
   phone: string;
+  logo_base64: string;
   gst_number: string;
   pan_number: string;
   cgst_percentage: number;
@@ -58,20 +61,25 @@ interface OrgSettings {
   terms_and_conditions: string;
   currency: string;
   currency_symbol: string;
+  owner_name: string;
+  owner_mobile: string;
+  owner_address: string;
+  owner_email: string;
 }
 
 export default function OrganizationSettingsScreen() {
   const [settings, setSettings] = useState<OrgSettings>({
-    name: '', address: '', email: '', phone: '',
+    name: '', address: '', email: '', phone: '', logo_base64: '',
     gst_number: '', pan_number: '',
     cgst_percentage: 9, sgst_percentage: 9,
     wo_prefix: 'WO', pc_prefix: 'PC', invoice_prefix: 'INV',
     terms_and_conditions: '',
     currency: 'INR', currency_symbol: '₹',
+    owner_name: '', owner_mobile: '', owner_address: '', owner_email: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<string | null>('basic');
 
   useEffect(() => {
     loadSettings();
@@ -80,7 +88,7 @@ export default function OrganizationSettingsScreen() {
   const loadSettings = async () => {
     try {
       const data = await apiRequest('/api/organisation-settings');
-      setSettings(data);
+      setSettings(prev => ({ ...prev, ...data }));
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -95,12 +103,35 @@ export default function OrganizationSettingsScreen() {
         method: 'PUT',
         body: JSON.stringify(settings),
       });
-      showAlert('Success', 'Settings saved successfully');
+      showAlert('Success', 'Organisation settings saved successfully!');
     } catch (error) {
       showAlert('Error', 'Failed to save settings');
     } finally {
       setSaving(false);
     }
+  };
+
+  const pickLogo = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        updateField('logo_base64', `data:image/jpeg;base64,${result.assets[0].base64}`);
+        showAlert('Success', 'Logo uploaded successfully');
+      }
+    } catch (error) {
+      showAlert('Error', 'Failed to pick image');
+    }
+  };
+
+  const removeLogo = () => {
+    updateField('logo_base64', '');
   };
 
   const updateField = (field: keyof OrgSettings, value: string | number) => {
@@ -125,12 +156,12 @@ export default function OrganizationSettingsScreen() {
       <Text style={styles.inputLabel}>{label}</Text>
       <TextInput
         style={[styles.input, multiline && styles.textArea]}
-        value={String(value)}
+        value={String(value || '')}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={Colors.textMuted}
         multiline={multiline}
-        numberOfLines={multiline ? 6 : 1}
+        numberOfLines={multiline ? 4 : 1}
         keyboardType={keyboardType || 'default'}
       />
     </View>
@@ -154,10 +185,43 @@ export default function OrganizationSettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Basic Info */}
         <Section title="Basic Information" icon="business" id="basic">
+          {/* Logo Upload */}
+          <View style={styles.logoSection}>
+            <Text style={styles.inputLabel}>Company Logo</Text>
+            <View style={styles.logoRow}>
+              {settings.logo_base64 ? (
+                <Image source={{ uri: settings.logo_base64 }} style={styles.logoImage} />
+              ) : (
+                <View style={styles.logoPlaceholder}>
+                  <Ionicons name="image-outline" size={32} color={Colors.textMuted} />
+                </View>
+              )}
+              <View style={styles.logoButtons}>
+                <Pressable style={styles.uploadBtn} onPress={pickLogo}>
+                  <Ionicons name="cloud-upload" size={18} color={Colors.primary} />
+                  <Text style={styles.uploadBtnText}>Upload Logo</Text>
+                </Pressable>
+                {settings.logo_base64 && (
+                  <Pressable style={styles.removeBtn} onPress={removeLogo}>
+                    <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                    <Text style={styles.removeBtnText}>Remove</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          </View>
           <InputField label="Organisation Name" value={settings.name} onChangeText={(v: string) => updateField('name', v)} placeholder="Company name" />
           <InputField label="Address" value={settings.address} onChangeText={(v: string) => updateField('address', v)} placeholder="Full address" multiline />
           <InputField label="Email" value={settings.email} onChangeText={(v: string) => updateField('email', v)} placeholder="contact@company.com" />
           <InputField label="Phone" value={settings.phone} onChangeText={(v: string) => updateField('phone', v)} placeholder="+91-XXXXXXXXXX" />
+        </Section>
+
+        {/* Owner Info */}
+        <Section title="Owner Information" icon="person" id="owner">
+          <InputField label="Owner Name" value={settings.owner_name} onChangeText={(v: string) => updateField('owner_name', v)} placeholder="Full name" />
+          <InputField label="Mobile Number" value={settings.owner_mobile} onChangeText={(v: string) => updateField('owner_mobile', v)} placeholder="+91-XXXXXXXXXX" keyboardType="phone-pad" />
+          <InputField label="Email Address" value={settings.owner_email} onChangeText={(v: string) => updateField('owner_email', v)} placeholder="owner@company.com" />
+          <InputField label="Address" value={settings.owner_address} onChangeText={(v: string) => updateField('owner_address', v)} placeholder="Owner's address" multiline />
         </Section>
 
         {/* Tax Info */}
@@ -195,7 +259,7 @@ export default function OrganizationSettingsScreen() {
             numberOfLines={15}
             textAlignVertical="top"
           />
-          <Text style={styles.charCount}>{settings.terms_and_conditions.length} characters</Text>
+          <Text style={styles.charCount}>{(settings.terms_and_conditions || '').length} characters</Text>
         </Section>
 
         {/* Save Button */}
@@ -227,6 +291,15 @@ const styles = StyleSheet.create({
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   sectionTitle: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.text },
   sectionContent: { padding: Spacing.md, paddingTop: 0, borderTopWidth: 1, borderTopColor: Colors.border },
+  logoSection: { marginBottom: Spacing.md },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.sm },
+  logoImage: { width: 80, height: 80, borderRadius: BorderRadius.md },
+  logoPlaceholder: { width: 80, height: 80, borderRadius: BorderRadius.md, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
+  logoButtons: { gap: Spacing.sm },
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, padding: Spacing.sm, borderWidth: 1, borderColor: Colors.primary, borderRadius: BorderRadius.md },
+  uploadBtnText: { fontSize: FontSizes.sm, color: Colors.primary },
+  removeBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, padding: Spacing.sm },
+  removeBtnText: { fontSize: FontSizes.sm, color: Colors.error },
   inputGroup: { marginBottom: Spacing.md },
   inputLabel: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.text, marginBottom: Spacing.xs },
   input: {
