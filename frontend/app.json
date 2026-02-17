@@ -12,7 +12,9 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Take progress photos for Daily Reports",
-        "NSPhotoLibraryUsageDescription": "Upload progress photos for Daily Reports"
+        "NSPhotoLibraryUsageDescription": "Upload progress photos for Daily Reports",
+        "NSLocationWhenInUseUsageDescription": "Verify your presence at the construction site",
+        "NSMicrophoneUsageDescription": "Record voice notes for Daily Progress Reports"
       }
     },
     "android": {
@@ -24,7 +26,10 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
