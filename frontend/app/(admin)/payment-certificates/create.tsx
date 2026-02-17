@@ -143,6 +143,7 @@ export default function CreatePaymentCertificateScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <ScreenHeader title="Create Payment Certificate" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Project Picker */}
         <View style={styles.fieldGroup}>
