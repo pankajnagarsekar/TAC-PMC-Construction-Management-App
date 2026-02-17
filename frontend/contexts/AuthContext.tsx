@@ -132,6 +132,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         login,
         logout,
         refreshUser,
+        checkCanLogout,
       }}
     >
       {children}
