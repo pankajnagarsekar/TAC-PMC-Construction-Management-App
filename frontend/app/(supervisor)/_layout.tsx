@@ -87,6 +87,7 @@ export default function SupervisorTabLayout() {
       {/* Hidden screens - accessible via navigation but not shown in tab bar */}
       <Tabs.Screen name="voice-log" options={{ href: null, headerTitle: 'Voice Log' }} />
       <Tabs.Screen name="dpr" options={{ href: null, headerTitle: 'Daily Progress Report' }} />
+      <Tabs.Screen name="select-project" options={{ href: null, headerShown: false }} />
     </Tabs>
   );
 }
