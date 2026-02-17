@@ -1198,6 +1198,82 @@ async def approve_petty_cash(
 
 
 # ============================================
+# ORGANIZATION SETTINGS
+# ============================================
+
+@api_router.get("/organisation-settings")
+async def get_organisation_settings(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get organisation settings"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    settings = await db.organisation_settings.find_one({
+        "organisation_id": user["organisation_id"]
+    })
+    
+    if not settings:
+        # Return defaults
+        return {
+            "organisation_id": user["organisation_id"],
+            "name": "My Organisation",
+            "address": "",
+            "email": "",
+            "phone": "",
+            "gst_number": "",
+            "pan_number": "",
+            "cgst_percentage": 9.0,
+            "sgst_percentage": 9.0,
+            "wo_prefix": "WO",
+            "pc_prefix": "PC",
+            "invoice_prefix": "INV",
+            "terms_and_conditions": "",
+            "currency": "INR",
+            "currency_symbol": "₹",
+        }
+    
+    settings["settings_id"] = str(settings.pop("_id"))
+    return settings
+
+
+@api_router.put("/organisation-settings")
+async def update_organisation_settings(
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update organisation settings"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    update_data = {
+        "organisation_id": user["organisation_id"],
+        "name": data.get("name", ""),
+        "address": data.get("address", ""),
+        "email": data.get("email", ""),
+        "phone": data.get("phone", ""),
+        "gst_number": data.get("gst_number", ""),
+        "pan_number": data.get("pan_number", ""),
+        "cgst_percentage": float(data.get("cgst_percentage", 9.0)),
+        "sgst_percentage": float(data.get("sgst_percentage", 9.0)),
+        "wo_prefix": data.get("wo_prefix", "WO"),
+        "pc_prefix": data.get("pc_prefix", "PC"),
+        "invoice_prefix": data.get("invoice_prefix", "INV"),
+        "terms_and_conditions": data.get("terms_and_conditions", ""),
+        "currency": data.get("currency", "INR"),
+        "currency_symbol": data.get("currency_symbol", "₹"),
+        "updated_at": datetime.utcnow(),
+    }
+    
+    await db.organisation_settings.update_one(
+        {"organisation_id": user["organisation_id"]},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    return {"message": "Settings updated successfully", **update_data}
+
+
+# ============================================
 # HEALTH CHECK
 # ============================================
 
