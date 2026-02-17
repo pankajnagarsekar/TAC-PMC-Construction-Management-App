@@ -21,7 +21,8 @@ from models import (
     DerivedFinancialState,
     AuditLog,
     GlobalSettings,
-    Token, LoginRequest, RefreshTokenRequest
+    Token, LoginRequest, RefreshTokenRequest,
+    WorkerEntry, WorkersDailyLog, WorkersDailyLogCreate, WorkersDailyLogUpdate
 )
 from auth import (
     hash_password, verify_password, create_access_token, create_refresh_token,
