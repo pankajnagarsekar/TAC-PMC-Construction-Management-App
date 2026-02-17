@@ -63,7 +63,7 @@ interface AttendanceRecord {
 }
 
 export default function SupervisorAttendance() {
-  const { selectedProject } = useProject();
+  const { selectedProject, isProjectSelected } = useProject();
   const { user } = useAuth();
   
   const [loading, setLoading] = useState(true);
