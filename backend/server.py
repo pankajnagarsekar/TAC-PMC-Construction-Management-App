@@ -1548,6 +1548,62 @@ async def get_worker_logs_summary(
     }
 
 
+@api_router.get("/auth/can-logout")
+async def check_can_logout(
+    current_user: dict = Depends(get_current_user)
+):
+    """Check if supervisor can logout - requires submitted worker log for today"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    # Admins can always logout
+    if user.get("role") == "Admin":
+        return {
+            "can_logout": True,
+            "reason": None
+        }
+    
+    # For supervisors, check if worker log is submitted for today
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    
+    # Get user's assigned projects
+    assigned_projects = user.get("assigned_projects", [])
+    
+    if not assigned_projects:
+        # No projects assigned, can logout
+        return {
+            "can_logout": True,
+            "reason": None
+        }
+    
+    # Check if there's a submitted worker log for any assigned project today
+    worker_log = await db.worker_logs.find_one({
+        "supervisor_id": user["user_id"],
+        "date": today,
+        "status": "submitted"
+    })
+    
+    if worker_log:
+        return {
+            "can_logout": True,
+            "reason": None
+        }
+    
+    # Check if there's at least a draft
+    draft_log = await db.worker_logs.find_one({
+        "supervisor_id": user["user_id"],
+        "date": today,
+        "status": "draft"
+    })
+    
+    return {
+        "can_logout": False,
+        "reason": "worker_log_required",
+        "message": "Please submit your daily worker log before logging out.",
+        "has_draft": draft_log is not None,
+        "draft_log_id": str(draft_log["_id"]) if draft_log else None
+    }
+
+
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint"""
