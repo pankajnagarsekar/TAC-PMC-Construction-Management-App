@@ -524,6 +524,8 @@ const styles = StyleSheet.create({
   roleText: { fontSize: FontSizes.xs, fontWeight: '600' },
   permissionBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.accent + '20', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.sm, gap: 2 },
   permissionText: { fontSize: FontSizes.xs, color: Colors.accent, fontWeight: '600' },
+  projectsRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xs, gap: 4 },
+  projectsText: { fontSize: FontSizes.xs, color: Colors.textMuted },
   actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.lg, marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.border },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   actionText: { fontSize: FontSizes.sm, color: Colors.primary },
