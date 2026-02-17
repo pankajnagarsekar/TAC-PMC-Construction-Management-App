@@ -347,7 +347,7 @@ export default function UserManagementScreen() {
         renderItem={renderUser}
         keyExtractor={(item) => item.user_id || item._id || item.email}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadUsers(); }} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color={Colors.textMuted} />
