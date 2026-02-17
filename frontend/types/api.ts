@@ -26,6 +26,8 @@ export interface User {
   role: 'Admin' | 'Supervisor' | 'Other';
   active_status: boolean;
   dpr_generation_permission: boolean;
+  screen_permissions?: string[];
+  assigned_projects?: string[];
   created_at: string;
   updated_at: string;
 }
