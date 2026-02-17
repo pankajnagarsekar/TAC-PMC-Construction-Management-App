@@ -241,7 +241,7 @@ export default function UserManagementScreen() {
       try {
         await apiRequest(`/api/users/${user.user_id || user._id}`, { method: 'DELETE' });
         showAlert('Success', 'User deactivated successfully');
-        loadUsers();
+        loadData();
       } catch (error: any) {
         showAlert('Error', error.message);
       }
