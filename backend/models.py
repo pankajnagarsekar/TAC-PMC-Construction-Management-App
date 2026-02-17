@@ -274,6 +274,35 @@ class RefreshToken(BaseModel):
     is_revoked: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
 
+
+# ============================================
+# PETTY CASH MODELS
+# ============================================
+class PettyCash(BaseModel):
+    petty_cash_id: Optional[str] = Field(default=None, alias="_id")
+    organisation_id: str
+    project_id: str
+    date: datetime
+    description: str
+    amount: float
+    type: str = "expense"  # expense or reimbursement
+    category: str = "general"  # general, travel, supplies, etc.
+    receipt_url: Optional[str] = None
+    status: str = "pending"  # pending, approved, rejected
+    created_by: str
+    approved_by: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+
+class PettyCashCreate(BaseModel):
+    project_id: str
+    date: datetime
+    description: str
+    amount: float
+    type: str = "expense"
+    category: str = "general"
+    receipt_url: Optional[str] = None
+
     class Config:
         populate_by_name = True
         json_encoders = {ObjectId: str}
