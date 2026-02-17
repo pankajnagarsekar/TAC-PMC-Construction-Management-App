@@ -71,7 +71,7 @@ interface ProgressUpdate {
 }
 
 export default function SupervisorProgress() {
-  const { selectedProject } = useProject();
+  const { selectedProject, isProjectSelected } = useProject();
   const { user } = useAuth();
   
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -86,7 +86,10 @@ export default function SupervisorProgress() {
   const [progressNotes, setProgressNotes] = useState('');
 
   const loadActivities = useCallback(async () => {
-    if (!selectedProject) return;
+    if (!selectedProject) {
+      setLoading(false);
+      return;
+    }
     
     try {
       const projectId = (selectedProject as any).project_id || (selectedProject as any)._id;
