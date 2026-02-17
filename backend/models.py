@@ -69,6 +69,8 @@ class UserResponse(BaseModel):
     role: str
     active_status: bool
     dpr_generation_permission: bool
+    assigned_projects: Optional[List[str]] = []
+    screen_permissions: Optional[List[str]] = []
     created_at: datetime
     updated_at: datetime
 
