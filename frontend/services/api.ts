@@ -210,6 +210,16 @@ export const authApi = {
   async getStoredToken(): Promise<string | null> {
     return storage.getItem(ACCESS_TOKEN_KEY);
   },
+
+  async checkCanLogout(): Promise<{ can_logout: boolean; reason?: string; message?: string; has_draft?: boolean }> {
+    try {
+      return await fetchApi<{ can_logout: boolean; reason?: string; message?: string; has_draft?: boolean }>('/api/auth/can-logout');
+    } catch (error) {
+      // On error, allow logout as fail-safe
+      console.error('Failed to check logout status:', error);
+      return { can_logout: true };
+    }
+  },
 };
 
 // ============================================
