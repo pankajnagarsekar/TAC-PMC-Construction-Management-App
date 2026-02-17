@@ -281,6 +281,13 @@ export default function SupervisorDashboard() {
               </View>
               <Text style={styles.actionText}>Voice Log</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(supervisor)/worker-log')}>
+              <View style={[styles.actionIcon, { backgroundColor: Colors.secondaryLight || '#E8EAF6' }]}>
+                <Ionicons name="people" size={24} color={Colors.secondary} />
+              </View>
+              <Text style={styles.actionText}>Worker Log</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
