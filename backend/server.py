@@ -463,6 +463,36 @@ async def update_user(
     )
 
 
+@api_router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete/deactivate user (Admin only)"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    target_user = await db.users.find_one({"_id": ObjectId(user_id)})
+    
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if target_user["organisation_id"] != user["organisation_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Don't allow deleting self
+    if str(target_user["_id"]) == user["user_id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Soft delete - deactivate
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"active_status": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "User deactivated successfully"}
+
+
 # ============================================
 # PROJECT ENDPOINTS
 # ============================================
