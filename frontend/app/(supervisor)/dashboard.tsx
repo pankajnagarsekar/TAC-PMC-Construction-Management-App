@@ -212,6 +212,16 @@ export default function SupervisorDashboard() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
+            {/* DPR - Show only if user has permission */}
+            {user?.dpr_generation_permission && (
+              <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(admin)/dpr')}>
+                <View style={[styles.actionIcon, { backgroundColor: Colors.primaryLight || '#E3F2FD' }]}>
+                  <Ionicons name="document-text" size={24} color={Colors.primary} />
+                </View>
+                <Text style={styles.actionText}>Create DPR</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(supervisor)/progress')}>
               <View style={[styles.actionIcon, { backgroundColor: Colors.successLight }]}>
                 <Ionicons name="trending-up" size={24} color={Colors.success} />
