@@ -130,8 +130,8 @@ export default function UserManagementScreen() {
   }, []);
 
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    loadData();
+  }, [loadData]);
 
   const resetForm = () => {
     setName('');
