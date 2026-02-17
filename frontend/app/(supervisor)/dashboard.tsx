@@ -78,6 +78,22 @@ export default function SupervisorDashboard() {
     loadData();
   }, []);
 
+  const handleLogout = async () => {
+    const result = await checkCanLogout();
+    
+    if (result.can_logout) {
+      await logout();
+    } else {
+      // Show blocked modal
+      setLogoutBlockedModal(true);
+    }
+  };
+
+  const goToWorkerLog = () => {
+    setLogoutBlockedModal(false);
+    router.push('/(supervisor)/worker-log');
+  };
+
   const handleCheckIn = () => {
     // TODO: Call attendanceApi.checkIn() when backend is connected
     // UI only updates state based on backend response
