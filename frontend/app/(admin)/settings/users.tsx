@@ -288,6 +288,14 @@ export default function UserManagementScreen() {
               </View>
             )}
           </View>
+          {item.assigned_projects && item.assigned_projects.length > 0 && (
+            <View style={styles.projectsRow}>
+              <Ionicons name="folder-outline" size={12} color={Colors.textMuted} />
+              <Text style={styles.projectsText} numberOfLines={1}>
+                {item.assigned_projects.length} project{item.assigned_projects.length > 1 ? 's' : ''} assigned
+              </Text>
+            </View>
+          )}
         </View>
       </View>
       <View style={styles.actionRow}>
