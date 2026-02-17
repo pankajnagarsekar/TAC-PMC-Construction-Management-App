@@ -9,6 +9,9 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Alert,
+  Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,13 +36,14 @@ const mockSupervisorData: SupervisorDashboardData = {
 
 export default function SupervisorDashboard() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, checkCanLogout } = useAuth();
   const { selectedProject, clearProject, isProjectSelected } = useProject();
   const [projects, setProjects] = useState<Project[]>([]);
   const [dashboardData, setDashboardData] = useState<SupervisorDashboardData>(mockSupervisorData);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
+  const [logoutBlockedModal, setLogoutBlockedModal] = useState(false);
 
   // Redirect to project selection if no project selected
   useEffect(() => {
