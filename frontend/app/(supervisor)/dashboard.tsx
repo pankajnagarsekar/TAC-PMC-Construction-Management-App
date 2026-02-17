@@ -214,7 +214,7 @@ export default function SupervisorDashboard() {
           <View style={styles.actionsGrid}>
             {/* DPR - Show only if user has permission */}
             {user?.dpr_generation_permission && (
-              <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(admin)/dpr')}>
+              <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/dpr/create' as any)}>
                 <View style={[styles.actionIcon, { backgroundColor: Colors.primaryLight || '#E3F2FD' }]}>
                   <Ionicons name="document-text" size={24} color={Colors.primary} />
                 </View>
