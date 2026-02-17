@@ -55,20 +55,22 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <NavigationGuard>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: Colors.background },
-          }}
-        >
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="(admin)" options={{ headerShown: false }} />
-          <Stack.Screen name="(supervisor)" options={{ headerShown: false }} />
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-        </Stack>
-      </NavigationGuard>
+      <ProjectProvider>
+        <NavigationGuard>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: Colors.background },
+            }}
+          >
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+            <Stack.Screen name="(supervisor)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+          </Stack>
+        </NavigationGuard>
+      </ProjectProvider>
     </AuthProvider>
   );
 }
