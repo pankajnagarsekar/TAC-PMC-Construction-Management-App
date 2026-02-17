@@ -455,4 +455,16 @@ const styles = StyleSheet.create({
   taskTitleCompleted: { textDecorationLine: 'line-through', color: Colors.textMuted },
   taskMeta: { fontSize: FontSizes.xs, color: Colors.textMuted, marginTop: 2 },
   taskDivider: { height: 1, backgroundColor: Colors.border, marginLeft: Spacing.xl + Spacing.md },
+  
+  // Logout Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
+  modalContent: { backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: Spacing.xl, width: '100%', maxWidth: 340, alignItems: 'center' },
+  modalIcon: { marginBottom: Spacing.md },
+  modalTitle: { fontSize: FontSizes.xl, fontWeight: '600', color: Colors.text, marginBottom: Spacing.sm, textAlign: 'center' },
+  modalText: { fontSize: FontSizes.md, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.lg, lineHeight: 22 },
+  modalButtons: { flexDirection: 'row', gap: Spacing.md, width: '100%' },
+  modalCancelBtn: { flex: 1, paddingVertical: Spacing.md, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
+  modalCancelText: { fontSize: FontSizes.md, fontWeight: '500', color: Colors.textSecondary },
+  modalPrimaryBtn: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, backgroundColor: Colors.accent, paddingVertical: Spacing.md, borderRadius: BorderRadius.md },
+  modalPrimaryText: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.white },
 });
