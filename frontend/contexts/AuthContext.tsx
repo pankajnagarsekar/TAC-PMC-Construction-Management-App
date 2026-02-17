@@ -2,6 +2,7 @@
 // Provides authentication state and methods throughout the app
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Alert, Platform } from 'react-native';
 import { authApi, ApiError } from '../services/api';
 import { User, LoginRequest } from '../types/api';
 
@@ -11,10 +12,18 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
+interface LogoutCheckResult {
+  can_logout: boolean;
+  reason?: string;
+  message?: string;
+  has_draft?: boolean;
+}
+
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  checkCanLogout: () => Promise<LogoutCheckResult>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
