@@ -313,6 +313,21 @@ export default function AdminReports() {
               </>
             )}
           </Pressable>
+
+          {/* Workers Report Link */}
+          <Pressable
+            style={styles.workersReportLink}
+            onPress={() => router.push('/(admin)/workers-report')}
+          >
+            <View style={styles.workersReportIcon}>
+              <Ionicons name="people" size={24} color={Colors.accent} />
+            </View>
+            <View style={styles.workersReportInfo}>
+              <Text style={styles.workersReportTitle}>Workers Report Engine</Text>
+              <Text style={styles.workersReportDesc}>View daily workforce logs with filters</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
+          </Pressable>
         </View>
 
         {/* Report Output */}
