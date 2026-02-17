@@ -1251,6 +1251,7 @@ async def update_organisation_settings(
         "address": data.get("address", ""),
         "email": data.get("email", ""),
         "phone": data.get("phone", ""),
+        "logo_base64": data.get("logo_base64", ""),
         "gst_number": data.get("gst_number", ""),
         "pan_number": data.get("pan_number", ""),
         "cgst_percentage": float(data.get("cgst_percentage", 9.0)),
@@ -1261,6 +1262,10 @@ async def update_organisation_settings(
         "terms_and_conditions": data.get("terms_and_conditions", ""),
         "currency": data.get("currency", "INR"),
         "currency_symbol": data.get("currency_symbol", "₹"),
+        "owner_name": data.get("owner_name", ""),
+        "owner_mobile": data.get("owner_mobile", ""),
+        "owner_address": data.get("owner_address", ""),
+        "owner_email": data.get("owner_email", ""),
         "updated_at": datetime.utcnow(),
     }
     
