@@ -335,6 +335,41 @@ export default function SupervisorDashboard() {
           </Card>
         </View>
       </ScrollView>
+
+      {/* Logout Blocked Modal */}
+      <Modal
+        visible={logoutBlockedModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setLogoutBlockedModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="warning" size={48} color={Colors.warning} />
+            </View>
+            <Text style={styles.modalTitle}>Worker Log Required</Text>
+            <Text style={styles.modalText}>
+              Please submit your daily worker log before logging out. This helps track workforce attendance.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalCancelBtn}
+                onPress={() => setLogoutBlockedModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Stay</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalPrimaryBtn}
+                onPress={goToWorkerLog}
+              >
+                <Ionicons name="people" size={18} color={Colors.white} />
+                <Text style={styles.modalPrimaryText}>Fill Worker Log</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
