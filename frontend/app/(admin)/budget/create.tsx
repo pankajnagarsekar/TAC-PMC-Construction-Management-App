@@ -121,6 +121,7 @@ export default function CreateBudgetScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <ScreenHeader title="Create Budget" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Project Picker */}
         <View style={styles.fieldGroup}>
