@@ -204,6 +204,7 @@ export default function UserManagementScreen() {
           active_status: activeStatus,
           dpr_generation_permission: dprPermission,
           screen_permissions: screenPermissions,
+          assigned_projects: assignedProjects,
         };
         
         await apiRequest(`/api/users/${editingUser.user_id || editingUser._id}`, {
@@ -227,7 +228,7 @@ export default function UserManagementScreen() {
 
       setModalVisible(false);
       resetForm();
-      loadUsers();
+      loadData();
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to save user');
     } finally {
