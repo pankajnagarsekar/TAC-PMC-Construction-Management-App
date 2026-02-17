@@ -1317,6 +1317,236 @@ async def update_organisation_settings(
 # HEALTH CHECK
 # ============================================
 
+# ============================================
+# WORKERS DAILY LOG ENDPOINTS
+# ============================================
+
+@api_router.post("/worker-logs", status_code=status.HTTP_201_CREATED)
+async def create_worker_log(
+    log_data: WorkersDailyLogCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new workers daily log (Supervisor)"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    # Check if log already exists for this date and project
+    existing = await db.worker_logs.find_one({
+        "project_id": log_data.project_id,
+        "date": log_data.date,
+        "supervisor_id": user["user_id"]
+    })
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Worker log already exists for this date. Please update the existing log."
+        )
+    
+    # Calculate totals
+    total_workers = len(log_data.workers)
+    total_hours = sum(w.hours_worked for w in log_data.workers)
+    
+    log_dict = {
+        "organisation_id": user["organisation_id"],
+        "project_id": log_data.project_id,
+        "date": log_data.date,
+        "supervisor_id": user["user_id"],
+        "supervisor_name": user["name"],
+        "workers": [w.dict() for w in log_data.workers],
+        "total_workers": total_workers,
+        "total_hours": total_hours,
+        "weather": log_data.weather,
+        "site_conditions": log_data.site_conditions,
+        "remarks": log_data.remarks,
+        "status": "draft",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    result = await db.worker_logs.insert_one(log_dict)
+    log_dict["log_id"] = str(result.inserted_id)
+    del log_dict["_id"] if "_id" in log_dict else None
+    
+    return log_dict
+
+
+@api_router.get("/worker-logs")
+async def get_worker_logs(
+    project_id: Optional[str] = None,
+    date: Optional[str] = None,
+    supervisor_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get workers daily logs with optional filters"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    query = {"organisation_id": user["organisation_id"]}
+    
+    if project_id:
+        query["project_id"] = project_id
+    if date:
+        query["date"] = date
+    if supervisor_id:
+        query["supervisor_id"] = supervisor_id
+    if status:
+        query["status"] = status
+    
+    logs = await db.worker_logs.find(query).sort("date", -1).to_list(length=100)
+    
+    for log in logs:
+        log["log_id"] = str(log.pop("_id"))
+    
+    return logs
+
+
+@api_router.get("/worker-logs/{log_id}")
+async def get_worker_log(
+    log_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific worker log by ID"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    log = await db.worker_logs.find_one({
+        "_id": ObjectId(log_id),
+        "organisation_id": user["organisation_id"]
+    })
+    
+    if not log:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Worker log not found"
+        )
+    
+    log["log_id"] = str(log.pop("_id"))
+    return log
+
+
+@api_router.put("/worker-logs/{log_id}")
+async def update_worker_log(
+    log_id: str,
+    update_data: WorkersDailyLogUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a workers daily log"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    log = await db.worker_logs.find_one({
+        "_id": ObjectId(log_id),
+        "organisation_id": user["organisation_id"]
+    })
+    
+    if not log:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Worker log not found"
+        )
+    
+    # Prepare update
+    update_dict = {}
+    
+    if update_data.workers is not None:
+        update_dict["workers"] = [w.dict() for w in update_data.workers]
+        update_dict["total_workers"] = len(update_data.workers)
+        update_dict["total_hours"] = sum(w.hours_worked for w in update_data.workers)
+    
+    if update_data.weather is not None:
+        update_dict["weather"] = update_data.weather
+    if update_data.site_conditions is not None:
+        update_dict["site_conditions"] = update_data.site_conditions
+    if update_data.remarks is not None:
+        update_dict["remarks"] = update_data.remarks
+    if update_data.status is not None:
+        update_dict["status"] = update_data.status
+    
+    update_dict["updated_at"] = datetime.utcnow()
+    
+    await db.worker_logs.update_one(
+        {"_id": ObjectId(log_id)},
+        {"$set": update_dict}
+    )
+    
+    updated_log = await db.worker_logs.find_one({"_id": ObjectId(log_id)})
+    updated_log["log_id"] = str(updated_log.pop("_id"))
+    
+    return updated_log
+
+
+@api_router.get("/worker-logs/check/{project_id}/{date}")
+async def check_worker_log_exists(
+    project_id: str,
+    date: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Check if worker log exists for a specific date and project"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    log = await db.worker_logs.find_one({
+        "project_id": project_id,
+        "date": date,
+        "supervisor_id": user["user_id"]
+    })
+    
+    return {
+        "exists": log is not None,
+        "log_id": str(log["_id"]) if log else None,
+        "status": log.get("status") if log else None
+    }
+
+
+@api_router.get("/worker-logs/report/summary")
+async def get_worker_logs_summary(
+    project_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get summary report of worker logs for admin"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    query = {"organisation_id": user["organisation_id"]}
+    
+    if project_id:
+        query["project_id"] = project_id
+    if start_date:
+        query["date"] = {"$gte": start_date}
+    if end_date:
+        if "date" in query:
+            query["date"]["$lte"] = end_date
+        else:
+            query["date"] = {"$lte": end_date}
+    
+    logs = await db.worker_logs.find(query).to_list(length=1000)
+    
+    # Calculate summary statistics
+    total_logs = len(logs)
+    total_workers = sum(log.get("total_workers", 0) for log in logs)
+    total_hours = sum(log.get("total_hours", 0) for log in logs)
+    
+    # Group by skill type
+    skill_breakdown = {}
+    for log in logs:
+        for worker in log.get("workers", []):
+            skill = worker.get("skill_type", "Unknown")
+            if skill not in skill_breakdown:
+                skill_breakdown[skill] = {"count": 0, "hours": 0}
+            skill_breakdown[skill]["count"] += 1
+            skill_breakdown[skill]["hours"] += worker.get("hours_worked", 0)
+    
+    return {
+        "total_logs": total_logs,
+        "total_workers": total_workers,
+        "total_hours": total_hours,
+        "skill_breakdown": skill_breakdown,
+        "date_range": {
+            "start": start_date,
+            "end": end_date
+        }
+    }
+
+
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint"""
