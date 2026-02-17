@@ -34,11 +34,19 @@ const mockSupervisorData: SupervisorDashboardData = {
 export default function SupervisorDashboard() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { selectedProject, clearProject, isProjectSelected } = useProject();
   const [projects, setProjects] = useState<Project[]>([]);
   const [dashboardData, setDashboardData] = useState<SupervisorDashboardData>(mockSupervisorData);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
+
+  // Redirect to project selection if no project selected
+  useEffect(() => {
+    if (!isProjectSelected) {
+      router.replace('/(supervisor)/select-project');
+    }
+  }, [isProjectSelected]);
 
   const loadData = async () => {
     try {
@@ -56,8 +64,10 @@ export default function SupervisorDashboard() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isProjectSelected) {
+      loadData();
+    }
+  }, [isProjectSelected]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
