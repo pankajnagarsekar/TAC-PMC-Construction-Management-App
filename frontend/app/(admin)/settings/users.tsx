@@ -159,6 +159,7 @@ export default function UserManagementScreen() {
     setActiveStatus(user.active_status);
     setDprPermission(user.dpr_generation_permission || false);
     setScreenPermissions(user.screen_permissions || []);
+    setAssignedProjects(user.assigned_projects || []);
     setModalVisible(true);
   };
 
