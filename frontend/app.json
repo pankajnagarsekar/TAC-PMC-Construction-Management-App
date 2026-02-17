@@ -52,6 +52,18 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Verify your presence at the construction site"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Record voice notes for Daily Progress Reports"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
