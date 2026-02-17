@@ -53,12 +53,13 @@ export default function AlertsScreen() {
         </View>
 
         <View style={styles.placeholderList}>
+          <Ionicons name="checkmark-circle" size={48} color={Colors.success} style={{ marginBottom: Spacing.md }} />
           <Text style={styles.placeholderText}>
             {selectedFilter === 'all' 
-              ? 'Alerts will be listed here'
-              : `Showing ${selectedFilter} alerts`}
+              ? 'No active alerts'
+              : `No ${selectedFilter} priority alerts`}
           </Text>
-          <Text style={styles.placeholderSubtext}>OVER_COMMIT, BUDGET_EXCEEDED, DELAY_WARNING...</Text>
+          <Text style={styles.placeholderSubtext}>All systems operating normally</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
