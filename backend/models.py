@@ -77,6 +77,8 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     active_status: Optional[bool] = None
     dpr_generation_permission: Optional[bool] = None
+    assigned_projects: Optional[List[str]] = None
+    screen_permissions: Optional[List[str]] = None
 
 # ============================================
 # USER PROJECT MAP MODEL
