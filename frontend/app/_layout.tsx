@@ -6,6 +6,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { ProjectProvider } from '../contexts/ProjectContext';
 import { LoadingScreen } from '../components/ui';
 import { Colors } from '../constants/theme';
 
