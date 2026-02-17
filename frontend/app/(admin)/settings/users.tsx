@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { usersApi } from '../../../services/apiClient';
+import { usersApi, projectsApi } from '../../../services/apiClient';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../../constants/theme';
 import ScreenHeader from '../../../components/ScreenHeader';
 
@@ -51,6 +51,11 @@ const showAlert = (title: string, message: string) => {
   if (Platform.OS === 'web') window.alert(`${title}: ${message}`);
   else Alert.alert(title, message);
 };
+
+interface Project {
+  project_id: string;
+  project_name: string;
+}
 
 interface User {
   user_id?: string;
