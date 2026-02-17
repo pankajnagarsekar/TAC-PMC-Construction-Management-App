@@ -458,6 +458,8 @@ async def update_user(
         role=updated_user["role"],
         active_status=updated_user["active_status"],
         dpr_generation_permission=updated_user.get("dpr_generation_permission", False),
+        assigned_projects=updated_user.get("assigned_projects", []),
+        screen_permissions=updated_user.get("screen_permissions", []),
         created_at=updated_user["created_at"],
         updated_at=updated_user["updated_at"]
     )
