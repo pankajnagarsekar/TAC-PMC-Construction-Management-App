@@ -1130,7 +1130,8 @@ async def create_petty_cash(
     
     result = await db.petty_cash.insert_one(entry)
     entry["petty_cash_id"] = str(result.inserted_id)
-    del entry["_id"] if "_id" in entry else None
+    if "_id" in entry:
+        del entry["_id"]
     
     return entry
 
