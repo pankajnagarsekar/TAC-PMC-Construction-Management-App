@@ -141,6 +141,7 @@ export default function UserManagementScreen() {
     setActiveStatus(true);
     setDprPermission(false);
     setScreenPermissions([]);
+    setAssignedProjects([]);
     setEditingUser(null);
   };
 
