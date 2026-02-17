@@ -94,6 +94,7 @@ export default function CreateProjectScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <ScreenHeader title="Create Project" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Project Name */}
         <View style={styles.fieldGroup}>
