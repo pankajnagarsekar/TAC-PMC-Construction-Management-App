@@ -84,6 +84,7 @@ const SCREENS = [
 
 export default function UserManagementScreen() {
   const [users, setUsers] = useState<User[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -98,6 +99,23 @@ export default function UserManagementScreen() {
   const [activeStatus, setActiveStatus] = useState(true);
   const [dprPermission, setDprPermission] = useState(false);
   const [screenPermissions, setScreenPermissions] = useState<string[]>([]);
+  const [assignedProjects, setAssignedProjects] = useState<string[]>([]);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [usersData, projectsData] = await Promise.all([
+        usersApi.getAll(),
+        projectsApi.getAll(),
+      ]);
+      setUsers(usersData || []);
+      setProjects(projectsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   const loadUsers = useCallback(async () => {
     try {
