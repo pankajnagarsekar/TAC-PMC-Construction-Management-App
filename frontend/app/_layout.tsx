@@ -31,7 +31,8 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
       if (user?.role === 'Admin') {
         router.replace('/(admin)/dashboard');
       } else {
-        router.replace('/(supervisor)/dashboard');
+        // Supervisors go to project selection first
+        router.replace('/(supervisor)/select-project');
       }
     } else if (isAuthenticated && user) {
       // STRICT ROLE-BASED ACCESS ENFORCEMENT
