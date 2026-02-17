@@ -226,6 +226,8 @@ async def login(login_data: LoginRequest):
         role=user["role"],
         active_status=user["active_status"],
         dpr_generation_permission=user.get("dpr_generation_permission", False),
+        assigned_projects=user.get("assigned_projects", []),
+        screen_permissions=user.get("screen_permissions", []),
         created_at=user["created_at"],
         updated_at=user["updated_at"]
     )
