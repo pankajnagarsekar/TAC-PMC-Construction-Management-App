@@ -439,6 +439,52 @@ export default function UserManagementScreen() {
                   </View>
                 </View>
               )}
+
+              {editingUser && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Assigned Projects</Text>
+                  <Text style={styles.hintText}>Select projects this user can access (for supervisors)</Text>
+                  {projects.length > 0 ? (
+                    <View style={styles.projectGrid}>
+                      {projects.map((project: any) => {
+                        const projectId = project.project_id || project._id;
+                        const isSelected = assignedProjects.includes(projectId);
+                        return (
+                          <Pressable
+                            key={projectId}
+                            style={[styles.projectItem, isSelected && styles.projectItemActive]}
+                            onPress={() => toggleAssignedProject(projectId)}
+                          >
+                            <Ionicons
+                              name={isSelected ? 'checkbox' : 'square-outline'}
+                              size={20}
+                              color={isSelected ? Colors.accent : Colors.textMuted}
+                            />
+                            <View style={styles.projectItemInfo}>
+                              <Text style={[styles.projectItemName, isSelected && styles.projectItemNameActive]} numberOfLines={1}>
+                                {project.project_name}
+                              </Text>
+                              {project.project_code && (
+                                <Text style={styles.projectItemCode}>{project.project_code}</Text>
+                              )}
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View style={styles.noProjectsContainer}>
+                      <Ionicons name="folder-open-outline" size={32} color={Colors.textMuted} />
+                      <Text style={styles.noProjectsText}>No projects available</Text>
+                    </View>
+                  )}
+                  {assignedProjects.length > 0 && (
+                    <Text style={styles.selectedCountText}>
+                      {assignedProjects.length} project{assignedProjects.length > 1 ? 's' : ''} selected
+                    </Text>
+                  )}
+                </View>
+              )}
             </ScrollView>
 
             <View style={styles.modalFooter}>
