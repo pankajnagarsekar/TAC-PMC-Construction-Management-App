@@ -1365,7 +1365,8 @@ async def create_worker_log(
     
     result = await db.worker_logs.insert_one(log_dict)
     log_dict["log_id"] = str(result.inserted_id)
-    del log_dict["_id"] if "_id" in log_dict else None
+    if "_id" in log_dict:
+        del log_dict["_id"]
     
     return log_dict
 
