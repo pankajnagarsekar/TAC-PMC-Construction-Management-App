@@ -88,6 +88,7 @@ export default function SupervisorTabLayout() {
       <Tabs.Screen name="voice-log" options={{ href: null, headerTitle: 'Voice Log' }} />
       <Tabs.Screen name="dpr" options={{ href: null, headerTitle: 'Daily Progress Report' }} />
       <Tabs.Screen name="select-project" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="worker-log" options={{ href: null, headerTitle: 'Workers Daily Log' }} />
     </Tabs>
   );
 }
