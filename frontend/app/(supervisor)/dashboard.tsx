@@ -135,7 +135,7 @@ export default function SupervisorDashboard() {
             <Text style={styles.userName}>{user?.name || 'Supervisor'}</Text>
             <Text style={styles.dateText}>{currentDate}</Text>
           </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
             <Ionicons name="log-out-outline" size={24} color={Colors.textSecondary} />
           </TouchableOpacity>
         </View>
