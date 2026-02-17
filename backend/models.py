@@ -310,3 +310,56 @@ class PettyCashCreate(BaseModel):
     class Config:
         populate_by_name = True
         json_encoders = {ObjectId: str}
+
+
+
+# ============================================
+# WORKERS DAILY LOG MODELS
+# ============================================
+class WorkerEntry(BaseModel):
+    """Individual worker entry in the daily log"""
+    worker_name: str
+    skill_type: str  # Mason, Carpenter, Laborer, Electrician, Plumber, Welder, etc.
+    hours_worked: float = 8.0
+    daily_wage: Optional[float] = None
+    contractor_name: Optional[str] = None
+    notes: Optional[str] = None
+
+class WorkersDailyLog(BaseModel):
+    """Daily log of workers present on site - non-financial tracking"""
+    log_id: Optional[str] = Field(default=None, alias="_id")
+    organisation_id: str
+    project_id: str
+    date: str  # ISO date format YYYY-MM-DD
+    supervisor_id: str
+    supervisor_name: str
+    workers: List[WorkerEntry] = []
+    total_workers: int = 0
+    total_hours: float = 0.0
+    weather: Optional[str] = None  # sunny, cloudy, rainy, etc.
+    site_conditions: Optional[str] = None
+    remarks: Optional[str] = None
+    status: str = "draft"  # draft, submitted
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+
+    class Config:
+        populate_by_name = True
+        json_encoders = {ObjectId: str}
+
+class WorkersDailyLogCreate(BaseModel):
+    """Create request for workers daily log"""
+    project_id: str
+    date: str
+    workers: List[WorkerEntry] = []
+    weather: Optional[str] = None
+    site_conditions: Optional[str] = None
+    remarks: Optional[str] = None
+
+class WorkersDailyLogUpdate(BaseModel):
+    """Update request for workers daily log"""
+    workers: Optional[List[WorkerEntry]] = None
+    weather: Optional[str] = None
+    site_conditions: Optional[str] = None
+    remarks: Optional[str] = None
+    status: Optional[str] = None
