@@ -1082,6 +1082,121 @@ async def get_audit_logs(
 
 
 # ============================================
+# PETTY CASH ENDPOINTS
+# ============================================
+
+@api_router.get("/petty-cash")
+async def get_petty_cash(
+    project_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get petty cash entries"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    query = {"organisation_id": user["organisation_id"]}
+    if project_id:
+        query["project_id"] = project_id
+    
+    entries = await db.petty_cash.find(query).sort("date", -1).to_list(length=100)
+    
+    for entry in entries:
+        entry["petty_cash_id"] = str(entry.pop("_id"))
+    
+    return entries
+
+
+@api_router.post("/petty-cash", status_code=status.HTTP_201_CREATED)
+async def create_petty_cash(
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create petty cash entry"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    entry = {
+        "organisation_id": user["organisation_id"],
+        "project_id": data.get("project_id"),
+        "date": datetime.fromisoformat(data.get("date").replace("Z", "+00:00")) if isinstance(data.get("date"), str) else data.get("date"),
+        "description": data.get("description"),
+        "amount": float(data.get("amount", 0)),
+        "type": data.get("type", "expense"),
+        "category": data.get("category", "general"),
+        "receipt_url": data.get("receipt_url"),
+        "status": "pending",
+        "created_by": user["user_id"],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    result = await db.petty_cash.insert_one(entry)
+    entry["petty_cash_id"] = str(result.inserted_id)
+    del entry["_id"] if "_id" in entry else None
+    
+    return entry
+
+
+@api_router.put("/petty-cash/{entry_id}")
+async def update_petty_cash(
+    entry_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update petty cash entry"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    existing = await db.petty_cash.find_one({"_id": ObjectId(entry_id)})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    update_data = {
+        "description": data.get("description", existing.get("description")),
+        "amount": float(data.get("amount", existing.get("amount"))),
+        "type": data.get("type", existing.get("type")),
+        "category": data.get("category", existing.get("category")),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.petty_cash.update_one({"_id": ObjectId(entry_id)}, {"$set": update_data})
+    
+    updated = await db.petty_cash.find_one({"_id": ObjectId(entry_id)})
+    updated["petty_cash_id"] = str(updated.pop("_id"))
+    return updated
+
+
+@api_router.delete("/petty-cash/{entry_id}")
+async def delete_petty_cash(
+    entry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete petty cash entry"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    existing = await db.petty_cash.find_one({"_id": ObjectId(entry_id)})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    await db.petty_cash.delete_one({"_id": ObjectId(entry_id)})
+    return {"message": "Entry deleted successfully"}
+
+
+@api_router.post("/petty-cash/{entry_id}/approve")
+async def approve_petty_cash(
+    entry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Approve petty cash entry"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    await permission_checker.check_admin_role(user)
+    
+    await db.petty_cash.update_one(
+        {"_id": ObjectId(entry_id)},
+        {"$set": {"status": "approved", "approved_by": user["user_id"], "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Entry approved"}
+
+
+# ============================================
 # HEALTH CHECK
 # ============================================
 
