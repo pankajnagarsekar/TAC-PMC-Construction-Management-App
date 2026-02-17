@@ -518,6 +518,7 @@ export default function CreateDPRScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <ScreenHeader title={dprId ? "Add Photos to DPR" : "Create DPR"} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Step 1: DPR Details */}
         {!dprId && (
