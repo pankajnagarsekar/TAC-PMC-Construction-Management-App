@@ -120,6 +120,27 @@ export default function SupervisorDashboard() {
           </TouchableOpacity>
         </View>
 
+        {/* Selected Project Card */}
+        {selectedProject && (
+          <TouchableOpacity 
+            style={styles.selectedProjectCard}
+            onPress={() => router.push('/(supervisor)/select-project')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.selectedProjectIcon}>
+              <Ionicons name="business" size={20} color={Colors.accent} />
+            </View>
+            <View style={styles.selectedProjectInfo}>
+              <Text style={styles.selectedProjectLabel}>Working on</Text>
+              <Text style={styles.selectedProjectName}>{selectedProject.project_name}</Text>
+            </View>
+            <View style={styles.switchProjectBtn}>
+              <Text style={styles.switchProjectText}>Switch</Text>
+              <Ionicons name="swap-horizontal" size={16} color={Colors.accent} />
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Attendance Status Card */}
         <Card style={[styles.attendanceCard, isCheckedIn && styles.attendanceCardCheckedIn]}>
           <View style={styles.attendanceHeader}>
