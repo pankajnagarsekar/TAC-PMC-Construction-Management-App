@@ -1,238 +1,264 @@
 <analysis>
 
-<original_problem_statement>
-The user has initiated a multi-phase backend and frontend refactoring project to improve financial integrity, robustness, and user experience.
+**original_problem_statement**:
+The user initially requested the completion of UI-6 (Client-side budget validation). However, during the session, the user provided a large list of critical bugs and new feature requests that superseded the original plan.
 
-**Backend Refactoring (Phases 1-6):**
-*   **Phase 1-3 (Completed before this session):** Financial determinism, immutable snapshots, and a state machine utility were implemented.
-*   **Phase 3B:** Wire the  into all core services.
-*   **Phase 4:** Introduce accounting periods, a  for global settings, and budget reduction guards.
-    *   **4A:** Create  migration.
-    *   **4B:** Enforce period locking in the determinism layer.
-    *   **4C:** Create a .
-    *   **4D:** Wire the  into other services.
-    *   **4E:** Add a guard to prevent budget reduction below the certified value.
-*   **Phase 5:** Improve event handling and data integrity.
-    *   **5A:** Ensure domain events are dispatched *after* DB transactions commit.
-    *   **5B:** Create a  for background verification.
-    *   **5C:** Enforce  for idempotency on all financial endpoints.
-*   **Phase 6:** Implement a Read Model/CQRS pattern.
-    *   **6A:** Create a  module.
-    *   **6B:** Trigger read model updates after financial mutations.
-    *   **6C:** Ensure validation logic uses only canonical data sources, not read models.
+**New High-Priority Requirements & Issues (from user):**
 
-**Frontend UI Tasks (UI-1 to UI-6):**
-*   **UI-1:** Replace hardcoded action buttons with dynamic buttons based on state machine transitions.
-*   **UI-2:** Implement a Locked state UI for documents.
-*   **UI-3:** Add a version selector to view historical document snapshots.
-*   **UI-4:** Refactor the dashboard to use backend read models instead of client-side calculations.
-*   **UI-5:** Handle  from the backend gracefully.
-*   **UI-6:** Add client-side validation to the budget edit form.
+*   **Critical Bugs:**
+    *   **Work Order (WO) module:**
+        *   Saved WOs are not visible in the WO list.
+        *   The Create WO action on the form does not work correctly (screen disappears, WO is not shown).
+        *   Action buttons on existing WOs (e.g., Issue) do not work.
+        *   Vendor dropdown is not populated on the create screen.
+    *   **Petty Cash, Contract Schedule, Activity Timeline:** UI screens are missing or are just placeholders.
+    *   **Supervisor Role:**
+        *   Supervisors with DPR rights cannot see the DPR option on their dashboard.
+        *    and  UIs are non-functional.
+        *   Profile screen buttons do not work.
+        *   Voice note functionality is broken.
+    *   **DPR Module:** AI caption generation is inaccurate.
 
-**DPR Bugs (From previous session):**
-1.  AI-generated captions for images are not working.
-2.  The application crashes when adding a second photo to a DPR.
-3.  Attempting to edit a draft DPR results in a 404 Not Found error.
-</original_problem_statement>
+*   **New Feature Requests:**
+    *   **General:**
+        *   Add a Back button to all relevant screens.
+        *   Provide success/failure feedback messages for all database operations.
+    *   **Settings:**
+        *   Implement full CRUD (Create, Read, Update, Delete) for Vendor Management.
+        *   Implement full CRUD for Activity Codes.
+        *   Make Organization Settings editable and add new fields (Terms & Conditions, GST%, prefixes, company logo, owner details).
+        *   Implement full CRUD for User Management, including the ability for an Admin to assign specific projects to a user.
+        *   Allow Admin to edit Help & Support and Terms of Service text.
+    *   **Supervisor Workflow:**
+        *   The supervisor's workflow must be project-centric. They must select a project first.
+        *   Implement a full check-in/DPR/checkout flow, including capturing selfie photos and GPS location on check-in.
+        *   DPR creation is a priority. It should enforce a minimum of 4 portrait-mode photos, have auto-generated (but editable) AI captions, and include voice notes/text reports.
+        *   Generated DPR PDF should have a specific filename format ().
+    *   **New Modules:**
+        *   **Workers Daily Log:** A simple, non-financial daily log for supervisors to enter worker details.
+        *   **Workers Report Engine:** An admin-facing report to view and filter worker log data.
+        *   **Enforcement:** Block supervisor logout if the daily worker log is not filled.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application has undergone extensive refactoring in both the backend and frontend.
-- **Backend**: Phases 3B through 6C have been implemented. This includes wiring the state machine, adding accounting period locks, a policy service, idempotency wrappers, a financial integrity job, and the skeleton for a read model service. The core financial logic is now significantly more robust.
-- **Frontend**: The three critical DPR bugs have been addressed with code changes. UI tasks 1 through 5 have been completed, introducing dynamic action buttons, locked state indicators, a version selector for historical data, a refactored dashboard, and specific error handling for locked periods. Several new reusable components (, ) have been created.
+The agent has addressed a number of the user's requests.
+- **Backend:**
+  - The budget update endpoint was fixed to work in a non-transactional MongoDB environment.
+  - New CRUD endpoints have been created for Vendors, Petty Cash, and Organization Settings.
+  - A  endpoint was added for Users.
+  - The AI caption endpoint was fixed to use the correct  format.
+  - Endpoints were added for WO transitions (, ).
+- **Frontend:**
+  - A reusable  component with a back button was created and added to most create screens.
+  - **New/Overhauled Screens:** Full UI/CRUD functionality has been implemented for Petty Cash (), Activity Timeline (), Appearance Settings (), Activity Codes (), Organization Settings (), and User Management ().
+  - **Vendor Management:** A new screen () and navigation link were created.
+  - **Supervisor:** The dashboard now conditionally shows a DPR button based on user permissions. A new (placeholder) DPR screen was created in the supervisor context.
+  - The confusing text on the  screen has been clarified.
 
 **Last working item**:
-- Last item agent was working: The agent was working on **Task UI-6**: Add client-side validation to block budget edits where the new budget is less than the certified value. The agent identified that no dedicated budget edit screen existed and began implementing an inline edit feature directly within the budget list screen ().
+- Last item agent was working: The agent was implementing the ability for an Admin to assign projects to users. This involved adding a multi-select project dropdown to the user editing form. The last action was modifying the user management UI file.
 - Status: IN PROGRESS
 - Agent Testing Done: N
 - Which testing method agent to use? frontend testing agent
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- Issue 1: Complete UI-6 Budget Edit Validation (P0)
-- Issue 2: Thoroughly Test DPR Bug Fixes (P1)
-- Issue 3: Incomplete Backend Read Models (P2)
+- Issue 1: Work Order (WO) module is critically broken (P0)
+- Issue 2: Supervisor DPR button navigates to a placeholder (P1)
+- Issue 3: Several Supervisor UI screens are non-functional (P2)
+- Issue 4: Incomplete Backend Read Models (P3)
+- Issue 5: DPR AI Caption generation is inaccurate (P3)
 
 Issues Detail:
-- Issue 1: **Complete UI-6 Budget Edit Validation**
-    - Attempted fixes: The agent started modifying  to add inline editing capabilities. The work is incomplete.
+- Issue 1: **Work Order (WO) module is critically broken**
+    - Description: The entire WO lifecycle is broken. Users cannot reliably create WOs (the form submission redirects but the new WO doesn't appear in the list), the list doesn't display existing WOs correctly, and action buttons like Issue or Cancel do not function as expected on the UI. The user has explicitly requested to **pause work on this issue**.
+    - Attempted fixes: The agent added non-transactional fallbacks for backend operations, fixed API client calls, and attempted to fix list refresh issues using  and  (which caused a separate crash and was reverted). The root cause is likely a combination of frontend state management, navigation, and data refresh logic.
     - Next debug checklist:
-        1.  Review the changes made to .
-        2.  Complete the implementation of the inline editing UI.
-        3.  Fetch the  for the budget item being edited.
-        4.  Add the client-side validation logic to check  before submitting the update.
-        5.  Display an inline error message if the validation fails.
-    - Why fix this issue and what will be achieved with the fix?: This is the final UI task requested by the user, ensuring data integrity from the client side.
-    - Status: IN PROGRESS
+        1. When the user gives the green light, re-investigate .
+        2. Verify the data being returned from .
+        3. Check the  and  functions to ensure they are correctly processing the data.
+        4. Debug the  and data loading logic to fix the list display.
+        5. Re-examine the  component to debug why the Issue button click does not trigger the backend call correctly from the UI, even though the API works via .
+    - Why fix this issue and what will be achieved with the fix?: This is a core feature of the application. Fixing it is essential for managing work and finances.
+    - Status: BLOCKED (by user instruction)
+    - Is recurring issue?: Y
+    - Should Test frontend/backend/both after fix?: both
+    - Blocked on other issue: None
+
+- Issue 2: **Supervisor DPR button navigates to a placeholder**
+    - Description: The agent correctly made the DPR button visible for supervisors with permission, but clicking it leads to a blank placeholder screen  instead of the actual DPR creation form.
+    - Attempted fixes: The agent created  and linked to it from the dashboard. This was a structural fix to solve a navigation context problem.
+    - Next debug checklist:
+        1. Copy the functionality from the admin DPR creation screen  into the new supervisor screen .
+        2. Adapt the copied code to work within the supervisor context (e.g., different layouts, available data).
+        3. Ensure the project selection logic is implemented as the first step.
+    - Why fix this issue and what will be achieved with the fix?: This is the entry point for the critical DPR workflow for supervisors.
+    - Status: NOT STARTED
     - Is recurring issue?: N
     - Should Test frontend/backend/both after fix?: frontend
     - Blocked on other issue: None
 
-- Issue 2: **Thoroughly Test DPR Bug Fixes**
-    - Attempted fixes: The agent implemented code fixes for all three DPR bugs (AI captions, 2nd photo crash, 404 on edit). However, verification was minimal (checking backend health). The user explicitly requested *thorough* testing.
+- Issue 3: **Several Supervisor UI screens are non-functional**
+    - Description: The user reported that the  and  screens in the supervisor section are not functional.
+    - Attempted fixes: None. The agent has not worked on these screens yet.
     - Next debug checklist:
-        1.  **AI Captions:** Go to the DPR creation screen, add a photo, and click Get AI Caption. Verify a caption is generated and displayed. Check backend logs for the call to .
-        2.  **Photo Crash:** Go to the DPR creation screen, add one photo, then add a second photo. Verify the app does not crash and both photos are displayed in the list.
-        3.  **Edit 404:** Create and save a DPR as a Draft. Navigate back to the DPR list, find the draft, and click to edit it. Verify the edit screen loads with the correct data and does not show a 404 error.
-    - Why fix this issue and what will be achieved with the fix?: These are critical user-reported bugs that were a high priority. Confirming the fixes is essential for feature usability.
-    - Status: USER VERIFICATION PENDING
-    - Is recurring issue?: Y (The AI caption issue was a recurring problem)
+        1. Inspect  and .
+        2. Identify the required backend APIs for these features.
+        3. Implement the backend APIs if they don't exist.
+        4. Build out the frontend UI to capture and display the relevant data.
+    - Why fix this issue and what will be achieved with the fix?: Fulfills the user's requirement for supervisors to log project progress and issues.
+    - Status: NOT STARTED
+    - Is recurring issue?: N
     - Should Test frontend/backend/both after fix?: both
     - Blocked on other issue: None
 
-- Issue 3: **Incomplete Backend Read Models**
-    - Attempted fixes: The agent created  and the  (Phase 6A). The frontend dashboard was refactored to call these new endpoints (UI-4). However, the methods within  are currently empty stubs.
+- Issue 4: **Incomplete Backend Read Models**
+    - Description: This is a carry-over issue from the initial plan. The admin dashboard was refactored to use CQRS-style read models from , but the methods in that file are empty stubs. This means the admin dashboard is likely broken and not displaying any data.
+    - Attempted fixes: None in this session. The file was created in a previous session.
     - Next debug checklist:
-        1.  Implement the logic for  and  in .
-        2.  These methods should read from  and other base tables to generate the summary data.
-        3.  Ensure the corresponding API endpoints in  call these service methods and return the data.
-    - Why fix this issue and what will be achieved with the fix?: The main admin dashboard is now dependent on these backend endpoints. Without this fix, the dashboard will not display any data.
+        1. Implement the logic for  and  in .
+        2. These methods should read from  and other base tables to generate summary data.
+    - Why fix this issue and what will be achieved with the fix?: This will make the main admin dashboard functional again.
     - Status: NOT STARTED
     - Is recurring issue?: N
     - Should Test frontend/backend/both after fix?: backend
     - Blocked on other issue: None
 
+- Issue 5: **DPR AI Caption generation is inaccurate**
+    - Description: User reported that the AI still provides incorrect captions (e.g., Foundation work for a finished cupboard).
+    - Attempted fixes: The agent fixed a technical bug in how the image data was sent to the  library. However, this did not address the model's performance or prompt engineering.
+    - Next debug checklist:
+        1. Review the prompt being sent to the vision model in  inside the  function.
+        2. Improve the prompt to be more specific (e.g., Describe the construction activity happening in this photo.).
+        3. Consider providing more context to the model if possible.
+    - Why fix this issue and what will be achieved with the fix?: Improves the usability and accuracy of a key DPR feature.
+    - Status: IN PROGRESS
+    - Is recurring issue?: Y
+    - Should Test frontend/backend/both after fix?: backend
+    - Blocked on other issue: None
+
 **In progress Task List**:
-- Task 1: **Implement inline budget editing on **
-    - Where to resume: Continue editing .
-    - What will be achieved with this?: This will provide the UI necessary to complete the validation requested in UI-6.
+- Task 1: **Complete Admin UI for Assigning Projects to Users** (P0)
+    - Where to resume: Continue editing . The agent was adding a multi-select component for  within the user edit modal.
+    - What will be achieved with this?: This is a prerequisite for the supervisor's project-centric workflow. Admins need to be able to assign projects before supervisors can select them.
     - Status: IN PROGRESS
     - Should Test frontend/backend/both after fix?: frontend
     - Blocked on something: None
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-  - **P0: Implement missing logic in backend services:** The  and  files exist but their methods are empty. They need to be fully implemented to make the corresponding frontend features functional.
-  - **P1: Schedule Financial Integrity Job:** The  file was created, but it is not scheduled to run. It needs to be integrated with a scheduler (e.g., cron, APScheduler).
-- **Future Tasks:**
-  - Apply the dynamic transition buttons (UI-1) and locked state UI (UI-2) to the  and  screens.
-  - Apply the version selector (UI-3) to the Work Order and Payment Certificate detail pages.
-  - Add caching for read model responses on the frontend.
+*   **A. Supervisor Workflow (P0)**
+    1.  **Project Selection:** Implement a project selection screen or context provider for supervisors. This must be the first step.
+    2.  **DPR Implementation:** Build out the full  screen with all requested features (project selection, 4 portrait photos, auto AI captions, voice/text notes).
+    3.  **Check-in/Checkout Flow:**
+        *   Implement the attendance screen () with selfie photo capture on check-in.
+        *   Integrate GPS location capture on check-in.
+        *   Implement logic to enable the checkout button only after a DPR is submitted.
+        *   Store check-in/out times.
+    4.  **UI Implementation:** Build the UIs for Update Progress and Report Issue (, ).
+*   **B. New Modules (P1)**
+    1.  **Workers Daily Log (Backend):** Create DB model and API endpoints.
+    2.  **Workers Daily Log (Frontend):** Create UI for supervisor to submit the log.
+    3.  **Logout Enforcement:** Implement the server-side check to block supervisor logout if the worker log is not submitted.
+    4.  **Workers Report Engine:** Create backend API and admin-facing UI with filters and export functionality.
+*   **C. Settings & Admin (P2)**
+    1.  **Help & TOS:** Create UI for Admin to edit Help & Support and Terms of Service text.
+    2.  **Report Filters:** Add filtering capabilities to the main Reports screen.
+*   **D. Work Order Module (BLOCKED)**
+    1.  Once unblocked by the user, perform a full diagnosis and fix of the WO list, create, and action button issues.
 
 **Completed work in this session**
-- **DPR Bug Fixes (Code Complete):** Addressed issues with AI captions, multi-photo crashes, and 404 errors on draft edits. *Verification is pending.*
-- **Backend Phase 3B (StateMachine Wiring):** Refactored  to use the state machine for all relevant financial operations.
-- **Backend Phases 4-6 (Core Refactor):**
-  - Implemented accounting period migrations and locking logic.
-  - Created and wired a .
-  - Added a budget reduction guard.
-  - Confirmed correct domain event dispatch.
-  - Created a financial integrity background job ().
-  - Enforced idempotency across all financial endpoints.
-  - Created a read models service skeleton ().
-  - Corrected validation logic to use canonical data sources.
-- **Frontend UI Tasks 1-5 (Complete):**
-  - Implemented  for dynamic action buttons.
-  - Added Locked state UI to WO and PC screens.
-  - Implemented  on the DPR detail page.
-  - Refactored the dashboard to call read model APIs.
-  - Added frontend handling for .
+- **Backend Infrastructure:**
+  - Implemented a non-transactional fallback in  and  to support single-instance MongoDB environments.
+- **New Backend Endpoints:**
+  - Full CRUD for Vendors ().
+  - Full CRUD for Petty Cash ().
+  - GET/UPDATE for Organization Settings ().
+  - DELETE for Users ().
+  - GET transitions for Work Orders ().
+- **Frontend UI Implementation:**
+  - Added a reusable  with a back button to most creation screens.
+  - Implemented full CRUD UIs for:
+    - Vendor Management ()
+    - Petty Cash ()
+    - Activity Codes ()
+    - User Management ()
+  - Implemented editable forms for:
+    - Organization Settings ()
+    - Appearance Settings ()
+  - Implemented a view-only Activity Timeline ().
+- **Bug Fixes:**
+  - Corrected the API call format for AI caption generation in .
+  - Clarified placeholder text on the System Alerts screen ().
+  - Made the DPR button conditionally visible on the supervisor dashboard.
 
 **Earlier issues found/mentioned but not fixed**
-- No issues were mentioned and subsequently ignored. The agent systematically worked through the user's phased requests.
+- The entire Work Order module functionality remains broken, as detailed in the Pending Issues section. Work on this was explicitly halted by the user.
+
+**Known issue recurrence from previous fork**
+- **AI Caption Accuracy:** The issue of the AI model providing poor-quality captions for DPR images was present in the previous fork, was fixed from a technical perspective, but then reported again by the user as still being inaccurate. The problem is one of quality/prompting, not just a technical bug.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend**: State Machines, Idempotency (Operation ID), Pessimistic Locking, CQRS (Read Models), Background Jobs, Policy-Based Control.
-- **Frontend**: Reusable Components (Hooks), Dynamic UI rendering based on state, State Management (for loading/error/locked states), Client-side validation.
-- **Database**: MongoDB
+- **Non-Transactional Fallback:** A pattern was established to handle the lack of a MongoDB replica set in the environment. Core financial services now attempt a transaction and fall back to a non-transactional (but still validated) operation upon failure.
+- **Role-Based UI:** The supervisor dashboard demonstrates conditional rendering of features () based on user role and permissions fetched from an Auth Context.
+- **Navigation Contexts:** The agent encountered issues navigating between different route groups ( vs. ) and created a new route within the target context to solve it.
 
 **key DB schema**
-- **accounting_periods**: 
+- **petty_cash**: 
+- **organization_settings**: A singleton document containing fields like , , , , etc.
+- **users**: (Updated) Now includes an optional  array.
 
 **All files of reference**
-- **/app/frontend/app/(admin)/budget.tsx**: File being edited for the last working item (UI-6).
-- **/app/backend/core/read_models.py**: A skeleton file that needs to be implemented to make the dashboard functional.
-- **/app/frontend/app/(admin)/dpr/create.tsx**: Contains bug fixes that need thorough verification.
-- **/app/backend/wave3_routes.py**: Contains bug fixes that need thorough verification.
+- : **(IN PROGRESS)** Last file being worked on.
+- : **(BROKEN)** The main file for the broken Work Order list.
+- : Contains the non-transactional fallback pattern.
+- : Entry point for the supervisor workflow.
+- User feedback messages , , and  are critical for understanding the upcoming tasks.
 
 **Critical Info for New Agent**
-- **Finish UI-6:** Your immediate task is to complete the budget editing validation in . The previous agent started an inline edit approach you should review and complete.
-- **VERIFY DPR FIXES:** The user explicitly requested thorough testing of the DPR bug fixes. Do not assume they work. Follow the test plan in the Pending Issues section. This is a higher priority than starting new feature work.
-- **SKELETON BACKEND:** Be aware that several completed backend features are just skeletons. The dashboard is now calling an empty  service. After verifying bug fixes, implementing the logic for these backend services is the next logical step.
-- **Browser Warnings:** The Expo Metro bundler may show  CORS warnings in the logs. These are generally harmless and related to the browser preview environment, not a backend code error. Restarting the frontend (expo: ERROR (not running)
-expo: started) can help clear stale states.
+- **DO NOT WORK ON THE WO MODULE.** The user has explicitly instructed to pause all work on the Work Order functionality due to persistent bugs. Acknowledge that it's broken but wait for user instruction before attempting to fix it.
+- Your immediate task is to complete the **Assign Projects to User** feature in . This is P0 for the next set of supervisor features.
+- The majority of the upcoming work revolves around implementing the **Supervisor role** and its specific workflows (Project Selection, DPR, Check-in/out, Worker Logs) as detailed by the user.
+- **MongoDB Environment Constraint:** The environment runs a single MongoDB instance, not a replica set. This means **MongoDB transactions will fail**. You must continue to use the established transactional with non-transactional fallback pattern for any new financial operations. Refer to  for an example.
+- After finishing the current task, present a new plan to the user based on the Upcoming and Future Tasks list, focusing on the supervisor workflow next.
 
 **documents created in this job**
-- /app/backend/migrations/003_accounting_periods.py
-- /app/backend/core/policy_service.py
-- /app/backend/core/financial_integrity_job.py
-- /app/backend/core/idempotency.py
-- /app/backend/core/read_models.py
-- /app/frontend/components/TransitionActions.tsx
-- /app/frontend/components/VersionSelector.tsx
+- /app/frontend/components/ScreenHeader.tsx
+- /app/frontend/app/(admin)/vendors.tsx
+- /app/frontend/app/(admin)/petty-cash.tsx
+- /app/frontend/app/(admin)/timeline.tsx
+- /app/frontend/app/(supervisor)/dpr.tsx
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Msg 332 (IN PROGRESS)**: User requested UI-6, blocking budget edits with an inline error if .
-2.  **Msg 313 (DONE)**: User requested UI-5, handling  on the frontend.
-3.  **Msg 302 (DONE)**: User requested UI-4, refactoring the dashboard to use read models.
-4.  **Msg 277 (DONE)**: User requested UI-3, adding a version selector to detail pages.
-5.  **Msg 234 (DONE)**: User requested UI-2, implementing a Locked state UI.
-6.  **Msg 217 (DONE)**: User requested UI-1, creating dynamic action buttons.
-7.  **Msg 202 (DONE)**: User requested Phase 6C, ensuring validation uses canonical data.
-8.  **Msg 189 (ADDRESSED)**: User reported an error, which was diagnosed as a harmless browser warning.
-9.  **Msg 176 (DONE)**: User requested Phase 6B, triggering projection updates.
-10. **Msg 169 (DONE)**: User requested Phase 6A, creating the read models module.
+1.  **Msg 556 (IN PROGRESS):** User confirms to proceed with task A1b (Assign projects to supervisors).
+2.  **Msg 553 (PENDING):** User provided detailed requirements for the DPR module and project selection for supervisors.
+3.  **Msg 536 (IN PROGRESS):** User verified the DPR button is visible but reported it doesn't work. Added requirement for project-centric supervisor workflow.
+4.  **Msg 513 (IN PROGRESS):** User confirms to start with task A1 (Fix supervisor DPR access).
+5.  **Msg 510 (PENDING):** User provided a very large list of issues and new requirements for the Supervisor role and two new modules (Worker Log & Report).
+6.  **Msg 491 (DONE):** User confirms to proceed with task 10 (User Management CRUD).
+7.  **Msg 482 (DONE):** User requested additions to the Organization Settings screen (logo, owner details, success message).
+8.  **Msg 463 (DONE):** User provided detailed requirements for the Organization Settings screen.
+9.  **Msg 452 (DONE):** User confirms to proceed with task 8 (Activity Codes CRUD).
+10. **Msg 441 (DONE):** User confirms to proceed with task 7 (Appearance UI).
 
 **Project Health Check:**
-- **Broken**: Yes. The main dashboard is currently non-functional as it relies on backend read model endpoints that are just stubs. The budget editing feature is half-implemented.
+- **Broken**: Yes. The core Work Order module is non-functional, blocking a primary workflow of the application. The Admin Dashboard is likely non-functional due to incomplete read models. Many parts of the supervisor UI are placeholders.
 
 **3rd Party Integrations**
-- **OpenAI GPT-4 Vision**: Accessed via the  library. Uses the Emergent LLM Key.
+- **OpenAI GPT-4 Vision**: Accessed via the  library for DPR AI Captions. Uses the Emergent LLM Key.
 
 **Testing status**
 - Testing agent used after significant changes: NO
 - Troubleshoot agent used after agent stuck in loop: NO
 - Test files created: []
 - Known regressions:
-    - The Admin Dashboard is currently broken because the backend read-model endpoints it calls are not fully implemented.
-
-**Credentials to test flow:**
-- **Admin**:  / 
-- **Note**: Database may need to be re-seeded with 🌱 Starting database seeding...
-📊 Creating organisation...
-   ✅ Organisation created: 699391b1d9052b5d5d5ba9ef
-⚙️  Creating global settings...
-   ✅ Global settings created (Currency: INR)
-👤 Creating admin user...
-   ✅ Admin user created
-      📧 Email: admin@example.com
-      🔑 Password: admin123
-      ⚠️  CHANGE PASSWORD AFTER FIRST LOGIN!
-🏷️  Creating Code Master entries...
-   ✅ Code created: CIV - Civil Works
-   ✅ Code created: ELC - Electrical Works
-   ✅ Code created: PLB - Plumbing Works
-   ✅ Code created: FIN - Finishing Works
-   ✅ Code created: SWP - Site Work and Preparation
-📇 Creating database indexes...
-   ✅ Indexes created
-
-============================================================
-✨ DATABASE SEEDING COMPLETE ✨
-============================================================
-
-📊 Organisation ID: 699391b1d9052b5d5d5ba9ef
-👤 Admin Email: admin@example.com
-🔑 Admin Password: admin123
-💰 Default Currency: INR
-🏷️  Code Master Entries: 5
-
-⚠️  SECURITY: Change admin password after first login!
-
-🚀 Phase 1 Foundation Ready
-   - JWT Authentication enabled
-   - Permission enforcement active
-   - Audit logging operational
-   - Financial recalculation engine ready
-
-📖 API Documentation: http://localhost:8001/docs
-============================================================ if the MongoDB instance is reset.
+    - The entire Work Order module is broken.
+    - The Admin Dashboard is likely broken due to incomplete backend read models.
 
 **What agent forgot to execute**
-- The agent did not perform the *thorough testing* of the DPR bug fixes as requested by the user in message 18. It performed basic backend health checks but did not do a full end-to-end user flow verification for each bug.
+- The agent has been following the user's most recent (and rapidly changing) instructions. However, the initial task from the previous fork, **Phase 6: Implement Read Model/CQRS pattern**, remains incomplete ( is a stub), which is the cause of the broken Admin Dashboard. This has been de-prioritized in favor of the user's new list of critical UI bugs and features.
 
 </analysis>
