@@ -171,6 +171,19 @@ export default function UserManagementScreen() {
     );
   };
 
+  const toggleAssignedProject = (projectId: string) => {
+    setAssignedProjects(prev =>
+      prev.includes(projectId)
+        ? prev.filter(p => p !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
+  const getProjectName = (projectId: string) => {
+    const project = projects.find(p => (p as any).project_id === projectId || (p as any)._id === projectId);
+    return project?.project_name || projectId;
+  };
+
   const handleSave = async () => {
     if (!name.trim() || !email.trim()) {
       showAlert('Validation Error', 'Name and Email are required');
