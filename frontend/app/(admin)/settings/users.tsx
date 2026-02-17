@@ -66,6 +66,7 @@ interface User {
   active_status: boolean;
   dpr_generation_permission?: boolean;
   screen_permissions?: string[];
+  assigned_projects?: string[];
 }
 
 const ROLES = ['Admin', 'Supervisor', 'User'];
