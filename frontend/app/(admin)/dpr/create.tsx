@@ -23,6 +23,7 @@ import { Camera, CameraView } from 'expo-camera';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { apiClient, projectsApi } from '../../../services/apiClient';
+import ScreenHeader from '../../../components/ScreenHeader';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../../constants/theme';
 
 interface CapturedImage {
