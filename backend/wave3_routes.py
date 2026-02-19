@@ -857,12 +857,11 @@ async def speech_to_text(
             }
         
         # Step 2: Translate to English using GPT
-        chat = LlmChat(api_key=api_key, model="gpt-4o-mini")
-        translation_prompt = f"""Translate the following text to English. If it's already in English, just clean it up and return it. Only return the translated text, nothing else.
-
-Text: {transcript}"""
+        from emergentintegrations.llm.openai import LlmChat
+        import uuid
+        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="You are a translator. Translate text to English.")
         
-        english_text = await chat.send_message(translation_prompt)
+        english_text = await chat.send_message(f"Translate to English. Only return the translation, nothing else: {transcript}")
         
         return {
             "transcript": english_text.strip() if english_text else transcript.strip(),
