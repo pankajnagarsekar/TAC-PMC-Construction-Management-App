@@ -205,8 +205,9 @@ export default function SupervisorDashboard() {
             <Text style={styles.greeting}>Hello, {user?.name || 'Supervisor'}!</Text>
             <Text style={styles.dateText}>{currentDate}</Text>
           </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Ionicons name="log-out-outline" size={24} color={Colors.textSecondary} />
+          <TouchableOpacity onPress={handleLogout} style={styles.checkoutButton}>
+            <Ionicons name="exit-outline" size={20} color={Colors.white} />
+            <Text style={styles.checkoutButtonText}>Checkout</Text>
           </TouchableOpacity>
         </View>
 
