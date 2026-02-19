@@ -28,7 +28,7 @@ const getBaseUrl = (): string => {
     return '';  // Use relative paths
   }
   // For native apps, use the backend URL from env
-  const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://contflow-3.preview.emergentagent.com';
+  const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://dpr-attendance.preview.emergentagent.com';
   console.log('Using backend URL:', backendUrl);
   return backendUrl;
 };
