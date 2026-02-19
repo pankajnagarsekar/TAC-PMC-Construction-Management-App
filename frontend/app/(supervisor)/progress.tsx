@@ -229,6 +229,21 @@ export default function SupervisorProgress() {
 
   const summary = getSummary();
 
+  // No project selected state
+  if (!selectedProject) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="folder-open-outline" size={64} color={Colors.textMuted} />
+          <Text style={styles.loadingText}>No project selected</Text>
+          <Text style={[styles.loadingText, { fontSize: FontSizes.sm }]}>
+            Please select a project from the dashboard
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
