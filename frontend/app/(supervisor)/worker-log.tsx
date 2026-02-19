@@ -704,4 +704,19 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     color: Colors.textMuted,
   },
+  doneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.success,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.md,
+    gap: Spacing.xs,
+  },
+  doneButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
+    fontSize: FontSizes.sm,
+  },
 });
