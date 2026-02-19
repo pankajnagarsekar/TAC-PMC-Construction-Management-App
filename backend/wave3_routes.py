@@ -1040,6 +1040,28 @@ async def generate_dpr_pdf(
         )
 
 
+
+@wave3_router.delete("/dpr/{dpr_id}")
+async def delete_dpr(
+    dpr_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a DPR (only drafts or by owner)"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    dpr = await db.dpr.find_one({"_id": ObjectId(dpr_id)})
+    if not dpr:
+        raise HTTPException(status_code=404, detail="DPR not found")
+    
+    # Only owner or admin can delete
+    if dpr.get("supervisor_id") != user["user_id"] and user.get("role") != "Admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    await db.dpr.delete_one({"_id": ObjectId(dpr_id)})
+    return {"message": "DPR deleted"}
+
+
+
 @wave3_router.post("/dpr/{dpr_id}/submit")
 async def submit_dpr(
     dpr_id: str,
