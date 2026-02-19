@@ -63,6 +63,11 @@ class PermissionChecker:
         if user.get("role") == "Admin":
             return True
         
+        # First check if project is in user's assigned_projects
+        assigned_projects = user.get("assigned_projects", [])
+        if project_id in assigned_projects:
+            return True  # Supervisors with assigned projects have full access
+        
         # Handle both ObjectId and string project IDs
         try:
             project_query_id = ObjectId(project_id) if isinstance(project_id, str) and len(project_id) == 24 else project_id
@@ -74,7 +79,7 @@ class PermissionChecker:
         except:
             user_query_id = user["user_id"]
         
-        # Check user_project_map
+        # Check user_project_map as fallback
         mapping = await self.db.user_project_map.find_one({
             "user_id": user_query_id,
             "project_id": project_query_id
