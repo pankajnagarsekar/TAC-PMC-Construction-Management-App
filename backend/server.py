@@ -554,20 +554,34 @@ async def get_projects(current_user: dict = Depends(get_current_user)):
             {"organisation_id": user["organisation_id"]}
         ).to_list(length=None)
     else:
-        # Get projects from user_project_map
-        mappings = await db.user_project_map.find(
-            {"user_id": user["user_id"]}
-        ).to_list(length=None)
+        # First check user's assigned_projects field
+        assigned_project_ids = user.get("assigned_projects", [])
         
-        project_ids = [m["project_id"] for m in mappings]
-        
-        projects = await db.projects.find(
-            {"_id": {"$in": project_ids}, "organisation_id": user["organisation_id"]}
-        ).to_list(length=None)
+        if assigned_project_ids:
+            # Query by both _id and project_id fields to handle different ID formats
+            projects = await db.projects.find({
+                "$or": [
+                    {"_id": {"$in": assigned_project_ids}},
+                    {"project_id": {"$in": assigned_project_ids}}
+                ],
+                "organisation_id": user["organisation_id"]
+            }).to_list(length=None)
+        else:
+            # Fallback: Get projects from user_project_map
+            mappings = await db.user_project_map.find(
+                {"user_id": user["user_id"]}
+            ).to_list(length=None)
+            
+            project_ids = [m["project_id"] for m in mappings]
+            
+            projects = await db.projects.find(
+                {"_id": {"$in": project_ids}, "organisation_id": user["organisation_id"]}
+            ).to_list(length=None)
     
-    # Convert ObjectId to string
+    # Convert ObjectId to string and ensure project_id is set
     for p in projects:
-        p["project_id"] = str(p.pop("_id"))
+        if "_id" in p:
+            p["project_id"] = str(p.pop("_id"))
     
     return projects
 
