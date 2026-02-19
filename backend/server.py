@@ -1361,9 +1361,15 @@ async def create_worker_log(
             detail="Worker log already exists for this date. Please update the existing log."
         )
     
-    # Calculate totals
-    total_workers = len(log_data.workers)
-    total_hours = sum(w.hours_worked for w in log_data.workers)
+    # Calculate totals from new entries format or legacy workers format
+    if log_data.entries:
+        total_workers = sum(e.workers_count for e in log_data.entries)
+        entries_data = [e.dict() for e in log_data.entries]
+    else:
+        total_workers = len(log_data.workers)
+        entries_data = []
+    
+    total_hours = sum(w.hours_worked for w in log_data.workers) if log_data.workers else 0
     
     log_dict = {
         "organisation_id": user["organisation_id"],
@@ -1371,13 +1377,14 @@ async def create_worker_log(
         "date": log_data.date,
         "supervisor_id": user["user_id"],
         "supervisor_name": user["name"],
+        "entries": entries_data,
         "workers": [w.dict() for w in log_data.workers],
-        "total_workers": total_workers,
+        "total_workers": log_data.total_workers if log_data.total_workers else total_workers,
         "total_hours": total_hours,
         "weather": log_data.weather,
         "site_conditions": log_data.site_conditions,
         "remarks": log_data.remarks,
-        "status": "draft",
+        "status": "submitted",
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
