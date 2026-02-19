@@ -5,8 +5,15 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function SupervisorTabLayout() {
+  const { user } = useAuth();
+  const screenPermissions = user?.screen_permissions || [];
+  
+  // Check if user has reports permission
+  const hasReportsPermission = screenPermissions.includes('reports');
+  
   return (
     <Tabs
       screenOptions={{
@@ -71,6 +78,18 @@ export default function SupervisorTabLayout() {
           headerTitle: 'Issue Log',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="warning-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      {/* Reports tab - shown only if user has permission */}
+      <Tabs.Screen
+        name="reports"
+        options={{
+          href: hasReportsPermission ? '/(supervisor)/reports' : null,
+          title: 'Reports',
+          headerTitle: 'Reports',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="document-text-outline" size={size} color={color} />
           ),
         }}
       />
