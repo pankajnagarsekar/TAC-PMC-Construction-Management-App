@@ -343,11 +343,11 @@ class DPRPDFGenerator:
     
     def get_filename(self, project_code: str, dpr_date: datetime) -> str:
         """
-        Generate filename in format: "ProjectCode - MMM DD, YYYY.pdf"
+        Generate filename in format: "ProjectCode - MM DD, YYYY.pdf"
         
-        Example: "MCT-2025 - Feb 19, 2025.pdf"
+        Example: "MCT-2025 - 02 19, 2025.pdf"
         """
-        date_str = dpr_date.strftime("%b %d, %Y")
+        date_str = dpr_date.strftime("%m %d, %Y")
         return f"{project_code} - {date_str}.pdf"
 
 
