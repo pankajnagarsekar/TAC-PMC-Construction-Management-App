@@ -392,7 +392,7 @@ export default function SupervisorDPRScreen() {
             const fileUri = FileSystem.documentDirectory + fileName;
             
             await FileSystem.writeAsStringAsync(fileUri, submitData.pdf_data, {
-              encoding: FileSystem.EncodingType.Base64,
+              encoding: 'base64',
             });
             
             if (await Sharing.isAvailableAsync()) {
