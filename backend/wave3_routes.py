@@ -816,10 +816,10 @@ async def speech_to_text(
 ):
     """Convert speech to text and translate to English."""
     import base64
-    import uuid
     import tempfile
-    import litellm
     from pathlib import Path
+    from emergentintegrations.llm.openai import OpenAISpeechToText, LlmChat
+    import uuid
     
     try:
         audio_data = request.audio_data
@@ -839,27 +839,29 @@ async def speech_to_text(
             temp_path = f.name
         
         try:
-            # Use litellm directly
+            stt = OpenAISpeechToText(api_key=api_key)
+            
+            # Pass open file handle as per playbook
             with open(temp_path, 'rb') as audio_file:
-                response = await litellm.atranscription(
-                    model="whisper-1",
+                result = await stt.transcribe(
                     file=audio_file,
-                    api_key=api_key
+                    model="whisper-1",
+                    response_format="json"
                 )
             
-            transcript = response.text if hasattr(response, 'text') else str(response)
+            transcript = result.text if hasattr(result, 'text') else str(result)
             Path(temp_path).unlink(missing_ok=True)
             
             if not transcript.strip():
                 return {"transcript": "", "error": "No speech detected"}
             
-            # Translate using litellm
-            translate_response = await litellm.acompletion(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": f"Translate to English only, return just the translation: {transcript}"}],
-                api_key=api_key
+            # Translate using LlmChat
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=str(uuid.uuid4()),
+                system_message="You are a translator. Only output the English translation, nothing else."
             )
-            english = translate_response.choices[0].message.content
+            english = await chat.send_message(f"Translate to English: {transcript}")
             
             return {"transcript": english.strip(), "original": transcript.strip()}
         except Exception as e:
