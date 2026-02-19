@@ -169,12 +169,6 @@ export default function SupervisorDashboard() {
       setIsProcessing(false);
     }
   };
-      console.error('Check-in error:', error);
-      Alert.alert('Error', 'Failed to check in. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   // STEP 2: Select Project
   const handleSelectProject = () => {
