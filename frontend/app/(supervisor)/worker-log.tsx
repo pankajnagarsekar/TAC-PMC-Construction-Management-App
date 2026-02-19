@@ -72,18 +72,18 @@ export default function WorkerLogScreen() {
   const loadVendors = async () => {
     try {
       const token = await getToken();
-      const response = await fetch(`${BASE_URL}/api/codes?code_type=vendor`, {
+      const response = await fetch(`${BASE_URL}/api/vendors`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
       if (response.ok) {
         const data = await response.json();
         const formattedVendors = (data || []).map((v: any) => ({
-          code_id: v.code_id || v._id,
-          code: v.code,
-          first_name: v.first_name || '',
-          last_name: v.last_name || '',
-          display_name: `${v.code} - ${v.first_name || ''} ${v.last_name || ''}`.trim(),
+          code_id: v.vendor_id,
+          code: v.vendor_type || '',
+          first_name: v.vendor_name || '',
+          last_name: '',
+          display_name: v.vendor_name || v.display_name || '',
         }));
         setVendors(formattedVendors);
       }
