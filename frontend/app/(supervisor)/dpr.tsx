@@ -598,23 +598,57 @@ export default function SupervisorDPRScreen() {
             <View style={styles.photoGrid}>
               {photos.map((photo, index) => (
                 <View key={photo.id} style={styles.photoCard}>
-                  <View style={styles.photoHeader}>
-                    <Text style={styles.photoNumber}>Photo {index + 1}</Text>
-                    <TouchableOpacity onPress={() => removePhoto(photo.id)}>
-                      <Ionicons name="close-circle" size={24} color={Colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                  <Image source={{ uri: photo.uri }} style={styles.photoImage} />
-                  <TextInput
-                    style={styles.captionInput}
-                    placeholder="Type caption for this photo..."
-                    value={photo.caption}
-                    onChangeText={(text) => updateCaption(photo.id, text)}
-                    multiline
-                    numberOfLines={2}
-                  />
-                  {!photo.caption.trim() && (
-                    <Text style={styles.captionWarning}>Caption required</Text>
+                  {/* Collapsible Header */}
+                  <TouchableOpacity 
+                    style={styles.photoHeader}
+                    onPress={() => togglePhotoExpand(photo.id)}
+                  >
+                    <View style={styles.photoHeaderLeft}>
+                      {photo.caption.trim() && (
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.success} style={{marginRight: 6}} />
+                      )}
+                      <Text style={styles.photoNumber}>Photo {index + 1}</Text>
+                      {photo.isCollapsed && photo.caption.trim() && (
+                        <Text style={styles.photoPreview} numberOfLines={1}> - {photo.caption}</Text>
+                      )}
+                    </View>
+                    <View style={styles.photoHeaderRight}>
+                      <Ionicons 
+                        name={photo.isCollapsed ? "chevron-down" : "chevron-up"} 
+                        size={20} 
+                        color={Colors.textMuted} 
+                      />
+                      <TouchableOpacity onPress={() => removePhoto(photo.id)}>
+                        <Ionicons name="trash-outline" size={20} color={Colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                  
+                  {/* Collapsible Content */}
+                  {!photo.isCollapsed && (
+                    <View style={styles.photoContent}>
+                      <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                      <TextInput
+                        style={styles.captionInput}
+                        placeholder="Type caption for this photo..."
+                        value={photo.caption}
+                        onChangeText={(text) => updateCaption(photo.id, text)}
+                        multiline
+                        numberOfLines={2}
+                      />
+                      {!photo.caption.trim() && (
+                        <Text style={styles.captionWarning}>Caption required</Text>
+                      )}
+                      {photo.caption.trim() && (
+                        <TouchableOpacity 
+                          style={styles.doneButton}
+                          onPress={() => collapsePhoto(photo.id)}
+                        >
+                          <Ionicons name="checkmark" size={16} color={Colors.white} />
+                          <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   )}
                 </View>
               ))}
