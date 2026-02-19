@@ -107,6 +107,7 @@ async def seed_database():
                 "role": "Admin",
                 "active_status": True,
                 "dpr_generation_permission": True,
+                "assigned_projects": [],
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }
@@ -117,6 +118,96 @@ async def seed_database():
             print(f"      📧 Email: {admin_email}")
             print(f"      🔑 Password: {admin_password}")
             print(f"      ⚠️  CHANGE PASSWORD AFTER FIRST LOGIN!")
+        
+        # ============================================
+        # 3b. CREATE SAMPLE PROJECT
+        # ============================================
+        print("🏗️  Creating sample project...")
+        
+        existing_project = await db.projects.find_one({"project_code": "PROJ001"})
+        
+        if existing_project:
+            print("   ⚠️  Sample project already exists. Skipping...")
+            project_id = str(existing_project["_id"])
+        else:
+            project_data = {
+                "organisation_id": organisation_id,
+                "project_code": "PROJ001",
+                "project_name": "Sample Construction Project",
+                "location": "Test Location, City",
+                "start_date": datetime.utcnow(),
+                "status": "Active",
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            
+            result = await db.projects.insert_one(project_data)
+            project_id = str(result.inserted_id)
+            print(f"   ✅ Sample project created: PROJ001 - Sample Construction Project")
+
+        # ============================================
+        # 3c. CREATE SUPERVISOR USER
+        # ============================================
+        print("👷 Creating supervisor user...")
+        
+        supervisor_email = "supervisor@example.com"
+        supervisor_password = "supervisor123"
+        
+        existing_supervisor = await db.users.find_one({"email": supervisor_email})
+        
+        if existing_supervisor:
+            print("   ⚠️  Supervisor user already exists. Skipping...")
+        else:
+            hashed_pw = hash_password(supervisor_password)
+            
+            supervisor_data = {
+                "organisation_id": organisation_id,
+                "name": "Test Supervisor",
+                "email": supervisor_email,
+                "hashed_password": hashed_pw,
+                "role": "Supervisor",
+                "active_status": True,
+                "dpr_generation_permission": True,
+                "assigned_projects": [project_id],
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            
+            result = await db.users.insert_one(supervisor_data)
+            supervisor_id = str(result.inserted_id)
+            print(f"   ✅ Supervisor user created")
+            print(f"      📧 Email: {supervisor_email}")
+            print(f"      🔑 Password: {supervisor_password}")
+            print(f"      🏗️  Assigned to: PROJ001")
+
+        # ============================================
+        # 3d. CREATE SAMPLE VENDORS
+        # ============================================
+        print("🏭 Creating sample vendors...")
+        
+        vendors = [
+            {"vendor_name": "ABC Construction Co.", "vendor_type": "Civil"},
+            {"vendor_name": "PowerLine Electricals", "vendor_type": "Electrical"},
+            {"vendor_name": "AquaFlow Plumbing", "vendor_type": "Plumbing"},
+        ]
+        
+        for vendor in vendors:
+            existing_vendor = await db.vendors.find_one({"vendor_name": vendor["vendor_name"]})
+            
+            if existing_vendor:
+                print(f"   ⚠️  Vendor {vendor['vendor_name']} already exists. Skipping...")
+            else:
+                vendor_data = {
+                    "organisation_id": organisation_id,
+                    "vendor_name": vendor["vendor_name"],
+                    "vendor_type": vendor["vendor_type"],
+                    "active_status": True,
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+                
+                await db.vendors.insert_one(vendor_data)
+                print(f"   ✅ Vendor created: {vendor['vendor_name']}")
         
         # ============================================
         # 4. CREATE CODE MASTER ENTRIES
