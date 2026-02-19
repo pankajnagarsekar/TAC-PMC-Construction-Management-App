@@ -816,7 +816,6 @@ async def speech_to_text(
     
     try:
         import base64
-        import tempfile
         import uuid
         from emergentintegrations.llm.openai import OpenAISpeechToText, LlmChat
         
@@ -832,31 +831,19 @@ async def speech_to_text(
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         file_ext = request.audio_format.lower() or 'webm'
         
-        # Save to temp file
-        with tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False) as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
+        # Transcribe using bytes directly
+        stt = OpenAISpeechToText(api_key=api_key)
+        result = await stt.transcribe(file=audio_bytes)
+        transcript = result.text if hasattr(result, 'text') else str(result)
         
-        try:
-            # Transcribe
-            stt = OpenAISpeechToText(api_key=api_key)
-            result = await stt.transcribe(file=tmp_path)
-            transcript = result.text if hasattr(result, 'text') else str(result)
-            
-            os.unlink(tmp_path)
-            
-            if not transcript.strip():
-                return {"transcript": "", "error": "No speech detected"}
-            
-            # Translate to English
-            chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="Translate to English only.")
-            english = await chat.send_message(f"Translate to English: {transcript}")
-            
-            return {"transcript": english.strip(), "original": transcript.strip()}
-        except Exception as e:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-            raise e
+        if not transcript.strip():
+            return {"transcript": "", "error": "No speech detected"}
+        
+        # Translate to English
+        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="Translate to English only.")
+        english = await chat.send_message(f"Translate to English: {transcript}")
+        
+        return {"transcript": english.strip(), "original": transcript.strip()}
                 
     except Exception as e:
         logger.error(f"[STT] Error: {str(e)}")

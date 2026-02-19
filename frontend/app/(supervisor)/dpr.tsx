@@ -383,36 +383,10 @@ export default function SupervisorDPRScreen() {
             });
           }
         } else if (submitData.pdf_data && Platform.OS !== 'web') {
-          // Mobile - save and share PDF
-          try {
-            const FileSystem = await import('expo-file-system');
-            const Sharing = await import('expo-sharing');
-            
-            const fileName = submitData.file_name || 'DPR.pdf';
-            const fileUri = FileSystem.documentDirectory + fileName;
-            
-            await FileSystem.writeAsStringAsync(fileUri, submitData.pdf_data, {
-              encoding: FileSystem.EncodingType?.Base64 || 'base64',
-            });
-            
-            const canShare = await Sharing.isAvailableAsync();
-            if (canShare) {
-              await Sharing.shareAsync(fileUri, {
-                mimeType: 'application/pdf',
-                dialogTitle: 'Save DPR Report',
-                UTI: 'com.adobe.pdf',
-              });
-            }
-            
-            showAlert('Success', `DPR submitted!\nFilename: ${fileName}\nAdmin notified.`, () => {
-              router.back();
-            });
-          } catch (mobileError) {
-            console.error('Mobile PDF error:', mobileError);
-            showAlert('Success', 'DPR submitted! Admin notified.', () => {
-              router.back();
-            });
-          }
+          // Mobile - just show success, PDF will be available in Reports
+          showAlert('Success', `DPR submitted!\nFilename: ${submitData.file_name}\nAdmin notified.\n\nView PDF in Reports section.`, () => {
+            router.back();
+          });
         } else {
           showAlert('Success', 'DPR submitted successfully! Admin has been notified.', () => {
             router.back();
