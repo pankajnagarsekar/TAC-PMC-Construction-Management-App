@@ -1605,6 +1605,163 @@ async def check_can_logout(
     }
 
 
+# ============================================
+# NOTIFICATION ENDPOINTS
+# ============================================
+
+@api_router.post("/notifications", status_code=status.HTTP_201_CREATED)
+async def create_notification(
+    notification_data: NotificationCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new notification (internal use or admin)"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    notification_doc = {
+        "organisation_id": user["organisation_id"],
+        "recipient_role": notification_data.recipient_role,
+        "recipient_user_id": notification_data.recipient_user_id,
+        "title": notification_data.title,
+        "message": notification_data.message,
+        "notification_type": notification_data.notification_type,
+        "priority": notification_data.priority,
+        "reference_type": notification_data.reference_type,
+        "reference_id": notification_data.reference_id,
+        "project_id": notification_data.project_id,
+        "project_name": notification_data.project_name,
+        "sender_id": user["user_id"],
+        "sender_name": user.get("name", "System"),
+        "is_read": False,
+        "read_at": None,
+        "created_at": datetime.utcnow()
+    }
+    
+    result = await db.notifications.insert_one(notification_doc)
+    
+    return {
+        "notification_id": str(result.inserted_id),
+        "status": "created"
+    }
+
+
+@api_router.get("/notifications")
+async def get_notifications(
+    limit: int = 50,
+    unread_only: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get notifications for current user (based on role)"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    # Build query
+    query = {
+        "organisation_id": user["organisation_id"],
+        "$or": [
+            {"recipient_role": user["role"].lower()},
+            {"recipient_user_id": user["user_id"]}
+        ]
+    }
+    
+    if unread_only:
+        query["is_read"] = False
+    
+    # Fetch notifications sorted by created_at (newest first)
+    cursor = db.notifications.find(query).sort("created_at", -1).limit(limit)
+    notifications = await cursor.to_list(length=limit)
+    
+    # Get unread count
+    unread_count = await db.notifications.count_documents({
+        "organisation_id": user["organisation_id"],
+        "$or": [
+            {"recipient_role": user["role"].lower()},
+            {"recipient_user_id": user["user_id"]}
+        ],
+        "is_read": False
+    })
+    
+    return {
+        "notifications": [serialize_doc(n) for n in notifications],
+        "unread_count": unread_count,
+        "total": len(notifications)
+    }
+
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark a notification as read"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    result = await db.notifications.update_one(
+        {
+            "_id": ObjectId(notification_id),
+            "organisation_id": user["organisation_id"]
+        },
+        {
+            "$set": {
+                "is_read": True,
+                "read_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"status": "marked_read"}
+
+
+@api_router.put("/notifications/mark-all-read")
+async def mark_all_notifications_read(
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark all notifications as read for current user"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    result = await db.notifications.update_many(
+        {
+            "organisation_id": user["organisation_id"],
+            "$or": [
+                {"recipient_role": user["role"].lower()},
+                {"recipient_user_id": user["user_id"]}
+            ],
+            "is_read": False
+        },
+        {
+            "$set": {
+                "is_read": True,
+                "read_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "status": "success",
+        "marked_count": result.modified_count
+    }
+
+
+@api_router.get("/notifications/unread-count")
+async def get_unread_count(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get unread notification count for badge display"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    count = await db.notifications.count_documents({
+        "organisation_id": user["organisation_id"],
+        "$or": [
+            {"recipient_role": user["role"].lower()},
+            {"recipient_user_id": user["user_id"]}
+        ],
+        "is_read": False
+    })
+    
+    return {"unread_count": count}
+
+
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint"""
