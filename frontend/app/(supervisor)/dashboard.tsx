@@ -491,6 +491,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     backgroundColor: Colors.accent,
+    borderRadius: BorderRadius.lg,
   },
   checkInCardComplete: {
     backgroundColor: Colors.white,
