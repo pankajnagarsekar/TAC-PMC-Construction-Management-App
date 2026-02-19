@@ -61,7 +61,7 @@ import {
 // ============================================
 // CONFIGURATION
 // ============================================
-const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://dpr-check-in.preview.emergentagent.com';
+const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://dpr-voice-log.preview.emergentagent.com';
 
 const TOKEN_KEYS = {
   ACCESS: 'access_token',
