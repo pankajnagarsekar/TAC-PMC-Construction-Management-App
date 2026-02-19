@@ -348,10 +348,10 @@ export default function WorkerLogScreen() {
                   onPress={() => selectVendor(item)}
                 >
                   <View style={styles.vendorIcon}>
-                    <Ionicons name="person" size={20} color={Colors.accent} />
+                    <Ionicons name="business" size={20} color={Colors.accent} />
                   </View>
                   <View style={styles.vendorInfo}>
-                    <Text style={styles.vendorName}>{item.first_name} {item.last_name}</Text>
+                    <Text style={styles.vendorName}>{item.display_name}</Text>
                     <Text style={styles.vendorCode}>{item.code}</Text>
                   </View>
                 </TouchableOpacity>
