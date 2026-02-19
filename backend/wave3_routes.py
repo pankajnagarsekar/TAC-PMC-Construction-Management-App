@@ -975,11 +975,15 @@ async def generate_dpr_pdf(
     """
     Generate PDF from DPR.
     
-    - Requires minimum 4 images
-    - Compresses to ensure < 3MB
-    - Filename in MMMM, DD, YYYY format
-    - Uploads to Google Drive (if configured)
+    PDF Structure:
+    - Page 1: Project details, Voice summary, Worker attendance
+    - Page 2+: One image per page with caption
+    
+    Filename format: "ProjectCode - MMM DD, YYYY.pdf"
     """
+    from core.pdf_service import pdf_generator
+    from fastapi.responses import Response
+    
     user = await permission_checker.get_authenticated_user(current_user)
     
     # Get DPR
@@ -997,47 +1001,94 @@ async def generate_dpr_pdf(
             detail=f"DPR requires minimum 4 images. Current: {image_count}"
         )
     
-    # Calculate estimated PDF size
-    total_image_size = sum(img.get("size_kb", 0) for img in dpr.get("images", []))
-    estimated_pdf_size = total_image_size * 0.8  # PDF compression factor
+    # Get project data
+    project_id = dpr.get("project_id")
+    project = await db.projects.find_one({"project_id": project_id}) or \
+              await db.projects.find_one({"_id": project_id})
     
-    # Ensure < 3MB (3072 KB)
-    if estimated_pdf_size > 3072:
-        # Would trigger additional compression in production
-        estimated_pdf_size = 2800  # Compressed to target
+    if not project:
+        project = {"project_name": "Unknown Project", "project_code": "DPR"}
     
-    # Generate PDF filename
+    # Get worker log for today
     dpr_date = dpr.get("dpr_date")
-    if isinstance(dpr_date, str):
-        dpr_date = datetime.fromisoformat(dpr_date.replace('Z', '+00:00'))
-    file_name = dpr_date.strftime("%B, %d, %Y") + ".pdf"
+    if isinstance(dpr_date, datetime):
+        date_str = dpr_date.strftime("%Y-%m-%d")
+    else:
+        date_str = str(dpr_date).split("T")[0] if dpr_date else datetime.now().strftime("%Y-%m-%d")
     
-    # Update DPR with PDF info
-    await db.dpr.update_one(
-        {"_id": ObjectId(dpr_id)},
-        {
-            "$set": {
-                "pdf_generated": True,
-                "file_name": file_name,
-                "file_size_kb": round(estimated_pdf_size, 2),
-                "pdf_generated_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
-            }
-        }
-    )
+    worker_log = await db.worker_logs.find_one({
+        "project_id": project_id,
+        "date": date_str
+    })
     
-    # Google Drive upload would happen here
-    # For now, return success with placeholder drive info
-    drive_link = None  # Would be actual Google Drive link
-    
-    return {
-        "dpr_id": dpr_id,
-        "file_name": file_name,
-        "file_size_kb": round(estimated_pdf_size, 2),
-        "pdf_generated": True,
-        "drive_link": drive_link,
-        "message": f"PDF generated: {file_name} ({round(estimated_pdf_size, 2)} KB)"
+    # Prepare DPR data
+    dpr_data = {
+        "dpr_date": dpr.get("dpr_date"),
+        "progress_notes": dpr.get("progress_notes", ""),
+        "voice_summary": dpr.get("voice_summary", ""),
+        "weather_conditions": dpr.get("weather_conditions", "Normal"),
+        "supervisor_name": user.get("name", "Supervisor"),
     }
+    
+    # Get images
+    images = dpr.get("images", [])
+    
+    # Generate PDF
+    try:
+        pdf_bytes = pdf_generator.generate_pdf(
+            project_data=project,
+            dpr_data=dpr_data,
+            worker_log=worker_log,
+            images=images
+        )
+        
+        # Generate filename
+        if isinstance(dpr_date, str):
+            try:
+                dpr_date_obj = datetime.fromisoformat(dpr_date.replace('Z', '+00:00'))
+            except:
+                dpr_date_obj = datetime.now()
+        elif isinstance(dpr_date, datetime):
+            dpr_date_obj = dpr_date
+        else:
+            dpr_date_obj = datetime.now()
+        
+        project_code = project.get("project_code", "DPR")
+        file_name = pdf_generator.get_filename(project_code, dpr_date_obj)
+        
+        # Calculate file size
+        file_size_kb = len(pdf_bytes) / 1024
+        
+        # Update DPR with PDF info
+        await db.dpr.update_one(
+            {"_id": ObjectId(dpr_id)},
+            {
+                "$set": {
+                    "pdf_generated": True,
+                    "file_name": file_name,
+                    "file_size_kb": round(file_size_kb, 2),
+                    "pdf_generated_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        # Return PDF as downloadable file
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{file_name}"',
+                "Content-Length": str(len(pdf_bytes))
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate PDF: {str(e)}"
+        )
 
 
 @wave3_router.post("/dpr/{dpr_id}/submit")
