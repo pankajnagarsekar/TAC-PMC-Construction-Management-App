@@ -1240,35 +1240,32 @@ async def submit_dpr(
     
     # Create notification for admin
     try:
-        # Get project details for notification
-        project = await db.projects.find_one({"_id": dpr["project_id"]}) or \
-                  await db.projects.find_one({"project_id": dpr["project_id"]})
-        project_name = project.get("project_name", "Unknown Project") if project else "Unknown Project"
+        # Format DPR date and time for message
+        now = datetime.utcnow()
+        time_str = now.strftime("%I:%M %p")  # e.g., "02:30 PM"
         
-        # Format DPR date for message
-        dpr_date = dpr.get("dpr_date")
-        if isinstance(dpr_date, datetime):
-            date_str = dpr_date.strftime("%B %d, %Y")
+        if isinstance(dpr_date_obj, datetime):
+            date_str = dpr_date_obj.strftime("%B %d, %Y")
         else:
-            date_str = str(dpr_date)
+            date_str = str(dpr_date).split('T')[0] if dpr_date else now.strftime("%B %d, %Y")
         
         notification_doc = {
             "organisation_id": user["organisation_id"],
             "recipient_role": "admin",
             "recipient_user_id": None,
             "title": "New DPR Submitted",
-            "message": f"{user.get('name', 'A supervisor')} submitted a Daily Progress Report for {project_name} on {date_str}",
+            "message": f"{user.get('name', 'A supervisor')} submitted a Daily Progress Report for {project_name} on {date_str} at {time_str}",
             "notification_type": "dpr_submitted",
             "priority": "normal",
             "reference_type": "dpr",
             "reference_id": dpr_id,
-            "project_id": dpr.get("project_id"),
+            "project_id": project_id,
             "project_name": project_name,
             "sender_id": user["user_id"],
             "sender_name": user.get("name", "Supervisor"),
             "is_read": False,
             "read_at": None,
-            "created_at": datetime.utcnow()
+            "created_at": now
         }
         
         await db.notifications.insert_one(notification_doc)
