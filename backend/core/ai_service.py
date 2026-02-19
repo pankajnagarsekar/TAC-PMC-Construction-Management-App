@@ -159,13 +159,53 @@ Return JSON format:
             raise AIServiceError(f"OCR failed: {e}")
     
     async def run_stt(self, audio_content: bytes, audio_format: str) -> Dict:
-        """STT using Emergent/OpenAI Whisper"""
+        """STT using OpenAI Whisper API with translation to English"""
         try:
-            # Note: Whisper API requires file upload, using mock for now
-            # Real implementation would use whisper API
-            logger.warning("[AI] STT not fully implemented, using mock")
-            return await MockAIProvider().run_stt(audio_content, audio_format)
+            import httpx
+            import io
             
+            # Determine file extension
+            ext_map = {
+                'webm': 'webm',
+                'mp3': 'mp3',
+                'mp4': 'mp4',
+                'm4a': 'm4a',
+                'wav': 'wav',
+                'mpeg': 'mpeg',
+                'mpga': 'mpga',
+                'ogg': 'ogg',
+            }
+            file_ext = ext_map.get(audio_format.lower(), 'mp3')
+            
+            # Use OpenAI Whisper API for transcription + translation
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # First, try translation endpoint (auto-detects language and translates to English)
+                files = {
+                    'file': (f'audio.{file_ext}', audio_content, f'audio/{file_ext}'),
+                    'model': (None, 'whisper-1'),
+                }
+                
+                response = await client.post(
+                    'https://api.openai.com/v1/audio/translations',
+                    headers={'Authorization': f'Bearer {self.api_key}'},
+                    files=files,
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return {
+                        "transcript": result.get('text', ''),
+                        "language": "en",  # Translation always outputs English
+                        "confidence": 0.95,
+                        "provider": "OPENAI_WHISPER"
+                    }
+                else:
+                    logger.error(f"[AI] Whisper API error: {response.status_code} - {response.text}")
+                    raise AIServiceError(f"Whisper API failed: {response.text}")
+                    
+        except httpx.TimeoutException:
+            logger.error("[AI] Whisper API timeout")
+            raise AIServiceError("Speech transcription timed out")
         except Exception as e:
             logger.error(f"[AI] STT failed: {e}")
             raise AIServiceError(f"STT failed: {e}")
