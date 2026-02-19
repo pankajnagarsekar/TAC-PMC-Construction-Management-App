@@ -249,25 +249,26 @@ export default function SupervisorDashboard() {
               style={({ pressed }) => [
                 styles.checkInButton, 
                 isProcessing && {opacity: 0.7},
-                pressed && {opacity: 0.8}
+                pressed && {opacity: 0.8, transform: [{scale: 0.98}]}
               ]} 
               onPress={() => {
                 console.log('Check-in button pressed');
                 handleCheckIn();
               }}
               disabled={isProcessing}
-              data-testid="check-in-selfie-btn"
               accessibilityRole="button"
               accessibilityLabel="Check in with selfie"
             >
-              {isProcessing ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <>
-                  <Ionicons name="camera" size={20} color={Colors.white} />
-                  <Text style={styles.checkInButtonText}>Check In with Selfie</Text>
-                </>
-              )}
+              <View style={styles.checkInButtonContent}>
+                {isProcessing ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <>
+                    <Ionicons name="camera" size={20} color={Colors.white} />
+                    <Text style={styles.checkInButtonText}>Check In with Selfie</Text>
+                  </>
+                )}
+              </View>
             </Pressable>
           )}
         </View>
