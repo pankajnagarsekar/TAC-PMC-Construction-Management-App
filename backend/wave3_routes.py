@@ -817,7 +817,7 @@ async def speech_to_text(
     
     try:
         import base64
-        import tempfile
+        import io
         from emergentintegrations.llm.openai import OpenAISpeechToText
         
         # Decode base64 audio
@@ -834,33 +834,24 @@ async def speech_to_text(
                 "note": "Please record a longer audio clip"
             }
         
-        # Save to temp file
-        file_ext = request.audio_format.lower() or 'webm'
-        with tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False) as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
+        # Use Emergent integration for Whisper
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        stt_client = OpenAISpeechToText(api_key=api_key)
         
-        try:
-            # Use Emergent integration for Whisper
-            api_key = os.environ.get('EMERGENT_LLM_KEY')
-            stt_client = OpenAISpeechToText(api_key=api_key)
-            
-            result = await stt_client.transcribe(file=tmp_path)
-            transcript = result.text if hasattr(result, 'text') else str(result)
-            
-            # Clean up temp file
-            os.unlink(tmp_path)
-            
-            return {
-                "transcript": transcript.strip() if transcript else "",
-                "language": "en",
-                "confidence": 0.95,
-                "note": "Transcribed successfully"
-            }
-        except Exception as e:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-            raise e
+        # Create file-like object from bytes
+        file_ext = request.audio_format.lower() or 'webm'
+        audio_file = io.BytesIO(audio_bytes)
+        audio_file.name = f'audio.{file_ext}'
+        
+        result = await stt_client.transcribe(file=audio_file)
+        transcript = result.text if hasattr(result, 'text') else str(result)
+        
+        return {
+            "transcript": transcript.strip() if transcript else "",
+            "language": "en",
+            "confidence": 0.95,
+            "note": "Transcribed successfully"
+        }
                 
     except Exception as e:
         logger.error(f"[STT] Error: {str(e)}")
