@@ -208,9 +208,26 @@ export default function AdminDashboard() {
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.userName}>{user?.name || 'Admin'}</Text>
           </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-            <Ionicons name="log-out-outline" size={24} color={Colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {/* Notification Bell */}
+            <TouchableOpacity 
+              onPress={() => router.push('/(admin)/notifications')} 
+              style={styles.notificationButton}
+            >
+              <Ionicons name="notifications-outline" size={24} color={Colors.textSecondary} />
+              {unreadNotifications > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* Logout Button */}
+            <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+              <Ionicons name="log-out-outline" size={24} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Alert Banner */}
