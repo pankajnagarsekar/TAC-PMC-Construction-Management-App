@@ -363,3 +363,45 @@ class WorkersDailyLogUpdate(BaseModel):
     site_conditions: Optional[str] = None
     remarks: Optional[str] = None
     status: Optional[str] = None
+
+
+# ============================================
+# NOTIFICATION MODELS
+# ============================================
+class Notification(BaseModel):
+    """In-app notification for users"""
+    notification_id: Optional[str] = Field(default=None, alias="_id")
+    organisation_id: str
+    recipient_role: str  # "admin", "supervisor", or specific user_id
+    recipient_user_id: Optional[str] = None  # If targeting specific user
+    title: str
+    message: str
+    notification_type: str  # "dpr_submitted", "issue_reported", "attendance", "system"
+    priority: str = "normal"  # "low", "normal", "high", "urgent"
+    reference_type: Optional[str] = None  # "dpr", "issue", "project", etc.
+    reference_id: Optional[str] = None  # ID of the referenced document
+    project_id: Optional[str] = None
+    project_name: Optional[str] = None
+    sender_id: Optional[str] = None
+    sender_name: Optional[str] = None
+    is_read: bool = False
+    read_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+
+    class Config:
+        populate_by_name = True
+        json_encoders = {ObjectId: str}
+
+
+class NotificationCreate(BaseModel):
+    """Create notification request"""
+    recipient_role: str = "admin"
+    recipient_user_id: Optional[str] = None
+    title: str
+    message: str
+    notification_type: str
+    priority: str = "normal"
+    reference_type: Optional[str] = None
+    reference_id: Optional[str] = None
+    project_id: Optional[str] = None
+    project_name: Optional[str] = None
