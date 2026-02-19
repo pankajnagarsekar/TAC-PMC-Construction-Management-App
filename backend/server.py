@@ -22,7 +22,7 @@ from models import (
     AuditLog,
     GlobalSettings,
     Token, LoginRequest, RefreshTokenRequest,
-    WorkerEntry, WorkersDailyLog, WorkersDailyLogCreate, WorkersDailyLogUpdate,
+    VendorWorkerEntry, WorkerEntry, WorkersDailyLog, WorkersDailyLogCreate, WorkersDailyLogUpdate,
     Notification, NotificationCreate
 )
 from auth import (
