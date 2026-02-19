@@ -316,11 +316,29 @@ export default function SupervisorDPRScreen() {
         body: JSON.stringify(dprPayload),
       });
 
-      if (!createResponse.ok) {
-        throw new Error('Failed to create DPR');
+      const dprData = await createResponse.json();
+      
+      // Handle existing DPR
+      if (dprData.exists) {
+        showAlert(
+          'DPR Exists',
+          `A DPR already exists for today (${dprData.status}). Do you want to delete it and create a new one?`,
+          async () => {
+            // Delete existing and retry
+            await fetch(`${BASE_URL}/api/v2/dpr/${dprData.dpr_id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            handleSubmit(); // Retry
+          }
+        );
+        return;
       }
 
-      const dprData = await createResponse.json();
+      if (!createResponse.ok) {
+        throw new Error(dprData.detail || 'Failed to create DPR');
+      }
+
       const dprId = dprData.dpr_id;
 
       // Upload photos with captions
