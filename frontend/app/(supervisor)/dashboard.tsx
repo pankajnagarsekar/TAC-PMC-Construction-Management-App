@@ -493,6 +493,20 @@ const styles = StyleSheet.create({
   logoutButton: {
     padding: Spacing.sm,
   },
+  checkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.error,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+  },
+  checkoutButtonText: {
+    color: Colors.white,
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+  },
   
   // Check-in Card
   checkInCard: {
