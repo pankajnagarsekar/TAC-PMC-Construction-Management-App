@@ -318,28 +318,35 @@ export default function SupervisorDPRScreen() {
 
       const dprData = await createResponse.json();
       
-      // Handle existing DPR
+      // Handle existing DPR - delete it and use that ID
       if (dprData.exists) {
-        showAlert(
-          'DPR Exists',
-          `A DPR already exists for today (${dprData.status}). Do you want to delete it and create a new one?`,
-          async () => {
-            // Delete existing and retry
-            await fetch(`${BASE_URL}/api/v2/dpr/${dprData.dpr_id}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': `Bearer ${token}` },
-            });
-            handleSubmit(); // Retry
-          }
-        );
-        return;
-      }
-
-      if (!createResponse.ok) {
+        // Delete existing DPR
+        await fetch(`${BASE_URL}/api/v2/dpr/${dprData.dpr_id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        // Create new one
+        const retryResponse = await fetch(`${BASE_URL}/api/v2/dpr`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(dprPayload),
+        });
+        
+        if (!retryResponse.ok) {
+          throw new Error('Failed to create DPR after deleting existing');
+        }
+        
+        const retryData = await retryResponse.json();
+        var dprId = retryData.dpr_id;
+      } else if (!createResponse.ok) {
         throw new Error(dprData.detail || 'Failed to create DPR');
+      } else {
+        var dprId = dprData.dpr_id;
       }
-
-      const dprId = dprData.dpr_id;
 
       // Upload photos with captions
       for (const photo of photos) {
