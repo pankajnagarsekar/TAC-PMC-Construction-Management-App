@@ -849,16 +849,37 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   photoCard: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.white,
     borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
     marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
   },
   photoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    padding: Spacing.sm,
+    backgroundColor: Colors.background,
+  },
+  photoHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  photoHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  photoPreview: {
+    fontSize: FontSizes.sm,
+    color: Colors.textMuted,
+    flex: 1,
+  },
+  photoContent: {
+    padding: Spacing.sm,
   },
   photoNumber: {
     fontSize: FontSizes.sm,
@@ -872,7 +893,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
   },
   captionInput: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.md,
@@ -886,6 +907,21 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     color: Colors.error,
     marginTop: 4,
+  },
+  doneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.success,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  doneButtonText: {
+    color: Colors.white,
+    fontWeight: '600',
+    fontSize: FontSizes.sm,
   },
   addPhotoButtons: {
     flexDirection: 'row',
