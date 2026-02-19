@@ -556,6 +556,12 @@ const styles = StyleSheet.create({
     // @ts-ignore - Web-specific cursor style
     cursor: 'pointer',
   },
+  checkInButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
   checkInButtonText: {
     fontSize: FontSizes.md,
     fontWeight: '600',
