@@ -63,10 +63,21 @@ class PermissionChecker:
         if user.get("role") == "Admin":
             return True
         
+        # Handle both ObjectId and string project IDs
+        try:
+            project_query_id = ObjectId(project_id) if isinstance(project_id, str) and len(project_id) == 24 else project_id
+        except:
+            project_query_id = project_id
+        
+        try:
+            user_query_id = ObjectId(user["user_id"]) if isinstance(user["user_id"], str) and len(user["user_id"]) == 24 else user["user_id"]
+        except:
+            user_query_id = user["user_id"]
+        
         # Check user_project_map
         mapping = await self.db.user_project_map.find_one({
-            "user_id": ObjectId(user["user_id"]) if isinstance(user["user_id"], str) else user["user_id"],
-            "project_id": ObjectId(project_id) if isinstance(project_id, str) else project_id
+            "user_id": user_query_id,
+            "project_id": project_query_id
         })
         
         if not mapping:
