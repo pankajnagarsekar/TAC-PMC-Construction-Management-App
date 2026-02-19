@@ -39,6 +39,7 @@ interface Photo {
   uri: string;
   base64: string;
   caption: string;
+  isCollapsed: boolean;
 }
 
 export default function SupervisorDPRScreen() {
@@ -49,6 +50,7 @@ export default function SupervisorDPRScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [voiceSummary, setVoiceSummary] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedPhotoId, setExpandedPhotoId] = useState<string | null>(null);
   
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
