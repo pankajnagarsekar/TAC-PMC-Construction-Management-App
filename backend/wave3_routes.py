@@ -818,7 +818,8 @@ async def speech_to_text(
     import base64
     import tempfile
     from pathlib import Path
-    from emergentintegrations.llm.openai import OpenAISpeechToText, LlmChat
+    from emergentintegrations.llm.openai import OpenAISpeechToText
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
     import uuid
     
     try:
@@ -855,13 +856,15 @@ async def speech_to_text(
             if not transcript.strip():
                 return {"transcript": "", "error": "No speech detected"}
             
-            # Translate using LlmChat
+            # Translate using LlmChat with proper UserMessage object
             chat = LlmChat(
                 api_key=api_key,
                 session_id=str(uuid.uuid4()),
                 system_message="You are a translator. Only output the English translation, nothing else."
             )
-            english = await chat.send_message(f"Translate to English: {transcript}")
+            # Use UserMessage object instead of plain string
+            user_msg = UserMessage(text=f"Translate to English: {transcript}")
+            english = await chat.send_message(user_msg)
             
             return {"transcript": english.strip(), "original": transcript.strip()}
         except Exception as e:
