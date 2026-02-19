@@ -614,11 +614,14 @@ async def create_dpr(
     })
     
     if existing:
-        # Delete existing draft DPR to allow recreation
-        if existing.get("status") == "Draft":
-            await db.dpr.delete_one({"_id": existing["_id"]})
-        else:
-            raise HTTPException(status_code=400, detail="DPR already submitted for this date")
+        # Return existing DPR info so frontend can ask user what to do
+        return {
+            "exists": True,
+            "dpr_id": str(existing["_id"]),
+            "status": existing.get("status", "Draft"),
+            "created_at": existing.get("created_at"),
+            "message": "DPR already exists for this date"
+        }
     
     # Generate filename in MMMM, DD, YYYY format
     file_name = dpr_date.strftime("%B, %d, %Y") + ".pdf"
@@ -812,8 +815,6 @@ async def speech_to_text(
     current_user: dict = Depends(get_current_user)
 ):
     """Convert speech to text and translate to English."""
-    user = await permission_checker.get_authenticated_user(current_user)
-    
     try:
         import base64
         import uuid
@@ -821,19 +822,22 @@ async def speech_to_text(
         
         audio_data = request.audio_data
         if audio_data.startswith('data:'):
-            audio_data = audio_data.split(',')[1] if ',' in audio_data else audio_data
+            audio_data = audio_data.split(',')[1]
         
         audio_bytes = base64.b64decode(audio_data)
-        
         if len(audio_bytes) < 100:
             return {"transcript": "", "error": "Audio too short"}
         
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         file_ext = request.audio_format.lower() or 'webm'
+        mime_types = {'webm': 'audio/webm', 'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'm4a': 'audio/m4a', 'ogg': 'audio/ogg'}
+        mime = mime_types.get(file_ext, 'audio/webm')
         
-        # Transcribe using bytes directly
+        # Pass as tuple: (filename, bytes, mimetype)
+        audio_tuple = (f"audio.{file_ext}", audio_bytes, mime)
+        
         stt = OpenAISpeechToText(api_key=api_key)
-        result = await stt.transcribe(file=audio_bytes)
+        result = await stt.transcribe(file=audio_tuple)
         transcript = result.text if hasattr(result, 'text') else str(result)
         
         if not transcript.strip():
@@ -844,7 +848,6 @@ async def speech_to_text(
         english = await chat.send_message(f"Translate to English: {transcript}")
         
         return {"transcript": english.strip(), "original": transcript.strip()}
-                
     except Exception as e:
         logger.error(f"[STT] Error: {str(e)}")
         return {"transcript": "", "error": str(e)}
