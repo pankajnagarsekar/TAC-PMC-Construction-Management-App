@@ -57,7 +57,16 @@ Build a comprehensive Construction Management System (SiteMaster) for supervisor
 
 ## What's Been Implemented
 
-### Feb 20, 2026 (Current Session)
+### Feb 20, 2026 (Current Session - Part 2)
+- [x] **PDF Filename Fix** - Changed format from "MMM DD, YYYY" to "MM DD, YYYY" per user requirement
+- [x] **M10: Admin DPR Image Edit** - Added collapsible photo frames with editable captions for Admin DPR detail screen
+- [x] **Image Caption API** - Added PUT /api/v2/dpr/{dpr_id}/images/{image_id} endpoint to update captions
+- [x] **Supervisor DPR Collapsible Photos** - Photos now collapse after adding caption for better UX
+- [x] **Worker Log Collapsible Entries** - Vendor entries collapse after completion with "Done" button
+- [x] **C3: Supervisor Profile Cleanup** - Removed unused buttons, kept only Password Change and Attendance History
+- [x] **Checkout Button on Dashboard** - Renamed logout to "Checkout" and moved to dashboard header with red button
+
+### Feb 20, 2026 (Current Session - Part 1)
 - [x] **P0 FIX: STT Transcription Error** - Fixed `'str' object has no attribute 'file_contents'` by using `UserMessage` object instead of plain string for `LlmChat.send_message()`. Corrected import to use `from emergentintegrations.llm.chat import LlmChat, UserMessage`
 - [x] **P0 FIX: Direct PDF Download** - Changed DPR submission to directly download PDF on web (using blob + download link) and share on mobile (using expo-file-system + expo-sharing) instead of showing "saved to reports"
 - [x] **Verified: Dashboard Workflow** - Check-in Required shown first with other options disabled, matching user requirements
@@ -73,7 +82,8 @@ Build a comprehensive Construction Management System (SiteMaster) for supervisor
 - [x] **M4: Remove AI Caption** - Simplified DPR to manual text input
 - [x] **M5: Voice-to-Text Module** - OpenAI Whisper integration
 - [x] **M6: PDF Generation (Page 1)** - Project info, summary, worker logs
-- [x] **M8: PDF Filename Format** - "PROJ001 - Feb 19, 2026.pdf"
+- [x] **M7: PDF Page 2+** - User tested and working
+- [x] **M8: PDF Filename Format** - "ProjectCode - MM DD, YYYY.pdf"
 - [x] **M9: Generate + Notify** - PDF download and admin notifications
 - [x] **Admin Notification System** - Notification bell and list
 
@@ -82,11 +92,9 @@ Build a comprehensive Construction Management System (SiteMaster) for supervisor
 ## Pending/Upcoming Tasks
 
 ### P1 - High Priority
-- [ ] **M7: PDF Page 2+** - Add photo pages (one photo + caption per page)
-- [ ] **M10: Admin DPR Edit** - View/edit DPR and regenerate PDF
+- [ ] **Admin DPR Re-export PDF** - After editing captions, regenerate PDF
 
 ### P2 - Medium Priority
-- [ ] **C3:** Fix/verify Profile screen buttons
 - [ ] **D1/D2:** Create Admin UI for editing Help/Support and Terms of Service
 
 ### P3 - Backlog
