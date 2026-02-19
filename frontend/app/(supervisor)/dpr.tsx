@@ -376,42 +376,70 @@ export default function SupervisorDPRScreen() {
       if (submitResponse.ok) {
         const submitData = await submitResponse.json();
         
-        // Download PDF if available
-        if (submitData.pdf_data && Platform.OS === 'web') {
+        // Download PDF directly
+        if (submitData.pdf_data) {
           try {
-            // Create blob from base64
-            const byteCharacters = atob(submitData.pdf_data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            if (Platform.OS === 'web') {
+              // Web: Create blob and download
+              const byteCharacters = atob(submitData.pdf_data);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              const blob = new Blob([byteArray], { type: 'application/pdf' });
+              
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = submitData.file_name || 'DPR.pdf';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+              
+              showAlert('Success', `DPR submitted and PDF downloaded!\n\nFilename: ${submitData.file_name}\n\nAdmin has been notified.`, () => {
+                router.back();
+              });
+            } else {
+              // Mobile: Use expo-file-system and expo-sharing
+              try {
+                const FileSystem = require('expo-file-system');
+                const Sharing = require('expo-sharing');
+                
+                const fileName = submitData.file_name || 'DPR.pdf';
+                const fileUri = FileSystem.documentDirectory + fileName;
+                
+                // Write base64 to file
+                await FileSystem.writeAsStringAsync(fileUri, submitData.pdf_data, {
+                  encoding: 'base64',
+                });
+                
+                // Check if sharing is available
+                const canShare = await Sharing.isAvailableAsync();
+                if (canShare) {
+                  await Sharing.shareAsync(fileUri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: `Share ${fileName}`,
+                  });
+                }
+                
+                showAlert('Success', `DPR submitted!\n\nFilename: ${fileName}\nAdmin has been notified.`, () => {
+                  router.back();
+                });
+              } catch (mobileError) {
+                console.error('Mobile PDF error:', mobileError);
+                showAlert('Success', `DPR submitted successfully!\n\nFilename: ${submitData.file_name}\nAdmin has been notified.`, () => {
+                  router.back();
+                });
+              }
             }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: 'application/pdf' });
-            
-            // Create download link
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = submitData.file_name || 'DPR.pdf';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            
-            showAlert('Success', `DPR submitted and PDF downloaded!\n\nFilename: ${submitData.file_name}\n\nAdmin has been notified.`, () => {
-              router.back();
-            });
           } catch (downloadError) {
             console.error('PDF download error:', downloadError);
-            showAlert('Success', 'DPR submitted successfully! Admin has been notified.\n\n(PDF download failed - please try again from Reports)', () => {
+            showAlert('Success', `DPR submitted successfully!\n\nFilename: ${submitData.file_name}\nAdmin has been notified.`, () => {
               router.back();
             });
           }
-        } else if (submitData.pdf_data && Platform.OS !== 'web') {
-          // Mobile - just show success, PDF will be available in Reports
-          showAlert('Success', `DPR submitted!\nFilename: ${submitData.file_name}\nAdmin notified.\n\nView PDF in Reports section.`, () => {
-            router.back();
-          });
         } else {
           showAlert('Success', 'DPR submitted successfully! Admin has been notified.', () => {
             router.back();
