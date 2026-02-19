@@ -142,6 +142,25 @@ export default function DPRDetailScreen() {
     }
   };
 
+  // M10: Save image caption
+  const saveImageCaption = async (imageId: string) => {
+    if (!dpr) return;
+    
+    setSaving(true);
+    try {
+      await apiClient.put(`/api/v2/dpr/${id}/images/${imageId}`, {
+        caption: imageCaptions[imageId] || '',
+      });
+      showAlert('Success', 'Caption updated successfully');
+      setExpandedImageId(null); // Collapse after save
+      fetchDPR();
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to update caption');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!dpr) return;
     
