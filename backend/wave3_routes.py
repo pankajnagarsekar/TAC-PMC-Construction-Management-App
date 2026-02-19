@@ -614,7 +614,11 @@ async def create_dpr(
     })
     
     if existing:
-        raise HTTPException(status_code=400, detail="DPR already exists for this date")
+        # Delete existing draft DPR to allow recreation
+        if existing.get("status") == "Draft":
+            await db.dpr.delete_one({"_id": existing["_id"]})
+        else:
+            raise HTTPException(status_code=400, detail="DPR already submitted for this date")
     
     # Generate filename in MMMM, DD, YYYY format
     file_name = dpr_date.strftime("%B, %d, %Y") + ".pdf"
