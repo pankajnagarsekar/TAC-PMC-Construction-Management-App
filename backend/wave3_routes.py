@@ -818,11 +818,10 @@ async def speech_to_text(
     import base64
     import uuid
     import tempfile
+    import litellm
     from pathlib import Path
     
     try:
-        from emergentintegrations.llm.openai import OpenAISpeechToText, LlmChat
-        
         audio_data = request.audio_data
         if audio_data.startswith('data:'):
             audio_data = audio_data.split(',')[1]
@@ -834,30 +833,38 @@ async def speech_to_text(
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         file_ext = request.audio_format.lower() or 'webm'
         
-        # Write to temp file - library requires file path
-        temp_file = tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False)
-        temp_file.write(audio_bytes)
-        temp_file.close()
-        temp_path = temp_file.name
+        # Write to temp file
+        with tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False) as f:
+            f.write(audio_bytes)
+            temp_path = f.name
         
         try:
-            stt = OpenAISpeechToText(api_key=api_key)
-            result = await stt.transcribe(file=temp_path)
-            transcript = result.text if hasattr(result, 'text') else str(result)
+            # Use litellm directly
+            with open(temp_path, 'rb') as audio_file:
+                response = await litellm.atranscription(
+                    model="whisper-1",
+                    file=audio_file,
+                    api_key=api_key
+                )
             
+            transcript = response.text if hasattr(response, 'text') else str(response)
             Path(temp_path).unlink(missing_ok=True)
             
             if not transcript.strip():
                 return {"transcript": "", "error": "No speech detected"}
             
-            # Translate to English
-            chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="Translate to English.")
-            english = await chat.send_message(f"Translate: {transcript}")
+            # Translate using litellm
+            translate_response = await litellm.acompletion(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": f"Translate to English only, return just the translation: {transcript}"}],
+                api_key=api_key
+            )
+            english = translate_response.choices[0].message.content
             
             return {"transcript": english.strip(), "original": transcript.strip()}
-        except Exception as inner_e:
+        except Exception as e:
             Path(temp_path).unlink(missing_ok=True)
-            raise inner_e
+            raise e
     except Exception as e:
         logger.error(f"[STT] Error: {str(e)}")
         return {"transcript": "", "error": str(e)}
