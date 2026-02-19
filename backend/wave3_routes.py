@@ -938,6 +938,48 @@ async def add_dpr_image(
     }
 
 
+# M10: Update image caption
+class UpdateImageCaptionRequest(BaseModel):
+    caption: str
+
+@wave3_router.put("/dpr/{dpr_id}/images/{image_id}")
+async def update_image_caption(
+    dpr_id: str,
+    image_id: str,
+    request: UpdateImageCaptionRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update caption for a specific image in DPR"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    # Verify DPR exists and belongs to org
+    dpr = await db.dpr.find_one({"_id": ObjectId(dpr_id)})
+    if not dpr:
+        raise HTTPException(status_code=404, detail="DPR not found")
+    
+    if dpr.get("organisation_id") != user["organisation_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Update the caption for the specific image
+    result = await db.dpr.update_one(
+        {
+            "_id": ObjectId(dpr_id),
+            "images.image_id": image_id
+        },
+        {
+            "$set": {
+                "images.$.caption": request.caption,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Image not found in DPR")
+    
+    return {"status": "updated", "message": "Caption updated successfully"}
+
+
 @wave3_router.post("/dpr/{dpr_id}/generate-pdf")
 async def generate_dpr_pdf(
     dpr_id: str,
