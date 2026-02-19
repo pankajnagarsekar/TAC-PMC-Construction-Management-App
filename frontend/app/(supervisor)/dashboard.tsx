@@ -212,7 +212,7 @@ export default function SupervisorDashboard() {
         </View>
 
         {/* STEP 1: Check-in Card - Always enabled */}
-        <Card style={[
+        <View style={[
           styles.checkInCard,
           isStep1Complete && styles.checkInCardComplete
         ]}>
@@ -234,7 +234,7 @@ export default function SupervisorDashboard() {
               ]}>
                 {isStep1Complete ? 'Checked In' : 'Check-in Required'}
               </Text>
-              <Text style={styles.checkInSubtitle}>
+              <Text style={[styles.checkInSubtitle, isStep1Complete && {color: Colors.textSecondary}]}>
                 {isStep1Complete 
                   ? `${new Date(checkInData.checkInTime!).toLocaleTimeString()}`
                   : 'Take a selfie to start your day'}
@@ -247,9 +247,12 @@ export default function SupervisorDashboard() {
           
           {!isStep1Complete && (
             <TouchableOpacity 
-              style={styles.checkInButton} 
-              onPress={handleCheckIn}
-              disabled={isProcessing}
+              style={[styles.checkInButton, isProcessing && {opacity: 0.7}]} 
+              onPress={() => {
+                console.log('Check-in button pressed');
+                handleCheckIn();
+              }}
+              activeOpacity={0.7}
             >
               {isProcessing ? (
                 <ActivityIndicator color={Colors.white} />
@@ -261,7 +264,7 @@ export default function SupervisorDashboard() {
               )}
             </TouchableOpacity>
           )}
-        </Card>
+        </View>
 
         {/* STEP 2: Select Project - Enabled after check-in */}
         <TouchableOpacity
