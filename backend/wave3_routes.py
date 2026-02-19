@@ -808,17 +808,17 @@ async def speech_to_text(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Convert speech to text using OpenAI Whisper via Emergent.
+    Convert speech to text and translate to English.
     
     Input: Base64 encoded audio (any language)
-    Output: Text transcription
+    Output: English text transcription
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
     try:
         import base64
         import io
-        from emergentintegrations.llm.openai import OpenAISpeechToText
+        from emergentintegrations.llm.openai import OpenAISpeechToText, LlmChat
         
         # Decode base64 audio
         audio_data = request.audio_data
@@ -834,11 +834,10 @@ async def speech_to_text(
                 "note": "Please record a longer audio clip"
             }
         
-        # Use Emergent integration for Whisper
         api_key = os.environ.get('EMERGENT_LLM_KEY')
-        stt_client = OpenAISpeechToText(api_key=api_key)
         
-        # Create file-like object from bytes
+        # Step 1: Transcribe audio
+        stt_client = OpenAISpeechToText(api_key=api_key)
         file_ext = request.audio_format.lower() or 'webm'
         audio_file = io.BytesIO(audio_bytes)
         audio_file.name = f'audio.{file_ext}'
@@ -846,11 +845,27 @@ async def speech_to_text(
         result = await stt_client.transcribe(file=audio_file)
         transcript = result.text if hasattr(result, 'text') else str(result)
         
+        if not transcript or not transcript.strip():
+            return {
+                "transcript": "",
+                "error": "No speech detected",
+                "note": "Please speak clearly and try again"
+            }
+        
+        # Step 2: Translate to English using GPT
+        chat = LlmChat(api_key=api_key, model="gpt-4o-mini")
+        translation_prompt = f"""Translate the following text to English. If it's already in English, just clean it up and return it. Only return the translated text, nothing else.
+
+Text: {transcript}"""
+        
+        english_text = await chat.send_message(translation_prompt)
+        
         return {
-            "transcript": transcript.strip() if transcript else "",
+            "transcript": english_text.strip() if english_text else transcript.strip(),
+            "original": transcript.strip(),
             "language": "en",
             "confidence": 0.95,
-            "note": "Transcribed successfully"
+            "note": "Transcribed and translated to English"
         }
                 
     except Exception as e:
