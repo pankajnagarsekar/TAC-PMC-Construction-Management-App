@@ -9,6 +9,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Pressable,
   Alert,
   Platform,
   Modal,
