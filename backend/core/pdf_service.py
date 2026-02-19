@@ -207,9 +207,9 @@ class DPRPDFGenerator:
         
         summary_text = dpr_data.get('progress_notes', '') or dpr_data.get('voice_summary', '')
         if summary_text:
-            elements.append(Paragraph(summary_text, self.styles['BodyText']))
+            elements.append(Paragraph(summary_text, self.styles['DPRBodyText']))
         else:
-            elements.append(Paragraph("No summary provided.", self.styles['BodyText']))
+            elements.append(Paragraph("No summary provided.", self.styles['DPRBodyText']))
         
         elements.append(Spacer(1, 20))
         
