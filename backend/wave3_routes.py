@@ -809,21 +809,20 @@ async def speech_to_text(
 ):
     """
     Convert speech to text using OpenAI Whisper via Emergent.
-    Automatically translates any language to English.
     
     Input: Base64 encoded audio (any language)
-    Output: English text transcription
+    Output: Text transcription
     """
     user = await permission_checker.get_authenticated_user(current_user)
     
     try:
         import base64
-        from emergentintegrations.llm.openai import transcribe_audio
+        import tempfile
+        from emergentintegrations.llm.openai import OpenAISpeechToText
         
         # Decode base64 audio
         audio_data = request.audio_data
         if audio_data.startswith('data:'):
-            # Remove data URL prefix
             audio_data = audio_data.split(',')[1] if ',' in audio_data else audio_data
         
         audio_bytes = base64.b64decode(audio_data)
@@ -835,8 +834,7 @@ async def speech_to_text(
                 "note": "Please record a longer audio clip"
             }
         
-        # Save temporarily
-        import tempfile
+        # Save to temp file
         file_ext = request.audio_format.lower() or 'webm'
         with tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False) as tmp:
             tmp.write(audio_bytes)
@@ -845,11 +843,10 @@ async def speech_to_text(
         try:
             # Use Emergent integration for Whisper
             api_key = os.environ.get('EMERGENT_LLM_KEY')
-            transcript = await transcribe_audio(
-                api_key=api_key,
-                audio_file_path=tmp_path,
-                language=None  # Auto-detect and translate to English
-            )
+            stt_client = OpenAISpeechToText(api_key=api_key)
+            
+            result = await stt_client.transcribe(file=tmp_path)
+            transcript = result.text if hasattr(result, 'text') else str(result)
             
             # Clean up temp file
             os.unlink(tmp_path)
@@ -858,10 +855,9 @@ async def speech_to_text(
                 "transcript": transcript.strip() if transcript else "",
                 "language": "en",
                 "confidence": 0.95,
-                "note": "Transcribed and translated to English"
+                "note": "Transcribed successfully"
             }
         except Exception as e:
-            # Clean up temp file on error
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
             raise e
