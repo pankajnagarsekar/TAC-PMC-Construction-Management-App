@@ -82,11 +82,25 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  // Load unread notification count
+  const loadNotificationCount = async () => {
+    try {
+      const response = await apiClient.get('/api/notifications/unread-count');
+      setUnreadNotifications(response.unread_count || 0);
+    } catch (error) {
+      console.log('Error loading notification count:', error);
+    }
+  };
 
   // UI-4: Load data from read model endpoints - NO local calculations
   const loadData = async () => {
     try {
       setError('');
+      // Load notification count along with other data
+      loadNotificationCount();
+      
       const projectsData = await projectsApi.getAll();
       setProjects(projectsData);
       
