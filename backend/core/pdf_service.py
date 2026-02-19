@@ -156,7 +156,7 @@ class DPRPDFGenerator:
         project_code = project_data.get('project_code', 'N/A')
         
         # Title
-        elements.append(Paragraph("Daily Progress Report", self.styles['Title']))
+        elements.append(Paragraph("Daily Progress Report", self.styles['DPRTitle']))
         
         # Subtitle with project and date
         dpr_date = dpr_data.get('dpr_date')
@@ -169,8 +169,8 @@ class DPRPDFGenerator:
             dpr_date = datetime.now()
         
         date_str = dpr_date.strftime("%B %d, %Y")
-        elements.append(Paragraph(f"{project_name} ({project_code})", self.styles['Subtitle']))
-        elements.append(Paragraph(date_str, self.styles['Subtitle']))
+        elements.append(Paragraph(f"{project_name} ({project_code})", self.styles['DPRSubtitle']))
+        elements.append(Paragraph(date_str, self.styles['DPRSubtitle']))
         
         elements.append(Spacer(1, 20))
         
