@@ -224,13 +224,16 @@ export default function SupervisorDPRScreen() {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
+        const newPhotoId = Date.now().toString();
         const newPhoto: Photo = {
-          id: Date.now().toString(),
+          id: newPhotoId,
           uri: asset.uri,
           base64: asset.base64 || '',
           caption: '',
+          isCollapsed: false,
         };
-        setPhotos(prev => [...prev, newPhoto]);
+        setPhotos(prev => [...prev.map(p => ({ ...p, isCollapsed: true })), newPhoto]);
+        setExpandedPhotoId(newPhotoId);
       }
     } catch (error) {
       showAlert('Error', 'Failed to take photo');
@@ -254,8 +257,11 @@ export default function SupervisorDPRScreen() {
           uri: asset.uri,
           base64: asset.base64 || '',
           caption: '',
+          isCollapsed: index > 0, // Only first new photo expanded
         }));
-        setPhotos(prev => [...prev, ...newPhotos]);
+        const firstNewId = newPhotos[0]?.id;
+        setPhotos(prev => [...prev.map(p => ({ ...p, isCollapsed: true })), ...newPhotos]);
+        if (firstNewId) setExpandedPhotoId(firstNewId);
       }
     } catch (error) {
       showAlert('Error', 'Failed to pick images');
@@ -264,6 +270,22 @@ export default function SupervisorDPRScreen() {
 
   const updateCaption = (id: string, caption: string) => {
     setPhotos(prev => prev.map(p => p.id === id ? { ...p, caption } : p));
+  };
+
+  const collapsePhoto = (id: string) => {
+    setPhotos(prev => prev.map(p => p.id === id ? { ...p, isCollapsed: true } : p));
+    setExpandedPhotoId(null);
+  };
+
+  const togglePhotoExpand = (id: string) => {
+    const photo = photos.find(p => p.id === id);
+    if (photo?.isCollapsed) {
+      setPhotos(prev => prev.map(p => ({ ...p, isCollapsed: p.id !== id })));
+      setExpandedPhotoId(id);
+    } else {
+      setPhotos(prev => prev.map(p => p.id === id ? { ...p, isCollapsed: true } : p));
+      setExpandedPhotoId(null);
+    }
   };
 
   const removePhoto = (id: string) => {
