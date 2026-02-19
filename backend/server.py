@@ -22,7 +22,8 @@ from models import (
     AuditLog,
     GlobalSettings,
     Token, LoginRequest, RefreshTokenRequest,
-    WorkerEntry, WorkersDailyLog, WorkersDailyLogCreate, WorkersDailyLogUpdate
+    WorkerEntry, WorkersDailyLog, WorkersDailyLogCreate, WorkersDailyLogUpdate,
+    Notification, NotificationCreate
 )
 from auth import (
     hash_password, verify_password, create_access_token, create_refresh_token,
