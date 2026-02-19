@@ -78,7 +78,7 @@ export default function SupervisorDashboard() {
     setIsProcessing(true);
     
     try {
-      // For web - simulate check-in directly (Alert.alert doesn't work on web)
+      // For web - simulate check-in directly
       if (Platform.OS === 'web') {
         console.log('Web platform - simulating check-in');
         const checkInTime = new Date().toISOString();
@@ -93,23 +93,38 @@ export default function SupervisorDashboard() {
         return;
       }
       
-      // Mobile - use camera
-      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      if (cameraStatus !== 'granted') {
-        setIsProcessing(false);
-        Alert.alert('Permission Required', 'Camera permission is needed to check in.');
-        return;
-      }
+      // Mobile - try to use camera, with fallback
+      let selfieUri: string | null = null;
+      
+      try {
+        const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+        console.log('Camera permission status:', cameraStatus);
+        
+        if (cameraStatus === 'granted') {
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: false,
+            quality: 0.7,
+            cameraType: ImagePicker.CameraType.front,
+          });
 
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: false,
-        quality: 0.7,
-        cameraType: ImagePicker.CameraType.front,
-      });
-
-      if (result.canceled) {
-        setIsProcessing(false);
-        return;
+          if (result.canceled) {
+            // User cancelled camera - still allow check-in without photo
+            console.log('User cancelled camera, proceeding without photo');
+          } else if (result.assets && result.assets[0]) {
+            selfieUri = result.assets[0].uri;
+          }
+        } else {
+          // Camera permission denied - show alert but still allow check-in
+          console.log('Camera permission denied, proceeding without photo');
+          Alert.alert(
+            'Camera Access', 
+            'Camera permission not granted. Checking in without selfie.',
+            [{ text: 'OK' }]
+          );
+        }
+      } catch (cameraError) {
+        console.log('Camera error (non-blocking):', cameraError);
+        // Continue without selfie
       }
 
       // Get location (non-blocking)
@@ -127,15 +142,21 @@ export default function SupervisorDashboard() {
         console.log('Location skipped:', e);
       }
 
+      // Complete check-in regardless of photo/location success
       const checkInTime = new Date().toISOString();
       setCheckInData({
         isCheckedIn: true,
         checkInTime,
-        selfieUri: result.assets[0].uri,
+        selfieUri,
         location: locationData,
       });
       setIsProcessing(false);
-      Alert.alert('Check-in Successful!', 'Time: ' + new Date(checkInTime).toLocaleTimeString());
+      
+      Alert.alert(
+        'Check-in Successful!', 
+        `Time: ${new Date(checkInTime).toLocaleTimeString()}${selfieUri ? '\nSelfie captured.' : ''}${locationData.latitude !== 0 ? '\nLocation captured.' : ''}`,
+        [{ text: 'OK' }]
+      );
       
     } catch (error) {
       console.error('Check-in error:', error);
