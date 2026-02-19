@@ -96,6 +96,13 @@ export default function DPRDetailScreen() {
       setWeatherConditions(response.weather_conditions || '');
       setManpowerCount(response.manpower_count?.toString() || '');
       setIssuesEncountered(response.issues_encountered || '');
+      
+      // M10: Initialize image captions
+      const captions: Record<string, string> = {};
+      response.images.forEach(img => {
+        captions[img.image_id] = img.caption || '';
+      });
+      setImageCaptions(captions);
     } catch (error: any) {
       console.error('Error fetching DPR:', error);
       showAlert('Error', error.message || 'Failed to load DPR');
