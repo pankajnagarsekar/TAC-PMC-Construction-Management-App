@@ -1,5 +1,5 @@
-// SUPERVISOR TAB LAYOUT
-// Bottom tab navigation for supervisor users
+// SUPERVISOR TAB LAYOUT - SIMPLIFIED
+// Bottom tab navigation with streamlined workflow
 
 import React from 'react';
 import { Tabs } from 'expo-router';
@@ -10,8 +10,6 @@ import { useAuth } from '../../contexts/AuthContext';
 export default function SupervisorTabLayout() {
   const { user } = useAuth();
   const screenPermissions = user?.screen_permissions || [];
-  
-  // Check if user has reports permission
   const hasReportsPermission = screenPermissions.includes('reports');
   
   return (
@@ -41,53 +39,23 @@ export default function SupervisorTabLayout() {
         },
       }}
     >
+      {/* Main Tabs - Simplified to 3 */}
       <Tabs.Screen
         name="dashboard"
         options={{
           title: 'Home',
-          headerTitle: 'Site Dashboard',
+          headerTitle: 'Supervisor Dashboard',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="progress"
-        options={{
-          title: 'Progress',
-          headerTitle: 'Progress Tracking',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trending-up-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="attendance"
-        options={{
-          title: 'Attendance',
-          headerTitle: 'My Attendance',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="finger-print-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="issues"
-        options={{
-          title: 'Issues',
-          headerTitle: 'Issue Log',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="warning-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      {/* Reports tab - shown only if user has permission */}
-      <Tabs.Screen
         name="reports"
         options={{
           href: hasReportsPermission ? '/(supervisor)/reports' : null,
           title: 'Reports',
-          headerTitle: 'Reports',
+          headerTitle: 'My Reports',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text-outline" size={size} color={color} />
           ),
@@ -103,11 +71,17 @@ export default function SupervisorTabLayout() {
           ),
         }}
       />
-      {/* Hidden screens - accessible via navigation but not shown in tab bar */}
-      <Tabs.Screen name="voice-log" options={{ href: null, headerTitle: 'Voice Log' }} />
-      <Tabs.Screen name="dpr" options={{ href: null, headerTitle: 'Daily Progress Report' }} />
+      
+      {/* Hidden screens - accessible via navigation only */}
       <Tabs.Screen name="select-project" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="worker-log" options={{ href: null, headerTitle: 'Workers Daily Log' }} />
+      <Tabs.Screen name="dpr" options={{ href: null, headerTitle: 'Create DPR' }} />
+      <Tabs.Screen name="voice-log" options={{ href: null, headerTitle: 'Voice Log' }} />
+      
+      {/* Remove from tabs - keep files but hide completely */}
+      <Tabs.Screen name="progress" options={{ href: null, headerTitle: 'Progress' }} />
+      <Tabs.Screen name="attendance" options={{ href: null, headerTitle: 'Attendance' }} />
+      <Tabs.Screen name="issues" options={{ href: null, headerTitle: 'Issues' }} />
     </Tabs>
   );
 }
