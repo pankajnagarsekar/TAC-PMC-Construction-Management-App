@@ -363,6 +363,8 @@ async def get_users(current_user: dict = Depends(get_current_user)):
             role=u["role"],
             active_status=u["active_status"],
             dpr_generation_permission=u.get("dpr_generation_permission", False),
+            assigned_projects=u.get("assigned_projects", []),
+            screen_permissions=u.get("screen_permissions", []),
             created_at=u["created_at"],
             updated_at=u["updated_at"]
         ))
@@ -398,6 +400,8 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
         role=target_user["role"],
         active_status=target_user["active_status"],
         dpr_generation_permission=target_user.get("dpr_generation_permission", False),
+        assigned_projects=target_user.get("assigned_projects", []),
+        screen_permissions=target_user.get("screen_permissions", []),
         created_at=target_user["created_at"],
         updated_at=target_user["updated_at"]
     )
