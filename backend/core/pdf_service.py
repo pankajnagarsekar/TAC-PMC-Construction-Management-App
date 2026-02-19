@@ -35,7 +35,7 @@ class DPRPDFGenerator:
     def _setup_custom_styles(self):
         """Setup custom paragraph styles"""
         self.styles.add(ParagraphStyle(
-            name='Title',
+            name='DPRTitle',
             parent=self.styles['Heading1'],
             fontSize=24,
             alignment=TA_CENTER,
@@ -44,7 +44,7 @@ class DPRPDFGenerator:
         ))
         
         self.styles.add(ParagraphStyle(
-            name='Subtitle',
+            name='DPRSubtitle',
             parent=self.styles['Normal'],
             fontSize=14,
             alignment=TA_CENTER,
@@ -65,7 +65,7 @@ class DPRPDFGenerator:
         ))
         
         self.styles.add(ParagraphStyle(
-            name='BodyText',
+            name='DPRBodyText',
             parent=self.styles['Normal'],
             fontSize=11,
             spaceAfter=8,
