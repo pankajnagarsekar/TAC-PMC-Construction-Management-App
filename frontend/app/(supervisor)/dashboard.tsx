@@ -146,47 +146,6 @@ export default function SupervisorDashboard() {
       }
     }
   };
-          const locationPromise = Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced, // Use balanced for faster response
-          });
-          
-          // Timeout after 10 seconds
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Location timeout')), 10000)
-          );
-          
-          const location = await Promise.race([locationPromise, timeoutPromise]) as any;
-          locationData = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          };
-        }
-      } catch (locError) {
-        console.log('Location error (non-blocking):', locError);
-        // Continue without location
-      }
-
-      // Save check-in data
-      const checkInTime = new Date().toISOString();
-      setCheckInData({
-        isCheckedIn: true,
-        checkInTime,
-        selfieUri: result.assets[0].uri,
-        location: locationData,
-      });
-
-      Alert.alert(
-        'Check-in Successful!', 
-        `Time: ${new Date(checkInTime).toLocaleTimeString()}${locationData.latitude !== 0 ? '\nLocation captured.' : ''}`,
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Check-in error:', error);
-      Alert.alert('Error', 'Failed to check in. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   // STEP 2: Select Project
   const handleSelectProject = () => {
