@@ -244,48 +244,85 @@ export default function WorkerLogScreen() {
         {/* Entries List */}
         {entries.map((entry, index) => (
           <Card key={entry.id} style={styles.entryCard}>
-            <View style={styles.entryHeader}>
-              <Text style={styles.entryNumber}>Entry #{index + 1}</Text>
-              <TouchableOpacity onPress={() => removeEntry(entry.id)} style={styles.removeButton}>
-                <Ionicons name="trash-outline" size={20} color={Colors.error} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Vendor Selection */}
-            <Text style={styles.fieldLabel}>Vendor Name</Text>
+            {/* Collapsible Header */}
             <TouchableOpacity 
-              style={styles.selectField}
-              onPress={() => openVendorModal(entry.id)}
+              style={styles.entryHeader}
+              onPress={() => toggleCollapse(entry.id)}
             >
-              <Text style={entry.vendor ? styles.selectFieldText : styles.selectFieldPlaceholder}>
-                {entry.vendor ? entry.vendor.display_name : 'Select Vendor'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={Colors.textMuted} />
+              <View style={styles.entryHeaderLeft}>
+                {isEntryComplete(entry) && (
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.success} style={{marginRight: 8}} />
+                )}
+                <Text style={styles.entryNumber}>Entry #{index + 1}</Text>
+                {entry.isCollapsed && entry.vendor && (
+                  <Text style={styles.entryPreview} numberOfLines={1}>
+                    • {entry.vendor.display_name} ({entry.workers_count})
+                  </Text>
+                )}
+              </View>
+              <View style={styles.entryHeaderRight}>
+                <Ionicons 
+                  name={entry.isCollapsed ? "chevron-down" : "chevron-up"} 
+                  size={20} 
+                  color={Colors.textMuted} 
+                />
+                <TouchableOpacity onPress={() => removeEntry(entry.id)} style={styles.removeButton}>
+                  <Ionicons name="trash-outline" size={20} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
 
-            {/* Workers Count */}
-            <Text style={styles.fieldLabel}>No. of Workers Present</Text>
-            <TextInput
-              style={styles.numberInput}
-              keyboardType="number-pad"
-              placeholder="0"
-              value={entry.workers_count ? entry.workers_count.toString() : ''}
-              onChangeText={(text) => {
-                const num = parseInt(text) || 0;
-                updateEntry(entry.id, 'workers_count', num);
-              }}
-            />
+            {/* Collapsible Content */}
+            {!entry.isCollapsed && (
+              <>
+                {/* Vendor Selection */}
+                <Text style={styles.fieldLabel}>Vendor Name</Text>
+                <TouchableOpacity 
+                  style={styles.selectField}
+                  onPress={() => openVendorModal(entry.id)}
+                >
+                  <Text style={entry.vendor ? styles.selectFieldText : styles.selectFieldPlaceholder}>
+                    {entry.vendor ? entry.vendor.display_name : 'Select Vendor'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color={Colors.textMuted} />
+                </TouchableOpacity>
 
-            {/* Purpose of Work */}
-            <Text style={styles.fieldLabel}>Purpose of Work</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Enter work description..."
-              value={entry.purpose}
-              onChangeText={(text) => updateEntry(entry.id, 'purpose', text)}
-              multiline
-              numberOfLines={2}
-            />
+                {/* Workers Count */}
+                <Text style={styles.fieldLabel}>No. of Workers Present</Text>
+                <TextInput
+                  style={styles.numberInput}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  value={entry.workers_count ? entry.workers_count.toString() : ''}
+                  onChangeText={(text) => {
+                    const num = parseInt(text) || 0;
+                    updateEntry(entry.id, 'workers_count', num);
+                  }}
+                />
+
+                {/* Purpose of Work */}
+                <Text style={styles.fieldLabel}>Purpose of Work</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter work description..."
+                  value={entry.purpose}
+                  onChangeText={(text) => updateEntry(entry.id, 'purpose', text)}
+                  multiline
+                  numberOfLines={2}
+                />
+                
+                {/* Done button to collapse */}
+                {isEntryComplete(entry) && (
+                  <TouchableOpacity 
+                    style={styles.doneButton}
+                    onPress={() => toggleCollapse(entry.id)}
+                  >
+                    <Ionicons name="checkmark" size={18} color={Colors.white} />
+                    <Text style={styles.doneButtonText}>Done</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
           </Card>
         ))}
 
