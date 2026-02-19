@@ -1,6 +1,7 @@
 // DPR DETAIL/EDIT SCREEN
 // View and edit existing Daily Progress Reports
 // UI-3: Version selector for viewing historical snapshots
+// M10: Admin can view images and edit captions
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -15,6 +16,7 @@ import {
   Platform,
   Image,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -37,6 +39,7 @@ interface DPRDetail {
   dpr_id: string;
   project_id: string;
   project_name?: string;
+  project_code?: string;
   dpr_date: string;
   status: string;
   progress_notes?: string;
@@ -67,6 +70,11 @@ export default function DPRDetailScreen() {
   const [weatherConditions, setWeatherConditions] = useState('');
   const [manpowerCount, setManpowerCount] = useState('');
   const [issuesEncountered, setIssuesEncountered] = useState('');
+  
+  // M10: Image caption editing
+  const [editingCaptions, setEditingCaptions] = useState(false);
+  const [imageCaptions, setImageCaptions] = useState<Record<string, string>>({});
+  const [expandedImageId, setExpandedImageId] = useState<string | null>(null);
 
   const showAlert = (title: string, message: string, onDismiss?: () => void) => {
     if (Platform.OS === 'web') {
