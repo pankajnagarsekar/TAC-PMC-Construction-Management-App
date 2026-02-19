@@ -102,8 +102,22 @@ export default function WorkerLogScreen() {
       vendor: null,
       workers_count: 0,
       purpose: '',
+      isCollapsed: false,
     };
-    setEntries([...entries, newEntry]);
+    // Collapse all existing entries
+    setEntries(prev => [...prev.map(e => ({ ...e, isCollapsed: true })), newEntry]);
+  };
+
+  // Toggle entry collapse
+  const toggleCollapse = (id: string) => {
+    setEntries(entries.map(e => 
+      e.id === id ? { ...e, isCollapsed: !e.isCollapsed } : e
+    ));
+  };
+
+  // Check if entry is complete (for showing checkmark)
+  const isEntryComplete = (entry: WorkerEntry) => {
+    return entry.vendor && entry.workers_count > 0 && entry.purpose.trim();
   };
 
   // Remove entry
