@@ -263,9 +263,9 @@ class DPRPDFGenerator:
             else:
                 # Legacy format or no entries
                 total = worker_log.get('total_workers', 0)
-                elements.append(Paragraph(f"Total Workers: {total}", self.styles['BodyText']))
+                elements.append(Paragraph(f"Total Workers: {total}", self.styles['DPRBodyText']))
         else:
-            elements.append(Paragraph("No worker attendance recorded.", self.styles['BodyText']))
+            elements.append(Paragraph("No worker attendance recorded.", self.styles['DPRBodyText']))
         
         return elements
     
