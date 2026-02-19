@@ -1384,7 +1384,7 @@ async def create_worker_log(
     log_data: WorkersDailyLogCreate,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a new workers daily log (Supervisor)"""
+    """Create or update a workers daily log (Supervisor)"""
     user = await permission_checker.get_authenticated_user(current_user)
     
     # Check if log already exists for this date and project
@@ -1393,12 +1393,6 @@ async def create_worker_log(
         "date": log_data.date,
         "supervisor_id": user["user_id"]
     })
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Worker log already exists for this date. Please update the existing log."
-        )
     
     # Calculate totals from new entries format or legacy workers format
     if log_data.entries:
@@ -1409,6 +1403,29 @@ async def create_worker_log(
         entries_data = []
     
     total_hours = sum(w.hours_worked for w in log_data.workers) if log_data.workers else 0
+    
+    if existing:
+        # Update existing log
+        update_dict = {
+            "entries": entries_data,
+            "workers": [w.dict() for w in log_data.workers],
+            "total_workers": log_data.total_workers if log_data.total_workers else total_workers,
+            "total_hours": total_hours,
+            "weather": log_data.weather,
+            "site_conditions": log_data.site_conditions,
+            "remarks": log_data.remarks,
+            "status": "submitted",
+            "updated_at": datetime.utcnow()
+        }
+        
+        await db.worker_logs.update_one(
+            {"_id": existing["_id"]},
+            {"$set": update_dict}
+        )
+        
+        updated = await db.worker_logs.find_one({"_id": existing["_id"]})
+        updated["log_id"] = str(updated.pop("_id"))
+        return updated
     
     log_dict = {
         "organisation_id": user["organisation_id"],
