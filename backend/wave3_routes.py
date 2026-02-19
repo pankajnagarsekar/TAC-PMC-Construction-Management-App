@@ -811,20 +811,15 @@ async def speech_to_text(
     request: SpeechToTextRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    Convert speech to text and translate to English.
-    
-    Input: Base64 encoded audio (any language)
-    Output: English text transcription
-    """
+    """Convert speech to text and translate to English."""
     user = await permission_checker.get_authenticated_user(current_user)
     
     try:
         import base64
-        import io
+        import tempfile
+        import uuid
         from emergentintegrations.llm.openai import OpenAISpeechToText, LlmChat
         
-        # Decode base64 audio
         audio_data = request.audio_data
         if audio_data.startswith('data:'):
             audio_data = audio_data.split(',')[1] if ',' in audio_data else audio_data
@@ -832,52 +827,40 @@ async def speech_to_text(
         audio_bytes = base64.b64decode(audio_data)
         
         if len(audio_bytes) < 100:
-            return {
-                "transcript": "",
-                "error": "Audio too short",
-                "note": "Please record a longer audio clip"
-            }
+            return {"transcript": "", "error": "Audio too short"}
         
         api_key = os.environ.get('EMERGENT_LLM_KEY')
-        
-        # Step 1: Transcribe audio
-        stt_client = OpenAISpeechToText(api_key=api_key)
         file_ext = request.audio_format.lower() or 'webm'
-        audio_file = io.BytesIO(audio_bytes)
-        audio_file.name = f'audio.{file_ext}'
         
-        result = await stt_client.transcribe(file=audio_file)
-        transcript = result.text if hasattr(result, 'text') else str(result)
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False) as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
         
-        if not transcript or not transcript.strip():
-            return {
-                "transcript": "",
-                "error": "No speech detected",
-                "note": "Please speak clearly and try again"
-            }
-        
-        # Step 2: Translate to English using GPT
-        from emergentintegrations.llm.openai import LlmChat
-        import uuid
-        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="You are a translator. Translate text to English.")
-        
-        english_text = await chat.send_message(f"Translate to English. Only return the translation, nothing else: {transcript}")
-        
-        return {
-            "transcript": english_text.strip() if english_text else transcript.strip(),
-            "original": transcript.strip(),
-            "language": "en",
-            "confidence": 0.95,
-            "note": "Transcribed and translated to English"
-        }
+        try:
+            # Transcribe
+            stt = OpenAISpeechToText(api_key=api_key)
+            result = await stt.transcribe(file=tmp_path)
+            transcript = result.text if hasattr(result, 'text') else str(result)
+            
+            os.unlink(tmp_path)
+            
+            if not transcript.strip():
+                return {"transcript": "", "error": "No speech detected"}
+            
+            # Translate to English
+            chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="Translate to English only.")
+            english = await chat.send_message(f"Translate to English: {transcript}")
+            
+            return {"transcript": english.strip(), "original": transcript.strip()}
+        except Exception as e:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise e
                 
     except Exception as e:
         logger.error(f"[STT] Error: {str(e)}")
-        return {
-            "transcript": "",
-            "error": str(e),
-            "note": "Failed to transcribe audio"
-        }
+        return {"transcript": "", "error": str(e)}
 
 
 @wave3_router.post("/dpr/{dpr_id}/images", status_code=201)
