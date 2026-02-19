@@ -599,8 +599,14 @@ async def build_dpr_snapshot(
     if not dpr:
         raise ValueError(f"DPR not found: {dpr_id}")
     
-    # Get related entities
-    project = await db.projects.find_one({"_id": ObjectId(dpr.get("project_id"))})
+    # Get related entities - handle both ObjectId and string project IDs
+    project_id = dpr.get("project_id")
+    try:
+        project_query = {"_id": ObjectId(project_id)} if len(str(project_id)) == 24 else {"project_id": project_id}
+    except:
+        project_query = {"project_id": project_id}
+    
+    project = await db.projects.find_one(project_query)
     
     # Build embedded snapshot
     snapshot_data = {
