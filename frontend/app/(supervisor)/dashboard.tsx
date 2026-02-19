@@ -76,6 +76,33 @@ export default function SupervisorDashboard() {
     try {
       setIsProcessing(true);
       
+      // Check platform
+      if (Platform.OS === 'web') {
+        // Web fallback - just use alert for demo
+        Alert.alert(
+          'Web Check-in',
+          'Camera check-in works best on mobile app. For web demo, we\'ll simulate check-in.',
+          [
+            { text: 'Cancel', onPress: () => setIsProcessing(false), style: 'cancel' },
+            { 
+              text: 'Simulate Check-in', 
+              onPress: () => {
+                const checkInTime = new Date().toISOString();
+                setCheckInData({
+                  isCheckedIn: true,
+                  checkInTime,
+                  selfieUri: null,
+                  location: { latitude: 0, longitude: 0 },
+                });
+                setIsProcessing(false);
+                Alert.alert('Check-in Successful!', `Time: ${new Date(checkInTime).toLocaleTimeString()}`);
+              }
+            }
+          ]
+        );
+        return;
+      }
+      
       // Request camera permission
       const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
       if (cameraStatus !== 'granted') {
@@ -84,30 +111,41 @@ export default function SupervisorDashboard() {
         return;
       }
 
-      // Request location permission
-      const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
-      if (locationStatus !== 'granted') {
-        Alert.alert('Permission Required', 'Location permission is needed to check in.');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Get location first
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      // Take selfie
+      // Take selfie first (don't block on location)
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
         quality: 0.7,
         cameraType: ImagePicker.CameraType.front,
-        aspect: [3, 4],
       });
 
       if (result.canceled) {
         setIsProcessing(false);
         return;
+      }
+
+      // Get location in background (with timeout)
+      let locationData = { latitude: 0, longitude: 0 };
+      try {
+        const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
+        if (locationStatus === 'granted') {
+          const locationPromise = Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced, // Use balanced for faster response
+          });
+          
+          // Timeout after 10 seconds
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Location timeout')), 10000)
+          );
+          
+          const location = await Promise.race([locationPromise, timeoutPromise]) as any;
+          locationData = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+        }
+      } catch (locError) {
+        console.log('Location error (non-blocking):', locError);
+        // Continue without location
       }
 
       // Save check-in data
@@ -116,18 +154,21 @@ export default function SupervisorDashboard() {
         isCheckedIn: true,
         checkInTime,
         selfieUri: result.assets[0].uri,
-        location: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        },
+        location: locationData,
       });
 
       Alert.alert(
         'Check-in Successful!', 
-        `Time: ${new Date(checkInTime).toLocaleTimeString()}\nLocation captured.`,
+        `Time: ${new Date(checkInTime).toLocaleTimeString()}${locationData.latitude !== 0 ? '\nLocation captured.' : ''}`,
         [{ text: 'OK' }]
       );
     } catch (error) {
+      console.error('Check-in error:', error);
+      Alert.alert('Error', 'Failed to check in. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
       console.error('Check-in error:', error);
       Alert.alert('Error', 'Failed to check in. Please try again.');
     } finally {
