@@ -530,7 +530,7 @@ export default function DPRDetailScreen() {
           )}
         </View>
 
-        {/* Photos Section */}
+        {/* Photos Section - M10: Collapsible frames with editable captions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Photos ({dpr.images.length})</Text>
@@ -555,18 +555,74 @@ export default function DPRDetailScreen() {
             </View>
           ) : (
             <View style={styles.photoGrid}>
-              {dpr.images.map((img, idx) => (
-                <View key={img.image_id || idx} style={styles.photoCard}>
-                  <Image 
-                    source={{ uri: img.image_url || 'https://via.placeholder.com/300' }} 
-                    style={styles.photo} 
-                    resizeMode="cover"
-                  />
-                  {img.caption && (
-                    <Text style={styles.photoCaption} numberOfLines={2}>{img.caption}</Text>
-                  )}
-                </View>
-              ))}
+              {dpr.images.map((img, idx) => {
+                const isExpanded = expandedImageId === img.image_id;
+                return (
+                  <View key={img.image_id || idx} style={styles.photoCard}>
+                    {/* Collapsible Header */}
+                    <TouchableOpacity 
+                      style={styles.photoHeader}
+                      onPress={() => setExpandedImageId(isExpanded ? null : img.image_id)}
+                    >
+                      <View style={styles.photoHeaderLeft}>
+                        <Ionicons name="image" size={20} color={Colors.accent} />
+                        <Text style={styles.photoNumber}>Photo {idx + 1}</Text>
+                        {!isExpanded && imageCaptions[img.image_id] && (
+                          <Text style={styles.photoPreview} numberOfLines={1}>
+                            - {imageCaptions[img.image_id]}
+                          </Text>
+                        )}
+                      </View>
+                      <Ionicons 
+                        name={isExpanded ? "chevron-up" : "chevron-down"} 
+                        size={20} 
+                        color={Colors.textMuted} 
+                      />
+                    </TouchableOpacity>
+                    
+                    {/* Collapsible Content */}
+                    {isExpanded && (
+                      <View style={styles.photoContent}>
+                        <Image 
+                          source={{ uri: img.image_url || 'https://via.placeholder.com/300' }} 
+                          style={styles.photo} 
+                          resizeMode="cover"
+                        />
+                        
+                        {/* M10: Editable Caption */}
+                        <Text style={styles.captionLabel}>Caption</Text>
+                        <TextInput
+                          style={styles.captionInput}
+                          value={imageCaptions[img.image_id] || ''}
+                          onChangeText={(text) => setImageCaptions(prev => ({
+                            ...prev,
+                            [img.image_id]: text
+                          }))}
+                          placeholder="Add a caption for this photo..."
+                          multiline
+                          numberOfLines={2}
+                          placeholderTextColor={Colors.textMuted}
+                        />
+                        
+                        <TouchableOpacity
+                          style={[styles.saveCaptionBtn, saving && styles.buttonDisabled]}
+                          onPress={() => saveImageCaption(img.image_id)}
+                          disabled={saving}
+                        >
+                          {saving ? (
+                            <ActivityIndicator color={Colors.white} size="small" />
+                          ) : (
+                            <>
+                              <Ionicons name="checkmark" size={16} color={Colors.white} />
+                              <Text style={styles.saveCaptionText}>Save Caption</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           )}
 
