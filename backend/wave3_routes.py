@@ -1280,7 +1280,10 @@ async def submit_dpr(
     return {
         "dpr_id": dpr_id,
         "status": "submitted",
-        "pdf_generated": True,
+        "pdf_generated": pdf_base64 is not None,
+        "file_name": file_name,
+        "file_size_kb": round(file_size_kb, 2),
+        "pdf_data": pdf_base64,  # Base64 encoded PDF for download
         "snapshot_version": snapshot.get("version"),
         "locked": True,
         "message": "DPR submitted successfully with immutable snapshot"
