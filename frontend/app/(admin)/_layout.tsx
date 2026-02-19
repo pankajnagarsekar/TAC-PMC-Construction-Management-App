@@ -117,6 +117,7 @@ export default function AdminTabLayout() {
       <Tabs.Screen name="settings/terms" options={{ href: null, headerTitle: 'Terms of Service' }} />
       <Tabs.Screen name="settings/privacy" options={{ href: null, headerTitle: 'Privacy Policy' }} />
       <Tabs.Screen name="workers-report" options={{ href: null, headerTitle: 'Workers Report' }} />
+      <Tabs.Screen name="notifications" options={{ href: null, headerTitle: 'Notifications' }} />
     </Tabs>
   );
 }
