@@ -585,7 +585,7 @@ export default function DPRDetailScreen() {
                     {isExpanded && (
                       <View style={styles.photoContent}>
                         <Image 
-                          source={{ uri: img.image_url || 'https://via.placeholder.com/300' }} 
+                          source={{ uri: img.image_url || (img.image_data?.startsWith('data:') ? img.image_data : `data:image/jpeg;base64,${img.image_data}`) || 'https://via.placeholder.com/300' }} 
                           style={styles.photo} 
                           resizeMode="cover"
                         />
