@@ -316,8 +316,15 @@ class PettyCashCreate(BaseModel):
 # ============================================
 # WORKERS DAILY LOG MODELS
 # ============================================
+class VendorWorkerEntry(BaseModel):
+    """Vendor-based worker entry"""
+    vendor_code: str
+    vendor_name: str
+    workers_count: int
+    purpose: str
+
 class WorkerEntry(BaseModel):
-    """Individual worker entry in the daily log"""
+    """Individual worker entry in the daily log (legacy)"""
     worker_name: str
     skill_type: str  # Mason, Carpenter, Laborer, Electrician, Plumber, Welder, etc.
     hours_worked: float = 8.0
@@ -333,7 +340,8 @@ class WorkersDailyLog(BaseModel):
     date: str  # ISO date format YYYY-MM-DD
     supervisor_id: str
     supervisor_name: str
-    workers: List[WorkerEntry] = []
+    entries: List[VendorWorkerEntry] = []  # New format
+    workers: List[WorkerEntry] = []  # Legacy format
     total_workers: int = 0
     total_hours: float = 0.0
     weather: Optional[str] = None  # sunny, cloudy, rainy, etc.
@@ -351,13 +359,16 @@ class WorkersDailyLogCreate(BaseModel):
     """Create request for workers daily log"""
     project_id: str
     date: str
-    workers: List[WorkerEntry] = []
+    entries: List[VendorWorkerEntry] = []  # New format
+    workers: List[WorkerEntry] = []  # Legacy format
+    total_workers: int = 0
     weather: Optional[str] = None
     site_conditions: Optional[str] = None
     remarks: Optional[str] = None
 
 class WorkersDailyLogUpdate(BaseModel):
     """Update request for workers daily log"""
+    entries: Optional[List[VendorWorkerEntry]] = None
     workers: Optional[List[WorkerEntry]] = None
     weather: Optional[str] = None
     site_conditions: Optional[str] = None
