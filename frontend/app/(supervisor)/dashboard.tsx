@@ -531,6 +531,8 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     marginTop: Spacing.md,
     gap: Spacing.sm,
+    // @ts-ignore - Web-specific cursor style
+    cursor: 'pointer',
   },
   checkInButtonText: {
     fontSize: FontSizes.md,
