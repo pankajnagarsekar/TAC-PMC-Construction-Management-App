@@ -796,6 +796,114 @@ ALT3: [alternative 3]""",
         }
 
 
+class SpeechToTextRequest(BaseModel):
+    """Request for speech-to-text conversion"""
+    audio_data: str  # Base64 encoded audio
+    audio_format: str = "webm"  # webm, mp3, wav, m4a, etc.
+
+
+@wave3_router.post("/speech-to-text")
+async def speech_to_text(
+    request: SpeechToTextRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Convert speech to text using OpenAI Whisper.
+    Automatically translates any language to English.
+    
+    Input: Base64 encoded audio (any language)
+    Output: English text transcription
+    """
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    # Get API key
+    api_key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('OPENAI_API_KEY')
+    
+    if not api_key:
+        return {
+            "transcript": "",
+            "error": "API key not configured",
+            "note": "Please configure EMERGENT_LLM_KEY or OPENAI_API_KEY"
+        }
+    
+    try:
+        import base64
+        import httpx
+        
+        # Decode base64 audio
+        audio_data = request.audio_data
+        if audio_data.startswith('data:'):
+            # Remove data URL prefix
+            audio_data = audio_data.split(',')[1] if ',' in audio_data else audio_data
+        
+        audio_bytes = base64.b64decode(audio_data)
+        
+        if len(audio_bytes) < 100:
+            return {
+                "transcript": "",
+                "error": "Audio too short",
+                "note": "Please record a longer audio clip"
+            }
+        
+        # Determine mime type
+        format_map = {
+            'webm': 'audio/webm',
+            'mp3': 'audio/mpeg',
+            'wav': 'audio/wav',
+            'm4a': 'audio/m4a',
+            'ogg': 'audio/ogg',
+            'mp4': 'audio/mp4',
+        }
+        mime_type = format_map.get(request.audio_format.lower(), 'audio/webm')
+        file_ext = request.audio_format.lower()
+        
+        # Call OpenAI Whisper API (translations endpoint auto-translates to English)
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            files = {
+                'file': (f'audio.{file_ext}', audio_bytes, mime_type),
+                'model': (None, 'whisper-1'),
+            }
+            
+            response = await client.post(
+                'https://api.openai.com/v1/audio/translations',
+                headers={'Authorization': f'Bearer {api_key}'},
+                files=files,
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                transcript = result.get('text', '').strip()
+                
+                return {
+                    "transcript": transcript,
+                    "language": "en",
+                    "confidence": 0.95,
+                    "note": "Transcribed and translated to English"
+                }
+            else:
+                error_detail = response.text[:200]
+                logger.error(f"[STT] Whisper API error: {response.status_code} - {error_detail}")
+                return {
+                    "transcript": "",
+                    "error": f"Transcription failed: {response.status_code}",
+                    "note": error_detail
+                }
+                
+    except httpx.TimeoutException:
+        return {
+            "transcript": "",
+            "error": "Timeout",
+            "note": "Transcription timed out. Try a shorter recording."
+        }
+    except Exception as e:
+        logger.error(f"[STT] Error: {str(e)}")
+        return {
+            "transcript": "",
+            "error": str(e),
+            "note": "Failed to transcribe audio"
+        }
+
+
 @wave3_router.post("/dpr/{dpr_id}/images", status_code=201)
 async def add_dpr_image(
     dpr_id: str,
