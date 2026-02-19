@@ -558,12 +558,17 @@ async def get_projects(current_user: dict = Depends(get_current_user)):
         assigned_project_ids = user.get("assigned_projects", [])
         
         if assigned_project_ids:
-            # Query by both _id and project_id fields to handle different ID formats
+            # Convert string IDs to ObjectId for proper matching
+            object_ids = []
+            for pid in assigned_project_ids:
+                try:
+                    object_ids.append(ObjectId(pid))
+                except:
+                    pass
+            
+            # Query by _id with proper ObjectId conversion
             projects = await db.projects.find({
-                "$or": [
-                    {"_id": {"$in": assigned_project_ids}},
-                    {"project_id": {"$in": assigned_project_ids}}
-                ],
+                "_id": {"$in": object_ids},
                 "organisation_id": user["organisation_id"]
             }).to_list(length=None)
         else:
