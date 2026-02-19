@@ -1197,13 +1197,20 @@ async def submit_dpr(
         file_size_kb = 0
         pdf_checksum = None
         pdf_base64 = None
-                    "file_name": file_name,
-                    "file_size_kb": round(estimated_pdf_size, 2),
-                    "pdf_generated_at": datetime.utcnow(),
-                    "pdf_checksum": pdf_checksum,
-                }
+    
+    # Update DPR with PDF info
+    await db.dpr.update_one(
+        {"_id": ObjectId(dpr_id)},
+        {
+            "$set": {
+                "pdf_generated": pdf_base64 is not None,
+                "file_name": file_name,
+                "file_size_kb": round(file_size_kb, 2),
+                "pdf_generated_at": datetime.utcnow(),
+                "pdf_checksum": pdf_checksum,
             }
-        )
+        }
+    )
     
     # Build complete embedded snapshot
     snapshot_data = await build_dpr_snapshot(db, dpr_id)
