@@ -490,10 +490,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  entryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  entryHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  entryPreview: {
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
+    marginLeft: Spacing.sm,
+    flex: 1,
   },
   entryNumber: {
     fontSize: FontSizes.md,
