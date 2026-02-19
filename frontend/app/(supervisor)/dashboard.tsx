@@ -73,45 +73,33 @@ export default function SupervisorDashboard() {
 
   // STEP 1: Check-in with Selfie + GPS
   const handleCheckIn = async () => {
+    console.log('handleCheckIn called, Platform:', Platform.OS);
+    setIsProcessing(true);
+    
     try {
-      setIsProcessing(true);
-      
-      // Check platform
+      // For web - simulate check-in directly (Alert.alert doesn't work on web)
       if (Platform.OS === 'web') {
-        // Web fallback - just use alert for demo
-        Alert.alert(
-          'Web Check-in',
-          'Camera check-in works best on mobile app. For web demo, we\'ll simulate check-in.',
-          [
-            { text: 'Cancel', onPress: () => setIsProcessing(false), style: 'cancel' },
-            { 
-              text: 'Simulate Check-in', 
-              onPress: () => {
-                const checkInTime = new Date().toISOString();
-                setCheckInData({
-                  isCheckedIn: true,
-                  checkInTime,
-                  selfieUri: null,
-                  location: { latitude: 0, longitude: 0 },
-                });
-                setIsProcessing(false);
-                Alert.alert('Check-in Successful!', `Time: ${new Date(checkInTime).toLocaleTimeString()}`);
-              }
-            }
-          ]
-        );
+        console.log('Web platform - simulating check-in');
+        const checkInTime = new Date().toISOString();
+        setCheckInData({
+          isCheckedIn: true,
+          checkInTime,
+          selfieUri: null,
+          location: { latitude: 0, longitude: 0 },
+        });
+        setIsProcessing(false);
+        window.alert('Check-in Successful!\nTime: ' + new Date(checkInTime).toLocaleTimeString());
         return;
       }
       
-      // Request camera permission
+      // Mobile - use camera
       const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
       if (cameraStatus !== 'granted') {
-        Alert.alert('Permission Required', 'Camera permission is needed to check in.');
         setIsProcessing(false);
+        Alert.alert('Permission Required', 'Camera permission is needed to check in.');
         return;
       }
 
-      // Take selfie first (don't block on location)
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
         quality: 0.7,
@@ -123,11 +111,41 @@ export default function SupervisorDashboard() {
         return;
       }
 
-      // Get location in background (with timeout)
+      // Get location (non-blocking)
       let locationData = { latitude: 0, longitude: 0 };
       try {
-        const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
-        if (locationStatus === 'granted') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise((_, reject) => setTimeout(() => reject('timeout'), 5000))
+          ]) as any;
+          locationData = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        }
+      } catch (e) {
+        console.log('Location skipped:', e);
+      }
+
+      const checkInTime = new Date().toISOString();
+      setCheckInData({
+        isCheckedIn: true,
+        checkInTime,
+        selfieUri: result.assets[0].uri,
+        location: locationData,
+      });
+      setIsProcessing(false);
+      Alert.alert('Check-in Successful!', 'Time: ' + new Date(checkInTime).toLocaleTimeString());
+      
+    } catch (error) {
+      console.error('Check-in error:', error);
+      setIsProcessing(false);
+      if (Platform.OS === 'web') {
+        window.alert('Check-in failed. Please try again.');
+      } else {
+        Alert.alert('Error', 'Check-in failed. Please try again.');
+      }
+    }
+  };
           const locationPromise = Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced, // Use balanced for faster response
           });
