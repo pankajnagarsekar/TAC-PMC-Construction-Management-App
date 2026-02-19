@@ -57,12 +57,17 @@ Build a comprehensive Construction Management System (SiteMaster) for supervisor
 
 ## What's Been Implemented
 
-### Feb 19, 2026 (Current Session)
+### Feb 20, 2026 (Current Session)
+- [x] **P0 FIX: STT Transcription Error** - Fixed `'str' object has no attribute 'file_contents'` by using `UserMessage` object instead of plain string for `LlmChat.send_message()`. Corrected import to use `from emergentintegrations.llm.chat import LlmChat, UserMessage`
+- [x] **P0 FIX: Direct PDF Download** - Changed DPR submission to directly download PDF on web (using blob + download link) and share on mobile (using expo-file-system + expo-sharing) instead of showing "saved to reports"
+- [x] **Verified: Dashboard Workflow** - Check-in Required shown first with other options disabled, matching user requirements
+
+### Feb 19, 2026 (Previous Session)
 - [x] **P0 FIX: Supervisor Check-in Button** - Fixed duplicate code causing syntax error, replaced `Alert.alert` with `window.alert` for web compatibility
 - [x] **P0 FIX: Project Assignment Bug** - Fixed ObjectId conversion in GET /projects endpoint so supervisors can see assigned projects
 - [x] **Database Seeding Enhancement** - Added supervisor user, sample project, and vendors to seed script
 
-### Previous Session Completed Work
+### Earlier Completed Work
 - [x] **M1: Simplified Supervisor Dashboard** - Step-by-step workflow (Check-in → Project → Actions)
 - [x] **M2 & M3: Check-in Flow & Worker Log** - UI/UX flow for check-in and worker log entry
 - [x] **M4: Remove AI Caption** - Simplified DPR to manual text input
