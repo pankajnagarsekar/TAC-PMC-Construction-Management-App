@@ -1,5 +1,5 @@
-// SUPERVISOR DASHBOARD - SIMPLIFIED WORKFLOW
-// Clear step-by-step flow: Check-in → Select Project → Workers Log → Create DPR
+// SUPERVISOR DASHBOARD - STEP-BY-STEP WORKFLOW
+// Flow: Check-in → Select Project → Workers Log / Create DPR
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -13,6 +13,7 @@ import {
   Platform,
   Modal,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,8 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
-import { projectsApi } from '../../services/apiClient';
-import { Card, LoadingScreen } from '../../components/ui';
+import { Card } from '../../components/ui';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../constants/theme';
 
 interface CheckInData {
@@ -32,44 +32,23 @@ interface CheckInData {
   location: { latitude: number; longitude: number } | null;
 }
 
-interface WorkerLogStatus {
-  isCompleted: boolean;
-  totalWorkers: number;
-}
-
-interface DPRStatus {
-  hasDraftDPR: boolean;
-  submittedToday: boolean;
-}
-
 export default function SupervisorDashboard() {
   const router = useRouter();
   const { user, logout, checkCanLogout } = useAuth();
   const { selectedProject, isProjectSelected } = useProject();
   
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [logoutBlockedModal, setLogoutBlockedModal] = useState(false);
   
-  // Step states
+  // Check-in state
   const [checkInData, setCheckInData] = useState<CheckInData>({
     isCheckedIn: false,
     checkInTime: null,
     selfieUri: null,
     location: null,
   });
-  
-  const [workerLogStatus, setWorkerLogStatus] = useState<WorkerLogStatus>({
-    isCompleted: false,
-    totalWorkers: 0,
-  });
-  
-  const [dprStatus, setDPRStatus] = useState<DPRStatus>({
-    hasDraftDPR: false,
-    submittedToday: false,
-  });
 
-  // Current date
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -77,22 +56,12 @@ export default function SupervisorDashboard() {
     year: 'numeric',
   });
 
-  const loadData = useCallback(async () => {
-    // TODO: Load actual status from backend
-    // For now using local state
-    setRefreshing(false);
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadData();
-  }, [loadData]);
+    setTimeout(() => setRefreshing(false), 1000);
+  }, []);
 
-  // Handle logout with worker log check
+  // Handle logout
   const handleLogout = async () => {
     const result = await checkCanLogout();
     if (result.can_logout) {
@@ -102,13 +71,16 @@ export default function SupervisorDashboard() {
     }
   };
 
-  // Step 1: Check-in with Selfie
+  // STEP 1: Check-in with Selfie + GPS
   const handleCheckIn = async () => {
     try {
+      setIsProcessing(true);
+      
       // Request camera permission
       const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
       if (cameraStatus !== 'granted') {
         Alert.alert('Permission Required', 'Camera permission is needed to check in.');
+        setIsProcessing(false);
         return;
       }
 
@@ -116,26 +88,33 @@ export default function SupervisorDashboard() {
       const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
       if (locationStatus !== 'granted') {
         Alert.alert('Permission Required', 'Location permission is needed to check in.');
+        setIsProcessing(false);
         return;
       }
+
+      // Get location first
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
 
       // Take selfie
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
         quality: 0.7,
         cameraType: ImagePicker.CameraType.front,
+        aspect: [3, 4],
       });
 
-      if (result.canceled) return;
+      if (result.canceled) {
+        setIsProcessing(false);
+        return;
+      }
 
-      // Get location
-      setIsLoading(true);
-      const location = await Location.getCurrentPositionAsync({});
-      
       // Save check-in data
+      const checkInTime = new Date().toISOString();
       setCheckInData({
         isCheckedIn: true,
-        checkInTime: new Date().toISOString(),
+        checkInTime,
         selfieUri: result.assets[0].uri,
         location: {
           latitude: location.coords.latitude,
@@ -143,51 +122,39 @@ export default function SupervisorDashboard() {
         },
       });
 
-      // TODO: Send to backend
-      Alert.alert('Success', 'You have checked in successfully!');
+      Alert.alert(
+        'Check-in Successful!', 
+        `Time: ${new Date(checkInTime).toLocaleTimeString()}\nLocation captured.`,
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       console.error('Check-in error:', error);
       Alert.alert('Error', 'Failed to check in. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  // Step 2: Navigate to project selection
+  // STEP 2: Select Project
   const handleSelectProject = () => {
     router.push('/(supervisor)/select-project');
   };
 
-  // Step 3: Navigate to worker log
+  // STEP 3: Worker Log
   const handleWorkerLog = () => {
     router.push('/(supervisor)/worker-log');
   };
 
-  // Step 4: Navigate to DPR creation
+  // STEP 4: Create DPR
   const handleCreateDPR = () => {
     router.push('/(supervisor)/dpr');
   };
 
-  // Determine which steps are complete
-  const step1Complete = checkInData.isCheckedIn;
-  const step2Complete = isProjectSelected;
-  const step3Complete = workerLogStatus.isCompleted;
-  const step4Complete = dprStatus.submittedToday;
-
-  // Determine which step is active (first incomplete step)
-  const getActiveStep = () => {
-    if (!step1Complete) return 1;
-    if (!step2Complete) return 2;
-    if (!step3Complete) return 3;
-    if (!step4Complete) return 4;
-    return 5; // All complete
-  };
-
-  const activeStep = getActiveStep();
-
-  if (isLoading) {
-    return <LoadingScreen message="Processing..." />;
-  }
+  // Determine enabled states
+  const isStep1Complete = checkInData.isCheckedIn;
+  const isStep2Complete = isProjectSelected;
+  const canAccessStep2 = isStep1Complete;
+  const canAccessOthers = isStep1Complete && isStep2Complete;
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
@@ -209,244 +176,200 @@ export default function SupervisorDashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* Daily Workflow Progress */}
-        <Card style={styles.progressCard}>
-          <Text style={styles.progressTitle}>Today's Workflow</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(activeStep - 1) * 25}%` }]} />
+        {/* STEP 1: Check-in Card - Always enabled */}
+        <Card style={[
+          styles.checkInCard,
+          isStep1Complete && styles.checkInCardComplete
+        ]}>
+          <View style={styles.checkInHeader}>
+            <View style={[
+              styles.checkInIcon,
+              isStep1Complete && styles.checkInIconComplete
+            ]}>
+              <Ionicons 
+                name={isStep1Complete ? "checkmark-circle" : "camera"} 
+                size={32} 
+                color={isStep1Complete ? Colors.success : Colors.white} 
+              />
+            </View>
+            <View style={styles.checkInInfo}>
+              <Text style={[
+                styles.checkInTitle,
+                isStep1Complete && styles.checkInTitleComplete
+              ]}>
+                {isStep1Complete ? 'Checked In' : 'Check-in Required'}
+              </Text>
+              <Text style={styles.checkInSubtitle}>
+                {isStep1Complete 
+                  ? `${new Date(checkInData.checkInTime!).toLocaleTimeString()}`
+                  : 'Take a selfie to start your day'}
+              </Text>
+            </View>
+            {isStep1Complete && checkInData.selfieUri && (
+              <Image source={{ uri: checkInData.selfieUri }} style={styles.selfieThumb} />
+            )}
           </View>
-          <Text style={styles.progressText}>
-            {activeStep <= 4 ? `Step ${activeStep} of 4` : 'All tasks completed!'}
-          </Text>
+          
+          {!isStep1Complete && (
+            <TouchableOpacity 
+              style={styles.checkInButton} 
+              onPress={handleCheckIn}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <>
+                  <Ionicons name="camera" size={20} color={Colors.white} />
+                  <Text style={styles.checkInButtonText}>Check In with Selfie</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </Card>
 
-        {/* Step 1: Check-in */}
+        {/* STEP 2: Select Project - Enabled after check-in */}
         <TouchableOpacity
           style={[
-            styles.stepCard,
-            step1Complete && styles.stepCardComplete,
-            activeStep === 1 && styles.stepCardActive,
+            styles.actionCard,
+            !canAccessStep2 && styles.actionCardDisabled,
+            isStep2Complete && styles.actionCardComplete,
           ]}
-          onPress={!step1Complete ? handleCheckIn : undefined}
-          disabled={step1Complete}
+          onPress={canAccessStep2 ? handleSelectProject : undefined}
+          disabled={!canAccessStep2}
+          activeOpacity={canAccessStep2 ? 0.7 : 1}
         >
-          <View style={styles.stepLeft}>
-            <View style={[
-              styles.stepNumber,
-              step1Complete && styles.stepNumberComplete,
-              activeStep === 1 && styles.stepNumberActive,
-            ]}>
-              {step1Complete ? (
-                <Ionicons name="checkmark" size={20} color={Colors.white} />
-              ) : (
-                <Text style={[styles.stepNumberText, activeStep === 1 && styles.stepNumberTextActive]}>1</Text>
-              )}
-            </View>
-            <View style={styles.stepInfo}>
-              <Text style={[styles.stepTitle, step1Complete && styles.stepTitleComplete]}>
-                Check-in with Selfie
-              </Text>
-              <Text style={styles.stepSubtitle}>
-                {step1Complete 
-                  ? `Checked in at ${new Date(checkInData.checkInTime!).toLocaleTimeString()}`
-                  : 'Take a selfie to mark attendance'}
-              </Text>
-            </View>
+          <View style={[
+            styles.actionIcon,
+            !canAccessStep2 && styles.actionIconDisabled,
+            isStep2Complete && styles.actionIconComplete,
+          ]}>
+            <Ionicons 
+              name={isStep2Complete ? "checkmark" : "business"} 
+              size={24} 
+              color={!canAccessStep2 ? Colors.textMuted : isStep2Complete ? Colors.white : Colors.accent} 
+            />
           </View>
-          {!step1Complete && activeStep === 1 && (
-            <View style={styles.stepAction}>
-              <Ionicons name="camera" size={24} color={Colors.accent} />
-            </View>
-          )}
-          {step1Complete && checkInData.selfieUri && (
-            <Image source={{ uri: checkInData.selfieUri }} style={styles.selfieThumb} />
-          )}
-        </TouchableOpacity>
-
-        {/* Step 2: Select Project */}
-        <TouchableOpacity
-          style={[
-            styles.stepCard,
-            step2Complete && styles.stepCardComplete,
-            activeStep === 2 && styles.stepCardActive,
-            !step1Complete && styles.stepCardDisabled,
-          ]}
-          onPress={step1Complete ? handleSelectProject : undefined}
-          disabled={!step1Complete}
-        >
-          <View style={styles.stepLeft}>
-            <View style={[
-              styles.stepNumber,
-              step2Complete && styles.stepNumberComplete,
-              activeStep === 2 && styles.stepNumberActive,
-              !step1Complete && styles.stepNumberDisabled,
+          <View style={styles.actionInfo}>
+            <Text style={[
+              styles.actionTitle,
+              !canAccessStep2 && styles.actionTitleDisabled,
             ]}>
-              {step2Complete ? (
-                <Ionicons name="checkmark" size={20} color={Colors.white} />
-              ) : (
-                <Text style={[
-                  styles.stepNumberText,
-                  activeStep === 2 && styles.stepNumberTextActive,
-                  !step1Complete && styles.stepNumberTextDisabled,
-                ]}>2</Text>
-              )}
-            </View>
-            <View style={styles.stepInfo}>
-              <Text style={[
-                styles.stepTitle,
-                step2Complete && styles.stepTitleComplete,
-                !step1Complete && styles.stepTitleDisabled,
-              ]}>
-                Select Project
-              </Text>
-              <Text style={[styles.stepSubtitle, !step1Complete && styles.stepSubtitleDisabled]}>
-                {step2Complete 
-                  ? selectedProject?.project_name
-                  : 'Choose the project you\'re working on'}
-              </Text>
-            </View>
-          </View>
-          {step2Complete ? (
-            <TouchableOpacity onPress={handleSelectProject} style={styles.changeBtn}>
-              <Text style={styles.changeBtnText}>Change</Text>
-            </TouchableOpacity>
-          ) : activeStep === 2 && (
-            <View style={styles.stepAction}>
-              <Ionicons name="chevron-forward" size={24} color={Colors.accent} />
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* Step 3: Workers Log */}
-        <TouchableOpacity
-          style={[
-            styles.stepCard,
-            step3Complete && styles.stepCardComplete,
-            activeStep === 3 && styles.stepCardActive,
-            !step2Complete && styles.stepCardDisabled,
-          ]}
-          onPress={step2Complete ? handleWorkerLog : undefined}
-          disabled={!step2Complete}
-        >
-          <View style={styles.stepLeft}>
-            <View style={[
-              styles.stepNumber,
-              step3Complete && styles.stepNumberComplete,
-              activeStep === 3 && styles.stepNumberActive,
-              !step2Complete && styles.stepNumberDisabled,
-            ]}>
-              {step3Complete ? (
-                <Ionicons name="checkmark" size={20} color={Colors.white} />
-              ) : (
-                <Text style={[
-                  styles.stepNumberText,
-                  activeStep === 3 && styles.stepNumberTextActive,
-                  !step2Complete && styles.stepNumberTextDisabled,
-                ]}>3</Text>
-              )}
-            </View>
-            <View style={styles.stepInfo}>
-              <Text style={[
-                styles.stepTitle,
-                step3Complete && styles.stepTitleComplete,
-                !step2Complete && styles.stepTitleDisabled,
-              ]}>
-                Workers Daily Log
-              </Text>
-              <Text style={[styles.stepSubtitle, !step2Complete && styles.stepSubtitleDisabled]}>
-                {step3Complete 
-                  ? `${workerLogStatus.totalWorkers} workers logged`
-                  : 'Log worker attendance for today'}
-              </Text>
-            </View>
-          </View>
-          {step2Complete && !step3Complete && activeStep === 3 && (
-            <View style={styles.stepAction}>
-              <Ionicons name="chevron-forward" size={24} color={Colors.accent} />
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* Step 4: Create DPR */}
-        <TouchableOpacity
-          style={[
-            styles.stepCard,
-            step4Complete && styles.stepCardComplete,
-            activeStep === 4 && styles.stepCardActive,
-            !step3Complete && styles.stepCardDisabled,
-          ]}
-          onPress={step3Complete ? handleCreateDPR : undefined}
-          disabled={!step3Complete}
-        >
-          <View style={styles.stepLeft}>
-            <View style={[
-              styles.stepNumber,
-              step4Complete && styles.stepNumberComplete,
-              activeStep === 4 && styles.stepNumberActive,
-              !step3Complete && styles.stepNumberDisabled,
-            ]}>
-              {step4Complete ? (
-                <Ionicons name="checkmark" size={20} color={Colors.white} />
-              ) : (
-                <Text style={[
-                  styles.stepNumberText,
-                  activeStep === 4 && styles.stepNumberTextActive,
-                  !step3Complete && styles.stepNumberTextDisabled,
-                ]}>4</Text>
-              )}
-            </View>
-            <View style={styles.stepInfo}>
-              <Text style={[
-                styles.stepTitle,
-                step4Complete && styles.stepTitleComplete,
-                !step3Complete && styles.stepTitleDisabled,
-              ]}>
-                Create DPR
-              </Text>
-              <Text style={[styles.stepSubtitle, !step3Complete && styles.stepSubtitleDisabled]}>
-                {step4Complete 
-                  ? 'DPR submitted for today'
-                  : 'Daily Progress Report with photos & voice notes'}
-              </Text>
-            </View>
-          </View>
-          {step3Complete && !step4Complete && activeStep === 4 && (
-            <View style={styles.stepAction}>
-              <Ionicons name="chevron-forward" size={24} color={Colors.accent} />
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* All Complete Message */}
-        {activeStep === 5 && (
-          <Card style={styles.completeCard}>
-            <View style={styles.completeIcon}>
-              <Ionicons name="checkmark-circle" size={48} color={Colors.success} />
-            </View>
-            <Text style={styles.completeTitle}>Great Job!</Text>
-            <Text style={styles.completeText}>
-              You've completed all tasks for today. Your DPR has been submitted.
+              {isStep2Complete ? selectedProject?.project_name : 'Select Project'}
             </Text>
-          </Card>
+            <Text style={[
+              styles.actionSubtitle,
+              !canAccessStep2 && styles.actionSubtitleDisabled,
+            ]}>
+              {isStep2Complete ? 'Tap to change' : 'Choose your work site'}
+            </Text>
+          </View>
+          <Ionicons 
+            name="chevron-forward" 
+            size={24} 
+            color={!canAccessStep2 ? Colors.textMuted : Colors.accent} 
+          />
+        </TouchableOpacity>
+
+        {/* Divider */}
+        {canAccessOthers && (
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Daily Tasks</Text>
+            <View style={styles.dividerLine} />
+          </View>
         )}
 
-        {/* Quick Stats */}
-        {selectedProject && (
-          <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>Today's Summary</Text>
-            <View style={styles.statsRow}>
-              <Card style={styles.statCard}>
-                <Ionicons name="people" size={24} color={Colors.info} />
-                <Text style={styles.statValue}>{workerLogStatus.totalWorkers}</Text>
-                <Text style={styles.statLabel}>Workers</Text>
-              </Card>
-              <Card style={styles.statCard}>
-                <Ionicons name="document-text" size={24} color={Colors.success} />
-                <Text style={styles.statValue}>{step4Complete ? '1' : '0'}</Text>
-                <Text style={styles.statLabel}>DPR</Text>
-              </Card>
-            </View>
+        {/* STEP 3: Workers Log - Enabled after project selection */}
+        <TouchableOpacity
+          style={[
+            styles.actionCard,
+            !canAccessOthers && styles.actionCardDisabled,
+          ]}
+          onPress={canAccessOthers ? handleWorkerLog : undefined}
+          disabled={!canAccessOthers}
+          activeOpacity={canAccessOthers ? 0.7 : 1}
+        >
+          <View style={[
+            styles.actionIcon,
+            { backgroundColor: canAccessOthers ? Colors.info + '20' : Colors.border },
+          ]}>
+            <Ionicons 
+              name="people" 
+              size={24} 
+              color={canAccessOthers ? Colors.info : Colors.textMuted} 
+            />
           </View>
+          <View style={styles.actionInfo}>
+            <Text style={[
+              styles.actionTitle,
+              !canAccessOthers && styles.actionTitleDisabled,
+            ]}>
+              Workers Daily Log
+            </Text>
+            <Text style={[
+              styles.actionSubtitle,
+              !canAccessOthers && styles.actionSubtitleDisabled,
+            ]}>
+              Log vendor workers for today
+            </Text>
+          </View>
+          <Ionicons 
+            name="chevron-forward" 
+            size={24} 
+            color={canAccessOthers ? Colors.info : Colors.textMuted} 
+          />
+        </TouchableOpacity>
+
+        {/* STEP 4: Create DPR - Enabled after project selection */}
+        <TouchableOpacity
+          style={[
+            styles.actionCard,
+            !canAccessOthers && styles.actionCardDisabled,
+          ]}
+          onPress={canAccessOthers ? handleCreateDPR : undefined}
+          disabled={!canAccessOthers}
+          activeOpacity={canAccessOthers ? 0.7 : 1}
+        >
+          <View style={[
+            styles.actionIcon,
+            { backgroundColor: canAccessOthers ? Colors.success + '20' : Colors.border },
+          ]}>
+            <Ionicons 
+              name="document-text" 
+              size={24} 
+              color={canAccessOthers ? Colors.success : Colors.textMuted} 
+            />
+          </View>
+          <View style={styles.actionInfo}>
+            <Text style={[
+              styles.actionTitle,
+              !canAccessOthers && styles.actionTitleDisabled,
+            ]}>
+              Create DPR
+            </Text>
+            <Text style={[
+              styles.actionSubtitle,
+              !canAccessOthers && styles.actionSubtitleDisabled,
+            ]}>
+              Daily Progress Report with photos
+            </Text>
+          </View>
+          <Ionicons 
+            name="chevron-forward" 
+            size={24} 
+            color={canAccessOthers ? Colors.success : Colors.textMuted} 
+          />
+        </TouchableOpacity>
+
+        {/* Info Banner when not checked in */}
+        {!isStep1Complete && (
+          <Card style={styles.infoCard}>
+            <Ionicons name="information-circle" size={24} color={Colors.info} />
+            <Text style={styles.infoText}>
+              Please check in with a selfie to start your workday. All other features will be unlocked after check-in.
+            </Text>
+          </Card>
         )}
       </ScrollView>
 
@@ -524,183 +447,164 @@ const styles = StyleSheet.create({
   logoutButton: {
     padding: Spacing.sm,
   },
-  progressCard: {
-    padding: Spacing.md,
-    marginBottom: Spacing.lg,
-    backgroundColor: Colors.primary,
+  
+  // Check-in Card
+  checkInCard: {
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.accent,
   },
-  progressTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-    color: Colors.white,
-    marginBottom: Spacing.sm,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
+  checkInCardComplete: {
     backgroundColor: Colors.white,
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: FontSizes.sm,
-    color: Colors.white,
-    marginTop: Spacing.sm,
-    opacity: 0.9,
-  },
-  stepCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.white,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.sm,
     borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  stepCardActive: {
-    borderColor: Colors.accent,
-    backgroundColor: Colors.accent + '08',
-  },
-  stepCardComplete: {
     borderColor: Colors.success,
-    backgroundColor: Colors.success + '08',
   },
-  stepCardDisabled: {
-    opacity: 0.5,
-  },
-  stepLeft: {
+  checkInHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  stepNumber: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.border,
+  checkInIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
   },
-  stepNumberActive: {
-    backgroundColor: Colors.accent,
+  checkInIconComplete: {
+    backgroundColor: Colors.success + '20',
   },
-  stepNumberComplete: {
-    backgroundColor: Colors.success,
-  },
-  stepNumberDisabled: {
-    backgroundColor: Colors.border,
-  },
-  stepNumberText: {
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
-    color: Colors.textMuted,
-  },
-  stepNumberTextActive: {
-    color: Colors.white,
-  },
-  stepNumberTextDisabled: {
-    color: Colors.textMuted,
-  },
-  stepInfo: {
+  checkInInfo: {
     flex: 1,
   },
-  stepTitle: {
+  checkInTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: 'bold',
+    color: Colors.white,
+  },
+  checkInTitleComplete: {
+    color: Colors.success,
+  },
+  checkInSubtitle: {
+    fontSize: FontSizes.sm,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  selfieThumb: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: Colors.success,
+  },
+  checkInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  checkInButtonText: {
+    fontSize: FontSizes.md,
+    fontWeight: '600',
+    color: Colors.white,
+  },
+
+  // Action Cards
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  actionCardDisabled: {
+    backgroundColor: Colors.background,
+    opacity: 0.6,
+  },
+  actionCardComplete: {
+    borderColor: Colors.success,
+    backgroundColor: Colors.success + '08',
+  },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.accent + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  actionIconDisabled: {
+    backgroundColor: Colors.border,
+  },
+  actionIconComplete: {
+    backgroundColor: Colors.success,
+  },
+  actionInfo: {
+    flex: 1,
+  },
+  actionTitle: {
     fontSize: FontSizes.md,
     fontWeight: '600',
     color: Colors.text,
   },
-  stepTitleComplete: {
-    color: Colors.success,
-  },
-  stepTitleDisabled: {
+  actionTitleDisabled: {
     color: Colors.textMuted,
   },
-  stepSubtitle: {
+  actionSubtitle: {
     fontSize: FontSizes.sm,
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  stepSubtitleDisabled: {
+  actionSubtitleDisabled: {
     color: Colors.textMuted,
   },
-  stepAction: {
-    padding: Spacing.xs,
+
+  // Divider
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.md,
   },
-  changeBtn: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    backgroundColor: Colors.accent + '20',
-    borderRadius: BorderRadius.sm,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
   },
-  changeBtnText: {
+  dividerText: {
     fontSize: FontSizes.sm,
-    color: Colors.accent,
+    color: Colors.textMuted,
+    marginHorizontal: Spacing.md,
     fontWeight: '500',
   },
-  selfieThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: Colors.success,
-  },
-  completeCard: {
-    padding: Spacing.xl,
-    alignItems: 'center',
-    marginTop: Spacing.md,
-    backgroundColor: Colors.success + '10',
-    borderWidth: 1,
-    borderColor: Colors.success,
-  },
-  completeIcon: {
-    marginBottom: Spacing.md,
-  },
-  completeTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: 'bold',
-    color: Colors.success,
-  },
-  completeText: {
-    fontSize: FontSizes.md,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-  },
-  statsSection: {
-    marginTop: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  statsRow: {
+
+  // Info Card
+  infoCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+    backgroundColor: Colors.info + '10',
+    borderWidth: 1,
+    borderColor: Colors.info + '30',
     gap: Spacing.sm,
   },
-  statCard: {
+  infoText: {
     flex: 1,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: FontSizes.xxl,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginTop: Spacing.xs,
-  },
-  statLabel: {
     fontSize: FontSizes.sm,
-    color: Colors.textSecondary,
+    color: Colors.info,
+    lineHeight: 20,
   },
+
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
