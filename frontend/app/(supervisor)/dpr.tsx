@@ -1,7 +1,7 @@
-// SUPERVISOR DPR SCREEN - SIMPLIFIED
-// DPR creation with photos and manual captions (no AI)
+// SUPERVISOR DPR SCREEN - WITH VOICE-TO-TEXT
+// DPR creation with photos, manual captions, and voice summary
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
 import { useProject } from '../../contexts/ProjectContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui';
@@ -46,9 +47,15 @@ export default function SupervisorDPRScreen() {
   const { user } = useAuth();
   
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [voiceSummary, setVoiceSummary] = useState(''); // Will be used for voice-to-text later
+  const [voiceSummary, setVoiceSummary] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+  
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Redirect if no project selected
   useEffect(() => {
@@ -56,6 +63,16 @@ export default function SupervisorDPRScreen() {
       router.replace('/(supervisor)/select-project');
     }
   }, [selectedProject]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      }
+    };
+  }, []);
 
   const showAlert = (title: string, message: string, onOk?: () => void) => {
     if (Platform.OS === 'web') {
@@ -66,6 +83,129 @@ export default function SupervisorDPRScreen() {
     }
   };
 
+  // Voice Recording Functions
+  const startRecording = async () => {
+    try {
+      // Request permission
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') {
+        showAlert('Permission Required', 'Microphone permission is needed for voice recording');
+        return;
+      }
+
+      // Configure audio mode
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      // Start recording
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      showAlert('Error', 'Failed to start recording');
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      if (!recordingRef.current) return;
+
+      // Stop timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      setIsRecording(false);
+      setIsTranscribing(true);
+
+      // Stop recording
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      if (!uri) {
+        setIsTranscribing(false);
+        showAlert('Error', 'No audio recorded');
+        return;
+      }
+
+      // Read audio file and convert to base64
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64Audio = reader.result as string;
+        await transcribeAudio(base64Audio);
+      };
+
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      setIsTranscribing(false);
+      showAlert('Error', 'Failed to process recording');
+    }
+  };
+
+  const transcribeAudio = async (base64Audio: string) => {
+    try {
+      const token = await getToken();
+      
+      const response = await fetch(`${BASE_URL}/api/v2/speech-to-text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          audio_data: base64Audio,
+          audio_format: 'm4a', // expo-av records in m4a format
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.transcript) {
+        // Append to existing summary (don't replace)
+        setVoiceSummary(prev => {
+          if (prev.trim()) {
+            return prev + ' ' + result.transcript;
+          }
+          return result.transcript;
+        });
+        showAlert('Transcribed', 'Voice has been converted to text');
+      } else if (result.error) {
+        showAlert('Transcription Failed', result.note || result.error);
+      }
+    } catch (error) {
+      console.error('Transcription error:', error);
+      showAlert('Error', 'Failed to transcribe audio');
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Photo Functions
   const takePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -130,7 +270,6 @@ export default function SupervisorDPRScreen() {
 
   const canSubmit = () => {
     if (photos.length < MIN_PHOTOS) return false;
-    // Check if all photos have captions
     const allCaptioned = photos.every(p => p.caption.trim().length > 0);
     return allCaptioned && selectedProject;
   };
@@ -275,23 +414,57 @@ export default function SupervisorDPRScreen() {
             </View>
           </Card>
 
-          {/* Voice Summary Section (placeholder for M5) */}
+          {/* Voice Summary Section */}
           <Card style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Ionicons name="mic" size={20} color={Colors.info} />
-              <Text style={styles.sectionTitle}>Summary Notes</Text>
+              <Text style={styles.sectionTitle}>Voice Summary</Text>
+              <Text style={styles.languageNote}>(Any language → English)</Text>
             </View>
+
+            {/* Voice Recording Button */}
+            <View style={styles.voiceControls}>
+              {!isRecording && !isTranscribing ? (
+                <TouchableOpacity 
+                  style={styles.recordButton}
+                  onPress={startRecording}
+                >
+                  <Ionicons name="mic" size={32} color={Colors.white} />
+                  <Text style={styles.recordButtonText}>Hold to Record</Text>
+                </TouchableOpacity>
+              ) : isRecording ? (
+                <TouchableOpacity 
+                  style={[styles.recordButton, styles.recordingButton]}
+                  onPress={stopRecording}
+                >
+                  <View style={styles.recordingIndicator}>
+                    <Ionicons name="stop" size={32} color={Colors.white} />
+                  </View>
+                  <Text style={styles.recordButtonText}>
+                    Recording... {formatDuration(recordingDuration)}
+                  </Text>
+                  <Text style={styles.recordHint}>Tap to stop</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.transcribingContainer}>
+                  <ActivityIndicator size="large" color={Colors.info} />
+                  <Text style={styles.transcribingText}>Transcribing...</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Summary Text */}
             <TextInput
               style={styles.summaryInput}
-              placeholder="Enter summary notes for this DPR..."
+              placeholder="Speak or type your summary here..."
               value={voiceSummary}
               onChangeText={setVoiceSummary}
               multiline
-              numberOfLines={3}
+              numberOfLines={4}
               textAlignVertical="top"
             />
             <Text style={styles.helperText}>
-              Voice-to-text coming soon. Type your summary for now.
+              Speak in any language - AI will translate to English
             </Text>
           </Card>
 
@@ -455,6 +628,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
   },
+  languageNote: {
+    fontSize: FontSizes.xs,
+    color: Colors.textMuted,
+    marginLeft: 'auto',
+  },
+  voiceControls: {
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  recordButton: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.info,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    gap: Spacing.xs,
+  },
+  recordingButton: {
+    backgroundColor: Colors.error,
+  },
+  recordButtonText: {
+    fontSize: FontSizes.sm,
+    color: Colors.white,
+    fontWeight: '500',
+  },
+  recordHint: {
+    fontSize: FontSizes.xs,
+    color: Colors.white,
+    opacity: 0.8,
+  },
+  recordingIndicator: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  transcribingContainer: {
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  transcribingText: {
+    marginTop: Spacing.sm,
+    fontSize: FontSizes.md,
+    color: Colors.info,
+  },
   summaryInput: {
     backgroundColor: Colors.background,
     borderWidth: 1,
@@ -463,7 +685,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     fontSize: FontSizes.md,
     color: Colors.text,
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   helperText: {
