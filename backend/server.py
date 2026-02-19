@@ -733,6 +733,40 @@ async def get_codes(
     return codes
 
 
+# ============================================
+# VENDORS ENDPOINTS
+# ============================================
+
+@api_router.get("/vendors")
+async def get_vendors(
+    active_only: bool = True,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all vendors for the organisation"""
+    user = await permission_checker.get_authenticated_user(current_user)
+    
+    query = {"organisation_id": user["organisation_id"]}
+    if active_only:
+        query["active_status"] = True
+    
+    vendors = await db.vendors.find(query).to_list(length=None)
+    
+    # Format for frontend compatibility
+    result = []
+    for v in vendors:
+        result.append({
+            "vendor_id": str(v.pop("_id")),
+            "vendor_name": v.get("vendor_name", ""),
+            "vendor_type": v.get("vendor_type", ""),
+            "active_status": v.get("active_status", True),
+            # For autocomplete display
+            "display_name": v.get("vendor_name", ""),
+            "code": v.get("vendor_type", ""),
+        })
+    
+    return result
+
+
 @api_router.put("/codes/{code_id}")
 async def update_code(
     code_id: str,
