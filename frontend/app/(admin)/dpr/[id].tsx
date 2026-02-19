@@ -31,6 +31,7 @@ import { VersionSelector } from '../../../components/VersionSelector';
 interface DPRImage {
   image_id: string;
   image_url?: string;
+  image_data?: string;
   caption?: string;
   uploaded_at?: string;
 }
