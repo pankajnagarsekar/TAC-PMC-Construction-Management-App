@@ -1099,13 +1099,18 @@ async def submit_dpr(
     """
     Submit DPR for review.
     
-    - Requires minimum 4 portrait images
-    - Auto-generates PDF if not already generated
+    - Requires minimum 4 images
+    - Generates PDF with:
+      * Page 1: Project details, Voice summary, Worker attendance
+      * Page 2+: One image per page with caption
+    - Filename: "ProjectCode - MMM DD, YYYY.pdf"
+    - Sends notification to admin
     - Locks DPR from further edits
-    
-    SNAPSHOT: Creates immutable snapshot with embedded data and settings.
-    LOCKING: Sets locked_flag = true after submission.
     """
+    from core.pdf_service import pdf_generator
+    import hashlib
+    import base64
+    
     user = await permission_checker.get_authenticated_user(current_user)
     
     # Get DPR
@@ -1126,28 +1131,72 @@ async def submit_dpr(
             detail=f"DPR requires minimum 4 images. Current: {image_count}"
         )
     
-    # Auto-generate PDF if not done
-    pdf_checksum = None
-    if not dpr.get("pdf_generated"):
-        # Generate PDF
-        dpr_date = dpr.get("dpr_date")
-        if isinstance(dpr_date, str):
-            dpr_date = datetime.fromisoformat(dpr_date.replace('Z', '+00:00'))
-        file_name = dpr_date.strftime("%B, %d, %Y") + ".pdf"
+    # Get project data
+    project_id = dpr.get("project_id")
+    project = await db.projects.find_one({"project_id": project_id}) or \
+              await db.projects.find_one({"_id": project_id})
+    
+    if not project:
+        project = {"project_name": "Unknown Project", "project_code": "DPR"}
+    
+    project_name = project.get("project_name", "Unknown Project")
+    project_code = project.get("project_code", "DPR")
+    
+    # Get worker log for today
+    dpr_date = dpr.get("dpr_date")
+    if isinstance(dpr_date, datetime):
+        date_str = dpr_date.strftime("%Y-%m-%d")
+        dpr_date_obj = dpr_date
+    else:
+        date_str = str(dpr_date).split("T")[0] if dpr_date else datetime.now().strftime("%Y-%m-%d")
+        try:
+            dpr_date_obj = datetime.fromisoformat(date_str)
+        except:
+            dpr_date_obj = datetime.now()
+    
+    worker_log = await db.worker_logs.find_one({
+        "project_id": project_id,
+        "date": date_str
+    })
+    
+    # Prepare DPR data
+    dpr_data = {
+        "dpr_date": dpr_date_obj,
+        "progress_notes": dpr.get("progress_notes", ""),
+        "voice_summary": dpr.get("voice_summary", ""),
+        "weather_conditions": dpr.get("weather_conditions", "Normal"),
+        "supervisor_name": user.get("name", "Supervisor"),
+    }
+    
+    # Get images
+    images = dpr.get("images", [])
+    
+    # Generate PDF
+    try:
+        pdf_bytes = pdf_generator.generate_pdf(
+            project_data=project,
+            dpr_data=dpr_data,
+            worker_log=worker_log,
+            images=images
+        )
         
-        total_image_size = sum(img.get("size_kb", 0) for img in dpr.get("images", []))
-        estimated_pdf_size = min(total_image_size * 0.8, 2800)
+        # Generate filename: "ProjectCode - MMM DD, YYYY.pdf"
+        file_name = pdf_generator.get_filename(project_code, dpr_date_obj)
+        file_size_kb = len(pdf_bytes) / 1024
         
-        # Generate dummy PDF bytes for checksum (in real implementation, this would be actual PDF)
-        import hashlib
-        pdf_content = f"DPR_{dpr_id}_{datetime.utcnow().isoformat()}"
-        pdf_checksum = hashlib.sha256(pdf_content.encode()).hexdigest()
+        # Generate checksum
+        pdf_checksum = hashlib.sha256(pdf_bytes).hexdigest()
         
-        await db.dpr.update_one(
-            {"_id": ObjectId(dpr_id)},
-            {
-                "$set": {
-                    "pdf_generated": True,
+        # Convert PDF to base64 for frontend download
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
+        # Fallback - continue with submit but mark PDF as failed
+        file_name = f"{project_code} - {dpr_date_obj.strftime('%b %d, %Y')}.pdf"
+        file_size_kb = 0
+        pdf_checksum = None
+        pdf_base64 = None
                     "file_name": file_name,
                     "file_size_kb": round(estimated_pdf_size, 2),
                     "pdf_generated_at": datetime.utcnow(),
