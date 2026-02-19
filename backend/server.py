@@ -1583,7 +1583,7 @@ async def get_worker_logs_summary(
 async def check_can_logout(
     current_user: dict = Depends(get_current_user)
 ):
-    """Check if supervisor can logout - requires submitted worker log for today"""
+    """Check if supervisor can logout - requires submitted worker log for today if checked in"""
     user = await permission_checker.get_authenticated_user(current_user)
     
     # Admins can always logout
@@ -1606,7 +1606,20 @@ async def check_can_logout(
             "reason": None
         }
     
-    # Check if there's a submitted worker log for any assigned project today
+    # Check if user has checked in today (by looking for any worker log activity)
+    any_log_today = await db.worker_logs.find_one({
+        "supervisor_id": user["user_id"],
+        "date": today
+    })
+    
+    # If no worker log exists for today, user hasn't started work - allow logout
+    if not any_log_today:
+        return {
+            "can_logout": True,
+            "reason": None
+        }
+    
+    # User has started work - check if there's a submitted worker log
     worker_log = await db.worker_logs.find_one({
         "supervisor_id": user["user_id"],
         "date": today,
