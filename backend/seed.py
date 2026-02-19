@@ -4,6 +4,9 @@ Seed script for Phase 1 Construction Management System.
 Creates:
 - 1 Organisation
 - 1 Admin user (credentials: admin@example.com / admin123)
+- 1 Supervisor user (credentials: supervisor@example.com / supervisor123)
+- 1 Sample Project assigned to Supervisor
+- 3 Sample Vendors
 - Default Global Settings (currency: INR)
 - 5 Code Master entries: CIV, ELC, PLB, FIN, SWP
 """
