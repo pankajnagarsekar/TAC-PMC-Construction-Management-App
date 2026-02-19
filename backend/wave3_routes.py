@@ -815,9 +815,12 @@ async def speech_to_text(
     current_user: dict = Depends(get_current_user)
 ):
     """Convert speech to text and translate to English."""
+    import base64
+    import uuid
+    import tempfile
+    from pathlib import Path
+    
     try:
-        import base64
-        import uuid
         from emergentintegrations.llm.openai import OpenAISpeechToText, LlmChat
         
         audio_data = request.audio_data
@@ -830,24 +833,31 @@ async def speech_to_text(
         
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         file_ext = request.audio_format.lower() or 'webm'
-        mime_types = {'webm': 'audio/webm', 'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'm4a': 'audio/m4a', 'ogg': 'audio/ogg'}
-        mime = mime_types.get(file_ext, 'audio/webm')
         
-        # Pass as tuple: (filename, bytes, mimetype)
-        audio_tuple = (f"audio.{file_ext}", audio_bytes, mime)
+        # Write to temp file - library requires file path
+        temp_file = tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False)
+        temp_file.write(audio_bytes)
+        temp_file.close()
+        temp_path = temp_file.name
         
-        stt = OpenAISpeechToText(api_key=api_key)
-        result = await stt.transcribe(file=audio_tuple)
-        transcript = result.text if hasattr(result, 'text') else str(result)
-        
-        if not transcript.strip():
-            return {"transcript": "", "error": "No speech detected"}
-        
-        # Translate to English
-        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="Translate to English only.")
-        english = await chat.send_message(f"Translate to English: {transcript}")
-        
-        return {"transcript": english.strip(), "original": transcript.strip()}
+        try:
+            stt = OpenAISpeechToText(api_key=api_key)
+            result = await stt.transcribe(file=temp_path)
+            transcript = result.text if hasattr(result, 'text') else str(result)
+            
+            Path(temp_path).unlink(missing_ok=True)
+            
+            if not transcript.strip():
+                return {"transcript": "", "error": "No speech detected"}
+            
+            # Translate to English
+            chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="Translate to English.")
+            english = await chat.send_message(f"Translate: {transcript}")
+            
+            return {"transcript": english.strip(), "original": transcript.strip()}
+        except Exception as inner_e:
+            Path(temp_path).unlink(missing_ok=True)
+            raise inner_e
     except Exception as e:
         logger.error(f"[STT] Error: {str(e)}")
         return {"transcript": "", "error": str(e)}
