@@ -38,6 +38,7 @@ interface WorkerEntry {
   vendor: Vendor | null;
   workers_count: number;
   purpose: string;
+  isCollapsed: boolean;
 }
 
 export default function WorkerLogScreen() {
